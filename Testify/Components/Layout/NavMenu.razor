@@ -1,0 +1,274 @@
+﻿@inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@rendermode InteractiveServer
+
+<header class="relative z-[100] bg-transparent p-2.5 px-8">
+    <div class="mx-auto flex max-w-[1400px] items-center justify-between">
+
+        @* --- LOGO SECTION --- *@
+        <NavLink href="" class="group flex cursor-pointer items-center gap-2 no-underline">
+            <div class="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#E85D3F] shadow-[#E85D3F]/20 shadow-lg transition-transform group-hover:scale-110">
+                <div class="h-5 w-5 rounded-full bg-white opacity-30 blur-[1px]"></div>
+                <div class="absolute text-xl font-bold text-white">L</div>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-slate-800">LANCIFY</span>
+        </NavLink>
+
+        @* --- NAVIGATION LINKS --- *@
+        <nav class="hidden items-center gap-8 md:flex">
+            <NavLink class="nav-link-styled" href="" Match="NavLinkMatch.All">
+                Home
+                <span class="active-underline"></span>
+            </NavLink>
+            <NavLink class="nav-link-styled" href="messages">
+                Message
+                <span class="active-underline"></span>
+            </NavLink>
+            <NavLink class="nav-link-styled" href="projects">
+                Project
+                <span class="active-underline"></span>
+            </NavLink>
+            <NavLink class="nav-link-styled" href="about">
+                About
+                <span class="active-underline"></span>
+            </NavLink>
+        </nav>
+
+        @* --- RIGHT SIDE: SEARCH & PROFILE --- *@
+        <div class="relative flex items-center gap-4">
+
+            @* Client Mode Badge (Example Static Logic) *@
+            @if (IsClientMode)
+            {
+                <div class="mr-2 hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-4 py-1.5 font-bold tracking-widest text-white text-[10px] uppercase lg:flex">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#E85D3F]"><rect width="16" height="20" x="4" y="2" rx="2" ry="2" /><path d="M9 22v-4h6v4" /><path d="M8 6h.01" /><path d="M16 6h.01" /><path d="M12 6h.01" /><path d="M12 10h.01" /><path d="M12 14h.01" /><path d="M16 10h.01" /><path d="M16 14h.01" /><path d="M8 10h.01" /><path d="M8 14h.01" /></svg>
+                    Client Mode
+                </div>
+            }
+
+            @* Search Bar *@
+            <div class="group relative hidden sm:block">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 transition-colors group-hover:text-slate-600"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                <input type="text"
+                       placeholder="@(IsClientMode ? "Search talent..." : "Quick search...")"
+                       class="w-48 rounded-full border border-transparent bg-white py-2 pr-4 pl-10 text-sm shadow-sm transition-all focus:w-64 focus:border-slate-200 focus:bg-white focus:outline-none" />
+            </div>
+
+            @* Notification Bell *@
+            <button class="relative rounded-xl border-none bg-transparent p-2.5 text-slate-500 transition-all hover:bg-white hover:shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
+                <span class="absolute top-2.5 right-2.5 h-2 w-2 rounded-full border-2 border-[#F3F5F9] bg-red-500"></span>
+            </button>
+
+            @* --- AUTHENTICATION & PROFILE DROPDOWN --- *@
+            <AuthorizeView>
+                <Authorized>
+                    <div class="relative">
+                        <button @onclick="ToggleMenu"
+                                class="flex items-center gap-2 rounded-full border-2 p-1 pr-3 transition-all hover:bg-white hover:shadow-md @(_isMenuOpen ? "border-[#E85D3F] bg-white shadow-sm" : "border-white")">
+                            <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100 shadow-sm">
+                                @if (IsClientMode)
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><rect width="16" height="20" x="4" y="2" rx="2" ry="2" /><path d="M9 22v-4h6v4" /><path d="M8 6h.01" /><path d="M16 6h.01" /><path d="M12 6h.01" /><path d="M12 10h.01" /><path d="M12 14h.01" /><path d="M16 10h.01" /><path d="M16 14h.01" /><path d="M8 10h.01" /><path d="M8 14h.01" /></svg>
+                                }
+                                else
+                                {
+                                    @* Use context.User.Identity.Name or a placeholder image *@
+                                    <img src="https://picsum.photos/seed/user-dev/100/100" alt="Profile" class="h-full w-full object-cover" />
+                                }
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 transition-transform duration-300 @(_isMenuOpen ? "rotate-180 text-[#E85D3F]" : "")"><path d="m6 9 6 6 6-6" /></svg>
+                        </button>
+
+                        @if (_isMenuOpen)
+                        {
+                            <div class="animate-in fade-in slide-in-from-top-4 absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl ring-1 ring-black/5 duration-200">
+                                <div class="border-b border-slate-50 bg-slate-50/50 p-5">
+                                    <p class="mb-1 text-xs font-bold tracking-widest text-slate-400 uppercase">Signed in as</p>
+                                    <p class="truncate font-bold text-slate-800">@GetUserFullName(context)</p>
+                                    <p class="truncate text-[10px] text-slate-500">@GetUserEmail(context)</p>
+                                </div>
+
+                                <div class="p-2">
+                                    <a href="Account/Manage" class="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-slate-600 no-underline transition-all hover:bg-slate-50 hover:text-[#E85D3F]">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                        @(IsClientMode ? "Organization Profile" : "My Profile")
+                                    </a>
+                                </div>
+
+                                <div class="border-t border-slate-50 bg-slate-50/20 p-2">
+                                    <form action="Account/Logout" method="post">
+                                        <AntiforgeryToken />
+                                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                                        <button type="submit" class="flex w-full items-center gap-3 rounded-2xl border-none bg-transparent p-3 text-sm font-bold text-rose-500 transition-all hover:bg-rose-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
+                                            Log out
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="flex gap-4">
+                        <NavLink href="Account/Login" class="py-2 text-sm font-bold text-slate-600 transition-colors hover:text-[#E85D3F]">
+                            Log in
+                        </NavLink>
+                        <NavLink href="Account/Register" class="rounded-full bg-slate-900 px-5 py-2 text-sm font-bold text-white transition-transform hover:scale-105">
+                            Sign up
+                        </NavLink>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</header>
+
+@code {
+    private bool _isMenuOpen = false;
+    private string? currentUrl;
+
+    // Simulate role for visual purposes. In real app, check claims.
+    private bool IsClientMode = false;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        _isMenuOpen = false; // Close menu on navigation
+        StateHasChanged();
+    }
+
+    private void ToggleMenu()
+    {
+        _isMenuOpen = !_isMenuOpen;
+    }
+
+    private string GetUserFullName(AuthenticationState authState)
+    {
+        // Try to get the full name from claims
+        var fullName = authState.User.FindFirst("name")?.Value
+                    ?? authState.User.FindFirst(ClaimTypes.Name)?.Value
+                    ?? authState.User.Identity?.Name
+                    ?? "User";
+
+        return fullName;
+    }
+
+    private string GetUserEmail(AuthenticationState authState)
+    {
+        // Get email from claims
+        var email = authState.User.FindFirst(ClaimTypes.Email)?.Value
+                 ?? authState.User.FindFirst("email")?.Value
+                 ?? "No email available";
+
+        return email;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
+
+
+
+@* @implements IDisposable
+
+@inject NavigationManager NavigationManager
+
+<div class="top-row navbar navbar-dark ps-3">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Testify</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="counter">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="weather">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="auth">
+                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
+            </NavLink>
+        </div>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Manage">
+                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <button type="submit" class="nav-link">
+                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
+                        </button>
+                    </form>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Register">
+                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Login">
+                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@code {
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
+ *@

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Testify.Client/Testify.Client.csproj" />
+  <Project Path="Testify.Shared/Testify.Shared.csproj" Id="39929e2e-e425-4118-895e-83a4f9c2b74e" />
+  <Project Path="Testify/Testify.csproj" />
+</Solution>

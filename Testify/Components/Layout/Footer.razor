@@ -1,0 +1,333 @@
+﻿@inject NavigationManager Navigation
+
+<footer class="relative mt-8 overflow-hidden bg-[#1C1D2A] pt-24 pb-12 text-white">
+    @* Decorative Background Elements *@
+    <div class="absolute top-0 right-0 -mt-48 -mr-48 h-96 w-96 rounded-full bg-[#E85D3F]/5 blur-[120px]"></div>
+    <div class="absolute bottom-0 left-0 -mb-32 -ml-32 h-64 w-64 rounded-full bg-[#7E96E1]/5 blur-[100px]"></div>
+
+    <div class="relative z-10 mx-auto max-w-[1400px] px-8">
+        <div class="grid grid-cols-1 gap-16 border-b border-white/5 pb-20 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
+
+            @* Brand Identity *@
+            <div class="space-y-8 lg:col-span-4">
+                <div class="group flex w-fit cursor-pointer items-center gap-3" @onclick="@(() => NavigateTo("/"))">
+                    <div class="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E85D3F] shadow-[#E85D3F]/20 shadow-lg transition-transform group-hover:scale-110">
+                        <div class="h-6 w-6 rounded-full bg-white opacity-30 blur-[1px]"></div>
+                        <div class="absolute text-2xl font-bold text-white">T</div>
+                    </div>
+                    <span class="text-2xl font-bold tracking-tight text-white">TESTIFY</span>
+                </div>
+
+                <p class="max-w-sm text-lg leading-relaxed text-slate-400">
+                    Empowering development teams with comprehensive testing tools and seamless project management solutions.
+                </p>
+
+                <div class="flex items-center gap-4">
+                    @foreach (var social in SocialLinks)
+                    {
+                        <a href="@social.Href"
+                           class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-400 transition-all duration-300 hover:bg-[#E85D3F] hover:text-white"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            @* Render SVG Path directly *@
+                            <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="@social.SvgPath" />
+                            </svg>
+                        </a>
+                    }
+                </div>
+            </div>
+
+            @* Quick Links *@
+            <div class="space-y-6 lg:col-span-2">
+                <h4 class="text-xs font-bold tracking-[0.2em] text-[#E85D3F] uppercase">Platform</h4>
+                <ul class="space-y-4">
+                    @foreach (var item in PlatformLinks)
+                    {
+                        <li>
+                            <button @onclick="@(() => NavigateTo(item.Route))"
+                                    class="text-slate-400 hover:text-white transition-colors text-sm font-semibold">
+                                @item.Name
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            @* Resources *@
+            <div class="space-y-6 lg:col-span-2">
+                <h4 class="text-xs font-bold tracking-[0.2em] text-[#E85D3F] uppercase">Resources</h4>
+                <ul class="space-y-4">
+                    @foreach (var item in ResourceLinks)
+                    {
+                        <li>
+                            <a href="@item.Href"
+                               class="group flex items-center gap-2 text-sm font-semibold text-slate-400 transition-colors hover:text-white">
+                                @item.Name
+                                @* Heroicon: ArrowTopRightOnSquare *@
+                                <svg class="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                                </svg>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            @* Newsletter *@
+            <div class="space-y-8 lg:col-span-4">
+                <div class="rounded-[40px] border border-white/5 bg-white/5 p-8 backdrop-blur-sm">
+                    <h4 class="mb-4 text-xl font-bold">Stay ahead of the curve</h4>
+                    <p class="mb-6 text-sm leading-relaxed text-slate-400">
+                        Get monthly insights on testing best practices and platform updates.
+                    </p>
+                    <div class="group relative">
+                        <input type="email"
+                               @bind="newsletterEmail"
+                               placeholder="Enter your email"
+                               class="w-full rounded-2xl border border-white/10 bg-white/5 px-6 py-4 pr-14 text-sm text-white transition-all focus:border-[#E85D3F]/50 focus:outline-none" />
+                        <button @onclick="SubscribeToNewsletter"
+                                class="absolute top-1/2 right-2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl bg-[#E85D3F] text-white shadow-[#E85D3F]/20 shadow-lg transition-all hover:scale-105">
+                            @* Heroicon: PaperAirplane *@
+                            <svg class="h-5 w-5 -rotate-45" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Bottom Bar *@
+        <div class="flex flex-col items-center justify-between gap-8 pt-12 md:flex-row">
+            <div class="flex flex-wrap items-center justify-center gap-8 font-bold tracking-widest text-[11px] text-slate-500 uppercase md:justify-start">
+                <span>© @DateTime.Now.Year Testify Inc.</span>
+                <a href="/privacy" class="transition-colors hover:text-[#E85D3F]">Privacy Policy</a>
+                <a href="/terms" class="transition-colors hover:text-[#E85D3F]">Terms of Service</a>
+                <a href="/cookies" class="transition-colors hover:text-[#E85D3F]">Cookies</a>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2 text-xs font-bold tracking-widest text-slate-500 uppercase">
+                    @* Heroicon: GlobeAlt *@
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S12 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S12 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+                    </svg>
+                    English (US)
+                </div>
+                <div class="flex items-center gap-2 text-xs font-bold tracking-widest text-slate-500 uppercase">
+                    @* Heroicon: ShieldCheck *@
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+                    </svg>
+                    Verified
+                </div>
+                <button @onclick="ScrollToTop"
+                        class="group flex h-12 w-12 items-center justify-center rounded-full border border-white/10 transition-all hover:bg-white hover:text-[#1C1D2A]">
+                    @* Heroicon: ArrowUp *@
+                    <svg class="h-5 w-5 transition-transform group-hover:-translate-y-1" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@code {
+    private string newsletterEmail = string.Empty;
+
+    // Use SVG Path Data strings for Brand Icons (Heroicons does not include Brands)
+    private List<SocialLink> SocialLinks = new()
+    {
+        // Twitter / X Icon
+        new SocialLink { SvgPath = "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z", Href = "https://twitter.com" },
+        // Dribbble Icon
+        new SocialLink { SvgPath = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm6.605 4.61a8.502 8.502 0 0 1 1.93 5.314c-.281-.054-3.101-.629-5.943-.271-.065-.141-.12-.293-.184-.445a25.416 25.416 0 0 0-.564-1.236c3.145-1.28 4.577-3.124 4.761-3.362zM12 3.475c2.17 0 4.154.813 5.662 2.148-.152.216-1.443 1.941-4.48 3.08-1.399-2.57-2.95-4.675-3.189-5A8.687 8.687 0 0 1 12 3.475zm-3.633.803a53.896 53.896 0 0 1 3.167 4.935c-3.992 1.12-8.16 1.147-8.5.147a8.6 8.6 0 0 1 5.333-5.082zm-2.956 5.35c.42.025 5.584-.25 10.197.868.03.111.08.231.11.346.516 1.57.87 3.246.992 4.932-3.57.994-6.525 1.096-7.55 1.096-.15 0-.295-.011-.43-.016-3.235-.01-5.116-2.073-5.116-2.073-.016-.24-.027-.478-.027-.723 0-1.802.662-3.46 1.76-4.755zM6.02 16.32c.163.29 2.016 3.178 5.672 3.178.539 0 1.08-.057 1.62-.178a9.467 9.467 0 0 1-.77-3.66 22.109 22.109 0 0 1-5.748-.909c-.276.54-.51 1.08-.774 1.569zm7.427 3.55c-1.325 0-2.573-.326-3.666-.895.534-1.076 1.036-2.28 1.488-3.593 3.655.857 5.756 2.502 5.968 2.68a8.647 8.647 0 0 1-3.79 1.808z", Href = "https://dribbble.com" },
+        // LinkedIn Icon
+        new SocialLink { SvgPath = "M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z", Href = "https://linkedin.com" },
+        // GitHub Icon
+        new SocialLink { SvgPath = "M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z", Href = "https://github.com" }
+    };
+
+    private List<NavLink> PlatformLinks = new()
+    {
+        new NavLink { Name = "Home", Route = "/" },
+        new NavLink { Name = "Dashboard", Route = "/dashboard" },
+        new NavLink { Name = "Projects", Route = "/projects" },
+        new NavLink { Name = "Profile", Route = "/profile" }
+    };
+
+    private List<ResourceLink> ResourceLinks = new()
+    {
+        new ResourceLink { Name = "Documentation", Href = "#" },
+        new ResourceLink { Name = "Community", Href = "#" },
+        new ResourceLink { Name = "Support", Href = "#" },
+        new ResourceLink { Name = "API", Href = "#" }
+    };
+
+    private void NavigateTo(string route)
+    {
+        Navigation.NavigateTo(route);
+    }
+
+    private async Task ScrollToTop()
+    {
+        await Task.CompletedTask;
+        Navigation.NavigateTo(Navigation.Uri.Split('#')[0], forceLoad: false);
+    }
+
+    private async Task SubscribeToNewsletter()
+    {
+        if (!string.IsNullOrWhiteSpace(newsletterEmail))
+        {
+            newsletterEmail = string.Empty;
+        }
+        await Task.CompletedTask;
+    }
+
+    private class SocialLink
+    {
+        public string SvgPath { get; set; } = string.Empty;
+        public string Href { get; set; } = string.Empty;
+    }
+
+    private class NavLink
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Route { get; set; } = string.Empty;
+    }
+
+    private class ResourceLink
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Href { get; set; } = string.Empty;
+    }
+}
+
+@* <footer class="relative mt-8 overflow-hidden bg-[#1C1D2A] pt-24 pb-12 text-white">
+      {/* Decorative Background Elements */}
+      <div class="absolute top-0 right-0 -mt-48 -mr-48 h-96 w-96 rounded-full bg-[#E85D3F]/5 blur-[120px]"></div>
+      <div class="absolute bottom-0 left-0 -mb-32 -ml-32 h-64 w-64 rounded-full bg-[#7E96E1]/5 blur-[100px]"></div>
+
+      <div class="relative z-10 mx-auto max-w-[1400px] px-8">
+        <div class="grid grid-cols-1 gap-16 border-b border-white/5 pb-20 md:grid-cols-2 lg:grid-cols-12 lg:gap-8">
+          
+          {/* Brand Identity */}
+          <div class="space-y-8 lg:col-span-4">
+            <div 
+              class="group flex w-fit cursor-pointer items-center gap-3" 
+              onClick={() => onNavigate('Home')}
+            >
+              <div class="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E85D3F] shadow-[#E85D3F]/20 shadow-lg transition-transform group-hover:scale-110">
+                 <div class="h-6 w-6 rounded-full bg-white opacity-30 blur-[1px]"></div>
+                 <div class="absolute text-2xl font-bold text-white">L</div>
+              </div>
+              <span class="text-2xl font-bold tracking-tight text-white">LANCIFY</span>
+            </div>
+            
+            <p class="max-w-sm text-lg leading-relaxed text-slate-400">
+              Empowering the world's most elite freelancers with high-end financial tools and legendary project opportunities.
+            </p>
+
+            <div class="flex items-center gap-4">
+              {[
+                { icon: Twitter, href: '#' },
+                { icon: Dribbble, href: '#' },
+                { icon: Linkedin, href: '#' },
+                { icon: Github, href: '#' }
+              ].map((social, idx) => (
+                <a 
+                  key={idx}
+                  href={social.href}
+                  class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-400 transition-all duration-300 hover:bg-[#E85D3F] hover:text-white"
+                >
+                  <social.icon class="h-5 w-5" />
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div class="space-y-6 lg:col-span-2">
+            <h4 class="text-xs font-bold tracking-[0.2em] text-[#E85D3F] uppercase">Platform</h4>
+            <ul class="space-y-4">
+              {['Home', 'Discover', 'Wallet', 'Projects', 'Messages'].map((item) => (
+                <li key={item}>
+                  <button 
+                    onClick={() => onNavigate(item)}
+                    class="text-slate-400 hover:text-white transition-colors text-sm font-semibold"
+                  >
+                    {item}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Resources */}
+          <div class="space-y-6 lg:col-span-2">
+            <h4 class="text-xs font-bold tracking-[0.2em] text-[#E85D3F] uppercase">Resources</h4>
+            <ul class="space-y-4">
+              {['Academy', 'Documentation', 'Community', 'Case Studies', 'Pricing'].map((item) => (
+                <li key={item}>
+                  <a href="#" class="group flex items-center gap-2 text-sm font-semibold text-slate-400 transition-colors hover:text-white">
+                    {item}
+                    <ExternalLink class="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Newsletter */}
+          <div class="space-y-8 lg:col-span-4">
+            <div class="rounded-[40px] border border-white/5 bg-white/5 p-8 backdrop-blur-sm">
+              <h4 class="mb-4 text-xl font-bold">Stay ahead of the curve</h4>
+              <p class="mb-6 text-sm leading-relaxed text-slate-400">
+                Get monthly insights on high-end freelance rates and platform updates.
+              </p>
+              <div class="group relative">
+                <input 
+                  type="email" 
+                  placeholder="Enter your email"
+                  class="w-full rounded-2xl border border-white/10 bg-white/5 px-6 py-4 pr-14 text-sm text-white transition-all focus:border-[#E85D3F]/50 focus:outline-none"
+                />
+                <button class="absolute top-1/2 right-2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl bg-[#E85D3F] text-white shadow-[#E85D3F]/20 shadow-lg transition-all hover:scale-105">
+                  <Send class="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div class="flex flex-col items-center justify-between gap-8 pt-12 md:flex-row">
+          <div class="flex flex-wrap items-center justify-center gap-8 font-bold tracking-widest text-[11px] text-slate-500 uppercase md:justify-start">
+            <span>© 2024 Lancify Inc.</span>
+            <a href="#" class="transition-colors hover:text-[#E85D3F]">Privacy Policy</a>
+            <a href="#" class="transition-colors hover:text-[#E85D3F]">Terms of Service</a>
+            <a href="#" class="transition-colors hover:text-[#E85D3F]">Cookies</a>
+          </div>
+
+          <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2 text-xs font-bold tracking-widest text-slate-500 uppercase">
+              <Globe class="h-4 w-4" />
+              English (US)
+            </div>
+            <div class="flex items-center gap-2 text-xs font-bold tracking-widest text-slate-500 uppercase">
+              <Shield class="h-4 w-4" />
+              Verified
+            </div>
+            <button 
+              onClick={scrollToTop}
+              class="group flex h-12 w-12 items-center justify-center rounded-full border border-white/10 transition-all hover:bg-white hover:text-[#1C1D2A]"
+            >
+              <ArrowUp class="h-5 w-5 transition-transform group-hover:-translate-y-1" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}; *@
