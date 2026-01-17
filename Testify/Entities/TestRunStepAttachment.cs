@@ -6,7 +6,7 @@ namespace Testify.Entities
 {
     public class TestRunStepAttachment
     {
-        public int AttachmentId { get; set; }
+        public int Id { get; set; }
         public int RunStepId { get; set; }
         public string FileName { get; set; } = string.Empty;
         public string FileUrl { get; set; } = string.Empty;

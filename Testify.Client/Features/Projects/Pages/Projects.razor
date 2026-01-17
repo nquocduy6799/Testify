@@ -1,0 +1,482 @@
+﻿@page "/projects"
+@using System.ComponentModel.DataAnnotations
+@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs.Projects
+@inject IProjectService ProjectService
+@inject NavigationManager Navigation
+@rendermode InteractiveWebAssembly
+
+<PageTitle>Projects</PageTitle>
+
+<div class="mx-auto w-full max-w-7xl px-4 py-6">
+    <div class="mb-8 flex items-center justify-between">
+        <h2 class="text-2xl font-bold text-gray-800">My Projects</h2>
+        <button class="text-green flex items-center rounded-lg bg-blue-600 px-4 py-2 shadow-sm transition-colors hover:bg-blue-700"
+                @onclick="OpenCreateDialog">
+            <i class="bi bi-plus-circle mr-2"></i> New Project
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="flex flex-col items-center justify-center py-12">
+            <div class="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+            <p class="mt-4 text-gray-500">Loading projects...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="relative mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700" role="alert">
+            <span class="block sm:inline">@errorMessage</span>
+            <button class="absolute top-0 right-0 bottom-0 px-4 py-3" @onclick="@(() => errorMessage = null)">
+                <i class="bi bi-x text-xl font-bold"></i>
+            </button>
+        </div>
+    }
+    else if (projects == null || !projects.Any())
+    {
+        <div class="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-16 text-center">
+            <i class="bi bi-inbox mb-4 text-6xl text-gray-400"></i>
+            <h4 class="text-xl font-semibold text-gray-700">No projects yet</h4>
+            <p class="mt-2 mb-6 text-gray-500">Create your first project to get started!</p>
+            <button class="text-green rounded-lg bg-blue-600 px-6 py-2 hover:bg-blue-700" @onclick="OpenCreateDialog">Create Project</button>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            @foreach (var project in projects)
+            {
+                <div class="bg-green flex h-full flex-col rounded-lg border border-gray-200 shadow-sm transition-shadow hover:shadow-md">
+                    <div class="flex-1 p-5">
+                        <div class="mb-3 flex items-start justify-between">
+                            <h5 class="flex items-center truncate text-lg font-semibold text-gray-900">
+                                @if (!string.IsNullOrEmpty(project.Color))
+                                {
+                                    <span class="mr-2 inline-block h-3 w-3 rounded-full" style="background-color: @project.Color;"></span>
+                                }
+                                <span class="truncate" title="@project.Name">@project.Name</span>
+                            </h5>
+
+                            <div class="group relative">
+                                <button class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <div class="bg-green absolute right-0 z-10 mt-1 hidden w-40 origin-top-right divide-y divide-gray-100 rounded-md border border-gray-200 shadow-lg group-hover:block focus-within:block">
+                                    <div class="py-1">
+                                        <a href="javascript:void(0)" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" @onclick="@(() => OpenEditDialog(project))">
+                                            <i class="bi bi-pencil mr-2"></i> Edit
+                                        </a>
+                                        <a href="javascript:void(0)" class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50" @onclick="@(() => OpenDeleteDialog(project))">
+                                            <i class="bi bi-trash mr-2"></i> Delete
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(project.Description))
+                        {
+                            <p class="mb-4 line-clamp-2 text-sm text-gray-500" title="@project.Description">@project.Description</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(project.Client))
+                        {
+                            <p class="mb-2 text-sm text-gray-500">
+                                <i class="bi bi-building mr-1"></i> @project.Client
+                            </p>
+                        }
+
+                        @if (project.Deadline.HasValue)
+                        {
+                            var daysRemaining = (project.Deadline.Value - DateTime.Now).Days;
+                            var deadlineColor = daysRemaining < 0 ? "text-red-600" : daysRemaining < 7 ? "text-yellow-600" : "text-gray-500";
+                            <p class="mb-2 text-sm @deadlineColor">
+                                <i class="bi bi-calendar mr-1"></i> Deadline: @project.Deadline.Value.ToString("MMM dd, yyyy")
+                            </p>
+                        }
+
+                        <div class="mt-4 mb-2">
+                            <div class="mb-1 flex justify-between">
+                                <span class="text-xs font-medium text-gray-500">Progress</span>
+                                <span class="text-xs font-medium text-gray-500">@project.Progress%</span>
+                            </div>
+                            <div class="h-1.5 w-full rounded-full bg-gray-200">
+                                <div class="h-1.5 rounded-full bg-blue-600" style="width: @project.Progress%"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex items-center justify-between border-t pt-3 text-xs text-gray-400">
+                            <span><i class="bi bi-people mr-1"></i> @project.MembersCount member@(project.MembersCount != 1 ? "s" : "")</span>
+                            <span>Bug threshold: @project.BugThreshold</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* Create/Edit Modal *@
+@if (showModal)
+{
+    <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="bg-opacity-75 fixed inset-0 bg-gray-500 transition-opacity" aria-hidden="true" @onclick="CloseModal"></div>
+
+            <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+            <div class="bg-green inline-block w-full transform overflow-hidden rounded-lg text-left align-bottom shadow-xl transition-all sm:my-8 sm:max-w-lg sm:align-middle">
+                <div class="bg-green px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="mb-4 flex items-center justify-between border-b pb-2">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            @(isEditMode ? "Edit Project" : "Create New Project")
+                        </h3>
+                        <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" @onclick="CloseModal">
+                            <i class="bi bi-x text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <EditForm Model="@projectForm" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+
+                        <div class="space-y-4">
+                            <div>
+                                <label for="projectName" class="mb-1 block text-sm font-medium text-gray-700">Name <span class="text-red-500">*</span></label>
+                                <InputText id="projectName" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:text-sm"
+                                           @bind-Value="projectForm.Name" placeholder="Enter project name" />
+                                <ValidationMessage For="@(() => projectForm.Name)" class="mt-1 text-sm text-red-600" />
+                            </div>
+
+                            <div>
+                                <label for="projectDescription" class="mb-1 block text-sm font-medium text-gray-700">Description</label>
+                                <InputTextArea id="projectDescription" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:text-sm"
+                                               @bind-Value="projectForm.Description" rows="3" placeholder="Enter project description" />
+                                <ValidationMessage For="@(() => projectForm.Description)" class="mt-1 text-sm text-red-600" />
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <label for="projectColor" class="mb-1 block text-sm font-medium text-gray-700">Color</label>
+                                    <div class="flex h-10 items-center">
+                                        <InputText id="projectColor" type="color" class="h-9 w-20 cursor-pointer rounded border border-gray-300 p-1"
+                                                   @bind-Value="projectForm.Color" />
+                                    </div>
+                                    <ValidationMessage For="@(() => projectForm.Color)" class="mt-1 text-sm text-red-600" />
+                                </div>
+
+                                <div>
+                                    <label for="projectClient" class="mb-1 block text-sm font-medium text-gray-700">Client</label>
+                                    <InputText id="projectClient" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:text-sm"
+                                               @bind-Value="projectForm.Client" placeholder="Client name" />
+                                    <ValidationMessage For="@(() => projectForm.Client)" class="mt-1 text-sm text-red-600" />
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <label for="projectDeadline" class="mb-1 block text-sm font-medium text-gray-700">Deadline</label>
+                                    <InputDate id="projectDeadline" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:text-sm"
+                                               @bind-Value="projectForm.Deadline" />
+                                    <ValidationMessage For="@(() => projectForm.Deadline)" class="mt-1 text-sm text-red-600" />
+                                </div>
+
+                                <div>
+                                    <label for="projectBugThreshold" class="mb-1 block text-sm font-medium text-gray-700">Bug Threshold</label>
+                                    <InputNumber id="projectBugThreshold" class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:text-sm"
+                                                 @bind-Value="projectForm.BugThreshold" min="0" max="100" />
+                                    <ValidationMessage For="@(() => projectForm.BugThreshold)" class="mt-1 text-sm text-red-600" />
+                                </div>
+                            </div>
+
+                            @if (isEditMode)
+                            {
+                                <div>
+                                    <label for="projectProgress" class="mb-1 block text-sm font-medium text-gray-700">Progress (%)</label>
+                                    <div class="flex items-center gap-2">
+                                        <InputNumber id="projectProgress" class="w-24 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none sm:text-sm"
+                                                     @bind-Value="projectForm.Progress" min="0" max="100" />
+                                        <div class="h-2.5 flex-1 rounded-full bg-gray-200">
+                                            <div class="h-2.5 rounded-full bg-blue-600" style="width: @projectForm.Progress%"></div>
+                                        </div>
+                                    </div>
+                                    <ValidationMessage For="@(() => projectForm.Progress)" class="mt-1 text-sm text-red-600" />
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(formErrorMessage))
+                            {
+                                <div class="rounded-md border border-red-200 bg-red-100 p-3 text-sm text-red-700">
+                                    @formErrorMessage
+                                </div>
+                            }
+                        </div>
+
+                        <div class="mt-6 flex flex-row-reverse gap-2">
+                            <button type="submit" class="text-green inline-flex w-full justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-base font-medium shadow-sm hover:bg-blue-700 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:text-sm" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <div class="border-green mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+                                }
+                                @(isEditMode ? "Update" : "Create")
+                            </button>
+                            <button type="button" class="bg-green inline-flex w-full justify-center rounded-md border border-gray-300 px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50 sm:w-auto sm:text-sm" @onclick="CloseModal" disabled="@isSubmitting">
+                                Cancel
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Delete Confirmation Modal *@
+@if (showDeleteModal)
+{
+    <div class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="bg-opacity-75 fixed inset-0 bg-gray-500 transition-opacity" aria-hidden="true" @onclick="CloseDeleteDialog"></div>
+
+            <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+            <div class="bg-green inline-block w-full transform overflow-hidden rounded-lg text-left align-bottom shadow-xl transition-all sm:my-8 sm:max-w-lg sm:align-middle">
+                <div class="flex items-center border-b border-red-100 bg-red-50 p-4">
+                    <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="bi bi-exclamation-triangle text-lg text-red-600"></i>
+                    </div>
+                    <h3 class="ml-3 text-lg leading-6 font-medium text-red-900" id="modal-title">
+                        Confirm Delete
+                    </h3>
+                    <button type="button" class="ml-auto text-red-400 hover:text-red-500 focus:outline-none" @onclick="CloseDeleteDialog">
+                        <i class="bi bi-x text-2xl"></i>
+                    </button>
+                </div>
+                <div class="bg-green px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="mt-2">
+                        <p class="text-sm text-gray-500">
+                            Are you sure you want to delete the project <span class="font-bold text-gray-800">@projectToDelete?.Name</span>?
+                        </p>
+                        <p class="mt-1 text-sm text-gray-400">This action cannot be undone.</p>
+
+                        @if (!string.IsNullOrEmpty(deleteErrorMessage))
+                        {
+                            <div class="mt-3 rounded-md border border-red-200 bg-red-100 p-3 text-sm text-red-700">
+                                @deleteErrorMessage
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="gap-2 bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                    <button type="button" class="text-green inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium shadow-sm hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50 sm:ml-3 sm:w-auto sm:text-sm" @onclick="HandleDelete" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <div class="border-green mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+                        }
+                        Delete
+                    </button>
+                    <button type="button" class="bg-green mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none disabled:opacity-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" @onclick="CloseDeleteDialog" disabled="@isDeleting">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProjectResponse>? projects;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    // Modal state
+    private bool showModal = false;
+    private bool showDeleteModal = false;
+    private bool isEditMode = false;
+    private bool isSubmitting = false;
+    private bool isDeleting = false;
+    private string? formErrorMessage;
+    private string? deleteErrorMessage;
+
+    // Form data
+    private ProjectFormModel projectForm = new();
+    private ProjectResponse? projectToDelete;
+    private int? editingProjectId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjects();
+    }
+
+    private async Task LoadProjects()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            projects = await ProjectService.GetProjectsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load projects: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        isEditMode = false;
+        editingProjectId = null;
+        projectForm = new ProjectFormModel
+        {
+            Color = "#007bff",
+            BugThreshold = 0
+        };
+        formErrorMessage = null;
+        showModal = true;
+    }
+
+    private void OpenEditDialog(ProjectResponse project)
+    {
+        isEditMode = true;
+        editingProjectId = project.Id;
+        projectForm = new ProjectFormModel
+        {
+            Name = project.Name,
+            Description = project.Description,
+            Color = project.Color,
+            Client = project.Client,
+            Progress = project.Progress,
+            Deadline = project.Deadline,
+            BugThreshold = project.BugThreshold
+        };
+        formErrorMessage = null;
+        showModal = true;
+    }
+
+    private void OpenDeleteDialog(ProjectResponse project)
+    {
+        projectToDelete = project;
+        deleteErrorMessage = null;
+        showDeleteModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        projectForm = new();
+        formErrorMessage = null;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        showDeleteModal = false;
+        projectToDelete = null;
+        deleteErrorMessage = null;
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            isSubmitting = true;
+            formErrorMessage = null;
+
+            if (isEditMode && editingProjectId.HasValue)
+            {
+                var updateRequest = new UpdateProjectRequest
+                {
+                    Name = projectForm.Name,
+                    Description = projectForm.Description,
+                    Color = projectForm.Color,
+                    Client = projectForm.Client,
+                    Progress = projectForm.Progress,
+                    Deadline = projectForm.Deadline,
+                    BugThreshold = projectForm.BugThreshold
+                };
+
+                await ProjectService.UpdateProjectAsync(editingProjectId.Value, updateRequest);
+            }
+            else
+            {
+                var createRequest = new CreateProjectRequest
+                {
+                    Name = projectForm.Name,
+                    Description = projectForm.Description,
+                    Color = projectForm.Color,
+                    Client = projectForm.Client,
+                    Deadline = projectForm.Deadline,
+                    BugThreshold = projectForm.BugThreshold
+                };
+
+                await ProjectService.CreateProjectAsync(createRequest);
+            }
+
+            CloseModal();
+            await LoadProjects();
+        }
+        catch (Exception ex)
+        {
+            formErrorMessage = $"Failed to {(isEditMode ? "update" : "create")} project: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task HandleDelete()
+    {
+        if (projectToDelete == null) return;
+
+        try
+        {
+            isDeleting = true;
+            deleteErrorMessage = null;
+
+            var success = await ProjectService.DeleteProjectAsync(projectToDelete.Id);
+            if (success)
+            {
+                CloseDeleteDialog();
+                await LoadProjects();
+            }
+            else
+            {
+                deleteErrorMessage = "Failed to delete project. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = $"Failed to delete project: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private class ProjectFormModel
+    {
+        [Required]
+        [StringLength(200)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(1000)]
+        public string? Description { get; set; }
+
+        [StringLength(7)]
+        public string? Color { get; set; }
+
+        [StringLength(200)]
+        public string? Client { get; set; }
+
+        [Range(0, 100)]
+        public int Progress { get; set; }
+
+        public DateTime? Deadline { get; set; }
+
+        [Range(0, 100)]
+        public int BugThreshold { get; set; }
+    }
+}

@@ -8,7 +8,7 @@ namespace Testify.Entities
 {
     public class TestRun
     {
-        public int RunId { get; set; }
+        public int Id { get; set; }
         public int PlanId { get; set; }
         public int TestCaseId { get; set; }
         public string? ExecutedByUserId { get; set; }

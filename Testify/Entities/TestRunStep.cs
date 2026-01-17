@@ -7,7 +7,7 @@ namespace Testify.Entities
 {
     public class TestRunStep
     {
-        public int RunStepId { get; set; }
+        public int Id { get; set; }
         public int RunId { get; set; }
         public int? StepId { get; set; }
 

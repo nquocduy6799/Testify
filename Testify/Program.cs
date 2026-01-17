@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Testify.Client.Pages;
+using Testify.Client.Features.Projects.Services;
+using Testify.Client.Interfaces;
 using Testify.Components;
 using Testify.Components.Account;
 using Testify.Data;
@@ -42,6 +43,16 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+// Add HttpClient for server-side rendering
+builder.Services.AddScoped(sp =>
+{
+    var navigationManager =
+        sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+    return new HttpClient { BaseAddress = new Uri(navigationManager.BaseUri) };
+});
+
+// Register TodoService for server-side
+builder.Services.AddScoped<IProjectService, ProjectService>();
 
 var app = builder.Build();
 

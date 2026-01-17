@@ -8,7 +8,9 @@ namespace Testify.Entities
 {
     public class ProjectTeamMember
     {
+        public int Id { get; set; }
         public int ProjectId { get; set; }
+
         public string UserId { get; set; } = string.Empty;
         public ProjectRole Role { get; set; } = ProjectRole.PM;
         public DateTime JoinedAt { get; set; } = DateTime.Now;

@@ -1,0 +1,38 @@
+﻿@* @using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+
+@inject AuthenticationStateProvider AuthStateProvider
+
+<AuthorizeView>
+    <Authorized>
+        @if (layoutToUse is not null)
+        {
+            <LayoutView Layout="@layoutToUse">
+                @Body
+            </LayoutView>
+        }
+    </Authorized>
+
+    <NotAuthorized>
+        <LayoutView Layout="@typeof(MainLayout)">
+            @Body
+        </LayoutView>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private Type? layoutToUse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.IsInRole("PM"))
+            layoutToUse = typeof(PMLayout);
+        else if (user.IsInRole("Tester"))
+            layoutToUse = typeof(TesterLayout);
+        else if (user.IsInRole("Developer"))
+            layoutToUse = typeof(DevLayout);
+    }
+} *@
