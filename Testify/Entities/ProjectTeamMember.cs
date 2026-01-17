@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Testify.Data;
 using Testify.Shared.Enums;
+using Testify.Shared.Helpers;
 
 namespace Testify.Entities
 {
@@ -13,7 +14,7 @@ namespace Testify.Entities
 
         public string UserId { get; set; } = string.Empty;
         public ProjectRole Role { get; set; } = ProjectRole.PM;
-        public DateTime JoinedAt { get; set; } = DateTime.Now;
+        public DateTime JoinedAt { get; set; } = DateTimeHelper.GetVietnamTime();
 
         // Navigation properties
         public virtual Project Project { get; set; } = null!;

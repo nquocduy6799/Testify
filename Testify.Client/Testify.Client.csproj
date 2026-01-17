@@ -19,7 +19,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Features\Milestones\" />
+    <Folder Include="Features\Milestones\Components\" />
+    <Folder Include="Features\Milestones\Services\" />
+    <Folder Include="Features\Milestones\Pages\" />
     <Folder Include="Features\Projects\Components\" />
     <Folder Include="Features\TeamMembers\Components\" />
     <Folder Include="Features\TeamMembers\Services\" />
