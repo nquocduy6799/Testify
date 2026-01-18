@@ -1,22 +1,38 @@
-﻿@* @using Testify.Client.Shared.Components
+﻿@using Testify.Client.Shared.Components
 @inherits LayoutComponentBase
-
-<h3>PMLayout</h3>
-<PMProjectNavbar/>
-
-@code {
-
-} *@
-
-
-@using Testify.Client.Shared.Components
-@inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
 <div>
-	<NavMenu/>
-	<PMProjectNavbar />
-	<main>
-		@Body
-	</main>
-	<Footer />
+    <NavMenu />
+
+    <nav class="hidden items-center gap-8 md:flex">
+        <NavLink class="nav-link-styled" href="@($"projects/{ProjectId}/pm")">
+            Overview
+            <span class="active-underline"></span>
+        </NavLink>
+
+        <NavLink class="nav-link-styled" href="@($"projects/{ProjectId}/pm/kanban")">
+            Kanban
+            <span class="active-underline"></span>
+        </NavLink>
+
+        <NavLink class="nav-link-styled" href="@($"projects/{ProjectId}/pm/team")">
+            Team Members
+            <span class="active-underline"></span>
+        </NavLink>
+    </nav> 
+
+    <main>
+        @Body
+    </main>
+
+    <Footer />
 </div>
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+}
+
+
+
+

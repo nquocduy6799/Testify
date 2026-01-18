@@ -1,0 +1,13 @@
+﻿@page "/projects/{ProjectId:int}/pm/kanban"
+@using Microsoft.AspNetCore.Authorization
+@using Testify.Client.Layouts
+@layout PMLayout
+@attribute [Authorize]
+
+<h3>Kanban - Project @ProjectId</h3>
+<h1>Welcome to kanban page!</h1>
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+}
+

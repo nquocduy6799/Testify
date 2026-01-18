@@ -19,13 +19,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Features\Kanban\Components\" />
+    <Folder Include="Features\Kanban\Services\" />
     <Folder Include="Features\Milestones\Components\" />
     <Folder Include="Features\Milestones\Services\" />
     <Folder Include="Features\Milestones\Pages\" />
     <Folder Include="Features\Projects\Components\" />
     <Folder Include="Features\TeamMembers\Components\" />
     <Folder Include="Features\TeamMembers\Services\" />
-    <Folder Include="Features\TeamMembers\Pages\" />
     <Folder Include="Features\TestTemplates\Components\" />
     <Folder Include="Features\TestTemplates\Services\" />
     <Folder Include="Features\TestTemplates\Pages\" />
