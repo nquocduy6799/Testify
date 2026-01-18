@@ -14,4 +14,24 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Authentication" Version="10.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Testify.Shared\Testify.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Features\Kanban\Components\" />
+    <Folder Include="Features\Kanban\Services\" />
+    <Folder Include="Features\Milestones\Components\" />
+    <Folder Include="Features\Milestones\Services\" />
+    <Folder Include="Features\Milestones\Pages\" />
+    <Folder Include="Features\Projects\Components\" />
+    <Folder Include="Features\TeamMembers\Components\" />
+    <Folder Include="Features\TeamMembers\Services\" />
+    <Folder Include="Features\TestTemplates\Components\" />
+    <Folder Include="Features\TestTemplates\Services\" />
+    <Folder Include="Features\TestTemplates\Pages\" />
+    <Folder Include="Services\" />
+    <Folder Include="Shared\Services\" />
+  </ItemGroup>
+
 </Project>

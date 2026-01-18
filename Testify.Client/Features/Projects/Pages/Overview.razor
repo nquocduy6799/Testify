@@ -1,0 +1,11 @@
+﻿@page "/projects/{ProjectId:int}/pm"
+@using Microsoft.AspNetCore.Authorization
+@using Testify.Client.Layouts
+@layout PMLayout
+@attribute [Authorize]
+
+<h3>Overview - Project @ProjectId</h3>
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+}

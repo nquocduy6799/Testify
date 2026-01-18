@@ -1,0 +1,516 @@
+﻿@page "/projects"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs.Projects
+@inject IProjectService ProjectService
+@inject NavigationManager Navigation
+@rendermode InteractiveWebAssembly
+@attribute [Authorize]
+
+<PageTitle>Project Management</PageTitle>
+
+<div class="min-h-screen bg-white font-sans text-slate-900">
+    <div class="animate-in fade-in mx-auto max-w-[1400px] space-y-8 px-8 duration-700">
+
+        @* --- HEADER SECTION --- *@
+        <div class="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+            <div class="space-y-6">
+                <div class="space-y-1">
+                    <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">Project Management</h1>
+                    <p class="font-medium text-slate-500">Oversee your active contracts and ongoing work.</p>
+                </div>
+
+                @* Segmented Controller (Visual Only for this demo, mapped to Projects) *@
+                <div class="flex w-fit rounded-[24px] border border-slate-100 bg-white p-1.5 shadow-sm">
+                    <button class="flex items-center gap-2 rounded-[20px] bg-[#1C1D2A] px-8 py-3 text-sm font-bold text-white shadow-lg transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+                        Active Projects
+                        <span class="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white">
+                            @(filteredProjects?.Count() ?? 0)
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex w-full items-center gap-4 md:w-auto">
+                <div class="relative flex-1 md:w-64">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                    <input type="text"
+                           @bind="searchTerm"
+                           @bind:event="oninput"
+                           placeholder="Search projects..."
+                           class="w-full rounded-2xl border border-transparent bg-white py-3 pr-4 pl-12 text-sm shadow-sm ring-1 ring-slate-100 transition-all outline-none focus:border-slate-200" />
+                </div>
+                <button @onclick="OpenCreateDialog" class="flex items-center gap-2 rounded-2xl bg-[#E85D3F] px-6 py-3 font-bold text-white shadow-[#E85D3F]/20 shadow-lg transition-all hover:scale-105">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                    New Project
+                </button>
+            </div>
+        </div>
+
+        @* --- FILTERS & VIEW TOGGLES --- *@
+        <div class="flex items-center justify-between border-b border-slate-200 pb-1">
+            <div class="flex gap-8">
+                @foreach (var tab in new[] { "All", "Active", "Completed" })
+                {
+                    <button @onclick="() => activeFilter = tab"
+                            class="@(activeFilter == tab ? "text-slate-900" : "text-slate-400 hover:text-slate-600") pb-4 text-sm font-bold transition-all relative">
+                        @tab
+                        @if (activeFilter == tab)
+                        {
+                            <div class="absolute bottom-0 left-0 h-1 w-full rounded-t-full bg-[#E85D3F]"></div>
+                        }
+                    </button>
+                }
+            </div>
+
+            <div class="mb-4 flex rounded-xl border border-slate-100 bg-white p-1 shadow-sm">
+                <button @onclick="@(() => viewType = "grid")" class="@(viewType == "grid" ? "bg-slate-100 text-slate-900" : "text-slate-400") p-2 rounded-lg transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /></svg>
+                </button>
+                <button @onclick="@(() => viewType = "list")" class="@(viewType == "list" ? "bg-slate-100 text-slate-900" : "text-slate-400") p-2 rounded-lg transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6" /><line x1="8" x2="21" y1="12" y2="12" /><line x1="8" x2="21" y1="18" y2="18" /><line x1="3" x2="3.01" y1="6" y2="6" /><line x1="3" x2="3.01" y1="12" y2="12" /><line x1="3" x2="3.01" y1="18" y2="18" /></svg>
+                </button>
+            </div>
+        </div>
+
+        @* --- LOADING & ERROR STATES --- *@
+        @if (isLoading)
+        {
+            <div class="flex flex-col items-center justify-center py-20">
+                <div class="h-10 w-10 animate-spin rounded-full border-b-2 border-[#E85D3F]"></div>
+                <p class="mt-4 font-medium text-slate-400">Loading projects...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-0.5 text-red-500"><circle cx="12" cy="12" r="10" /><line x1="15" x2="9" y1="9" y2="15" /><line x1="9" x2="15" y1="9" y2="15" /></svg>
+                <div>
+                    <h3 class="text-sm font-bold text-red-800">Something went wrong</h3>
+                    <p class="text-sm text-red-600">@errorMessage</p>
+                </div>
+            </div>
+        }
+        else if (filteredProjects == null || !filteredProjects.Any())
+        {
+            @* --- EMPTY STATE --- *@
+            <div class="space-y-6 rounded-[48px] border border-dashed border-slate-200 bg-white p-20 text-center">
+                <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300"><rect width="20" height="14" x="2" y="7" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-slate-800">No projects found</h3>
+                    <p class="mx-auto mt-2 max-w-xs text-slate-400">Start growing your portfolio by creating a new project.</p>
+                </div>
+                <button @onclick="OpenCreateDialog" class="rounded-2xl bg-[#E85D3F] px-10 py-4 font-bold text-white shadow-[#E85D3F]/20 shadow-xl transition-all hover:scale-105">
+                    Get Started
+                </button>
+            </div>
+        }
+        else
+        {
+            @* --- GRID CONTENT --- *@
+            <div class="grid gap-8 @(viewType == "grid" ? "grid-cols-1 md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1")">
+                @foreach (var project in filteredProjects)
+                {
+                    <div @onclick="() => NavigateToProjectWorkspace(project.Id)" class="group relative flex flex-col overflow-hidden rounded-[40px] border border-slate-50 bg-white p-8 shadow-sm transition-all hover:shadow-xl">
+                        @* Color Strip *@
+                        @* <div class="absolute top-0 left-0 h-full w-2" style="background-color: @(string.IsNullOrEmpty(project.Color) ? "#E85D3F" : project.Color)"></div> *@
+                        <div class="absolute top-0 left-0 h-full w-2" style="background-color: #E85D3F"></div>
+
+                        @* Card Header *@
+                        <div class="mb-6 flex items-start justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="flex h-14 w-14 items-center justify-center rounded-2xl border bg-slate-50 text-xl font-bold text-slate-400 shadow-sm">
+                                    @(string.IsNullOrEmpty(project.Client) ? "P" : project.Client.Substring(0, 1).ToUpper())
+                                </div>
+                                <div>
+                                    <h3 class="line-clamp-1 text-lg font-bold text-slate-800 transition-colors group-hover:text-[#E85D3F]">@project.Name</h3>
+                                    <p class="text-sm font-medium text-slate-400">@(string.IsNullOrEmpty(project.Client) ? "Internal" : project.Client) • @project.MembersCount Members</p>
+                                </div>
+                            </div>
+
+                            @* Actions Dropdown *@
+                            <div class="group/menu relative">
+                                <button class="p-2 text-slate-300 transition-colors hover:text-slate-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+                                </button>
+                                <div class="absolute top-6 right-0 z-10 hidden w-32 rounded-xl border border-slate-100 bg-white p-1 shadow-xl group-hover/menu:block">
+                                    <button @onclick="() => OpenEditDialog(project)" class="w-full text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg> Edit
+                                    </button>
+                                    <button @onclick="() => OpenDeleteDialog(project)" class="w-full text-left px-3 py-2 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-lg flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* Stats Grid *@
+                        <div class="mb-8 grid grid-cols-2 gap-6">
+                            <div class="space-y-1">
+                                <p class="font-bold tracking-widest text-slate-400 text-[10px] uppercase">Deadline</p>
+                                <p class="text-sm font-bold text-slate-700">@(project.Deadline.HasValue? project.Deadline.Value.ToString("MMM dd, yyyy") : "No Date")</p>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="font-bold tracking-widest text-slate-400 text-[10px] uppercase">Threshold</p>
+                                <p class="text-sm font-bold text-slate-700">@project.BugThreshold Bugs</p>
+                            </div>
+                        </div>
+
+                        @* Progress Bar *@
+                        <div class="mb-8 space-y-2">
+                            <div class="flex items-end justify-between">
+                                <span class="font-bold tracking-widest text-[10px] text-slate-400 uppercase">Milestone Progress</span>
+                                <span class="text-sm font-extrabold text-[#E85D3F]">@project.Progress%</span>
+                            </div>
+                            <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                                <div class="h-full bg-[#E85D3F] shadow-[0_0_10px_rgba(232,93,63,0.3)] transition-all duration-1000 ease-out"
+                                     style="width: @project.Progress%"></div>
+                            </div>
+                        </div>
+
+                        @* Card Footer *@
+                        <div class="mt-auto space-y-4 border-t border-slate-50 pt-6">
+                            <div class="flex items-center justify-between">
+                                @* <button class="flex items-center gap-2 rounded-xl bg-[#1C1D2A] px-6 py-3 text-xs font-bold text-white shadow-lg transition-all hover:bg-[#E85D3F]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" /></svg>
+                                    Project Room
+                                </button> *@
+                                <div class="flex items-center gap-1.5 font-bold tracking-widest text-slate-400 text-[10px] uppercase">
+                                    <span class="h-2 w-2 rounded-full @(project.Progress == 100 ? "bg-emerald-500" : "bg-blue-500")"></span>
+                                    @(project.Progress == 100 ? "Completed" : "Active")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @* --- CREATE/EDIT MODAL --- *@
+    @if (showModal)
+    {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @onclick="CloseModal"></div>
+
+            <div class="animate-in fade-in zoom-in relative w-full max-w-lg overflow-hidden rounded-[32px] bg-white shadow-2xl duration-200">
+                <div class="flex items-center justify-between border-b border-slate-50 bg-slate-50/50 p-8">
+                    <h3 class="text-xl font-extrabold text-slate-800">@(isEditMode ? "Edit Project" : "New Project")</h3>
+                    <button @onclick="CloseModal" class="rounded-full bg-white p-2 text-slate-400 shadow-sm transition-colors hover:text-slate-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18" /><line x1="6" x2="18" y1="6" y2="18" /></svg>
+                    </button>
+                </div>
+
+                <div class="p-8">
+                    @if (!string.IsNullOrEmpty(formErrorMessage))
+                    {
+                        <div class="mb-6 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-600">@formErrorMessage</div>
+                    }
+
+                    <EditForm Model="@projectForm" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+
+                        <div class="space-y-5">
+                            <div class="space-y-2">
+                                <label class="ml-1 text-xs font-bold tracking-widest text-slate-400 uppercase">Project Name</label>
+                                <InputText @bind-Value="projectForm.Name" class="w-full rounded-2xl border border-transparent bg-slate-50 px-5 py-3 text-sm font-bold text-slate-800 transition-all outline-none focus:border-[#E85D3F] focus:bg-white" placeholder="e.g. Website Redesign" />
+                                <ValidationMessage For="@(() => projectForm.Name)" class="text-xs text-red-500 ml-1" />
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-2">
+                                    <label class="ml-1 text-xs font-bold tracking-widest text-slate-400 uppercase">Client</label>
+                                    <InputText @bind-Value="projectForm.Client" class="w-full rounded-2xl border border-transparent bg-slate-50 px-5 py-3 text-sm font-bold text-slate-800 transition-all outline-none focus:border-[#E85D3F] focus:bg-white" placeholder="Client Name" />
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="ml-1 text-xs font-bold tracking-widest text-slate-400 uppercase">Description</label>
+                                <InputTextArea @bind-Value="projectForm.Description" rows="3" class="w-full rounded-2xl border border-transparent bg-slate-50 px-5 py-3 text-sm font-medium text-slate-600 transition-all outline-none focus:border-[#E85D3F] focus:bg-white" placeholder="Project details..." />
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-2">
+                                    <label class="ml-1 text-xs font-bold tracking-widest text-slate-400 uppercase">Deadline</label>
+                                    <InputDate @bind-Value="projectForm.Deadline" class="w-full rounded-2xl border border-transparent bg-slate-50 px-5 py-3 text-sm font-bold text-slate-800 transition-all outline-none focus:border-[#E85D3F] focus:bg-white" />
+                                </div>
+                            </div>
+
+                            @if (isEditMode)
+                            {
+                                <div class="space-y-2">
+                                    <label class="ml-1 text-xs font-bold tracking-widest text-slate-400 uppercase">Progress (@projectForm.Progress%)</label>
+                                    <input type="range" @bind="projectForm.Progress" min="0" max="100" class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-100 accent-[#E85D3F]" />
+                                </div>
+                            }
+
+                            <div class="flex gap-3 pt-4">
+                                <button type="button" @onclick="CloseModal" class="flex-1 rounded-2xl border border-slate-200 bg-white py-4 font-bold text-slate-600 transition-all hover:bg-slate-50">Cancel</button>
+                                <button type="submit" disabled="@isSubmitting" class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#E85D3F] py-4 font-bold text-white transition-all hover:shadow-[#E85D3F]/30 hover:shadow-lg">
+                                    @if (isSubmitting)
+                                    {
+                                        <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                                    }
+                                    @(isEditMode ? "Save Changes" : "Create Project")
+                                </button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* --- DELETE MODAL --- *@
+    @if (showDeleteModal)
+    {
+        <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @onclick="CloseDeleteDialog"></div>
+            <div class="animate-in fade-in zoom-in relative w-full max-w-sm rounded-[32px] bg-white p-8 text-center shadow-2xl duration-200">
+                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+                </div>
+                <h3 class="mb-2 text-xl font-extrabold text-slate-800">Delete Project?</h3>
+                <p class="mb-6 font-medium text-slate-500">Are you sure you want to delete <span class="font-bold text-slate-900">@projectToDelete?.Name</span>? This action cannot be undone.</p>
+
+                @if (!string.IsNullOrEmpty(deleteErrorMessage))
+                {
+                    <div class="mb-6 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-600">@deleteErrorMessage</div>
+                }
+
+                <div class="flex gap-3">
+                    <button @onclick="CloseDeleteDialog" class="flex-1 rounded-xl bg-slate-100 py-3 font-bold text-slate-600 transition-all hover:bg-slate-200">Cancel</button>
+                    <button @onclick="HandleDelete" disabled="@isDeleting" class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 py-3 font-bold text-white transition-all hover:shadow-lg hover:shadow-red-500/30">
+                        @if (isDeleting)
+                        {
+                            <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                        }
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+    private List<ProjectResponse>? projects;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    // View State
+    private string viewType = "grid";
+    private string activeFilter = "All";
+    private string searchTerm = "";
+
+    // Modal State
+    private bool showModal = false;
+    private bool showDeleteModal = false;
+    private bool isEditMode = false;
+    private bool isSubmitting = false;
+    private bool isDeleting = false;
+    private string? formErrorMessage;
+    private string? deleteErrorMessage;
+
+    // Form Data
+    private ProjectFormModel projectForm = new();
+    private ProjectResponse? projectToDelete;
+    private int? editingProjectId;
+
+    // Filter Logic
+    private IEnumerable<ProjectResponse>? filteredProjects =>
+        projects?
+        .Where(p =>
+            (activeFilter == "All" ||
+            (activeFilter == "Active" && p.Progress < 100) ||
+            (activeFilter == "Completed" && p.Progress == 100))
+            &&
+            (string.IsNullOrEmpty(searchTerm) ||
+             p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             (!string.IsNullOrEmpty(p.Client) && p.Client.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)))
+        );
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjects();
+    }
+
+    private async Task LoadProjects()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            projects = await ProjectService.GetProjectsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load projects: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        isEditMode = false;
+        editingProjectId = null;
+        projectForm = new ProjectFormModel
+        {
+        };
+        formErrorMessage = null;
+        showModal = true;
+    }
+
+    private void OpenEditDialog(ProjectResponse project)
+    {
+        isEditMode = true;
+        editingProjectId = project.Id;
+        projectForm = new ProjectFormModel
+        {
+            Name = project.Name,
+            Description = project.Description,
+            Client = project.Client,
+            Progress = project.Progress,
+            Deadline = project.Deadline,
+        };
+        formErrorMessage = null;
+        showModal = true;
+    }
+
+    private void OpenDeleteDialog(ProjectResponse project)
+    {
+        projectToDelete = project;
+        deleteErrorMessage = null;
+        showDeleteModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        projectForm = new();
+        formErrorMessage = null;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        showDeleteModal = false;
+        projectToDelete = null;
+        deleteErrorMessage = null;
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            isSubmitting = true;
+            formErrorMessage = null;
+
+            if (isEditMode && editingProjectId.HasValue)
+            {
+                var updateRequest = new UpdateProjectRequest
+                {
+                    Name = projectForm.Name,
+                    Description = projectForm.Description,
+                    Client = projectForm.Client,
+                    Progress = projectForm.Progress,
+                    Deadline = projectForm.Deadline,
+                };
+
+                await ProjectService.UpdateProjectAsync(editingProjectId.Value, updateRequest);
+            }
+            else
+            {
+                var createRequest = new CreateProjectRequest
+                {
+                    Name = projectForm.Name,
+                    Description = projectForm.Description,
+                    Client = projectForm.Client,
+                    Deadline = projectForm.Deadline,
+                };
+
+                await ProjectService.CreateProjectAsync(createRequest);
+            }
+
+            CloseModal();
+            await LoadProjects();
+        }
+        catch (Exception ex)
+        {
+            formErrorMessage = $"Action failed: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task HandleDelete()
+    {
+        if (projectToDelete == null) return;
+
+        try
+        {
+            isDeleting = true;
+            deleteErrorMessage = null;
+
+            var success = await ProjectService.DeleteProjectAsync(projectToDelete.Id);
+            if (success)
+            {
+                CloseDeleteDialog();
+                await LoadProjects();
+            }
+            else
+            {
+                deleteErrorMessage = "Failed to delete project.";
+            }
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private async Task NavigateToProjectWorkspace(int projectId)
+    {
+        var userRole = await ProjectService.GetMyRoleInProjectAsync(projectId);
+
+        if (userRole.HasValue)
+        {
+            Navigation.NavigateToProject(projectId, userRole.Value);
+        }
+        else
+        {
+            Navigation.NavigateTo($"/projects/{projectId}");
+        }
+    }
+
+    private class ProjectFormModel
+    {
+        [Required]
+        [StringLength(200)]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(1000)]
+        public string? Description { get; set; }
+
+        [StringLength(200)]
+        public string? Client { get; set; }
+
+        [Range(0, 100)]
+        public int Progress { get; set; }
+
+        public DateTime? Deadline { get; set; }
+    }
+}
