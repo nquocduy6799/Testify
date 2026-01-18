@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Testify.Entities
 {
-    public class Milestone
+    public class Milestone : AuditEntity
     {
         public int Id { get; set; }
         public int ProjectId { get; set; }
