@@ -1,4 +1,5 @@
 ﻿using Testify.Shared.DTOs.Projects;
+using Testify.Shared.Enums;
 
 namespace Testify.Client.Interfaces
 {
@@ -9,6 +10,7 @@ namespace Testify.Client.Interfaces
         Task<ProjectResponse> CreateProjectAsync(CreateProjectRequest request);
         Task<ProjectResponse> UpdateProjectAsync(int id, UpdateProjectRequest request);
         Task<bool> DeleteProjectAsync(int id);
+        Task<ProjectRole?> GetMyRoleInProjectAsync(int projectId);
     }
 }
 

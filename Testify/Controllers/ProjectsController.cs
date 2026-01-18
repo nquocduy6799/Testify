@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.Projects;
+using Testify.Shared.Enums;
 
 namespace Testify.Controllers
 {
@@ -92,6 +93,22 @@ namespace Testify.Controllers
             }
 
             return NoContent();
+        }
+
+        // GET: api/Projects/5/my-role
+        [HttpGet("{projectId}/my-role")]
+        public async Task<ActionResult<ProjectRole?>> GetMyRoleInProject(int projectId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var role = await _projectRepository.GetUserRoleInProjectAsync(projectId, userId);
+
+            return Ok(role);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using Testify.Client.Interfaces;
 using Testify.Shared.DTOs.Projects;
+using Testify.Shared.Enums;
 
 namespace Testify.Client.Features.Projects.Services
 {
@@ -82,6 +83,19 @@ namespace Testify.Client.Features.Projects.Services
             catch (HttpRequestException)
             {
                 return false;
+            }
+        }
+
+        public async Task<ProjectRole?> GetMyRoleInProjectAsync(int projectId)
+        {
+            try
+            {
+                var role = await _httpClient.GetFromJsonAsync<ProjectRole?>($"{ApiEndpoint}/{projectId}/my-role");
+                return role;
+            }
+            catch (HttpRequestException)
+            {
+                return null;
             }
         }
     }

@@ -142,5 +142,14 @@ namespace Testify.Repositories
                 UpdatedBy = project.UpdatedBy
             };
         }
+
+        public async Task<ProjectRole?> GetUserRoleInProjectAsync(int projectId, string userId)
+        {
+            var teamMember = await _context.ProjectTeamMembers
+                .Where(tm => tm.ProjectId == projectId && tm.UserId == userId)
+                .FirstOrDefaultAsync();
+
+            return teamMember?.Role;
+        }
     }
 }
