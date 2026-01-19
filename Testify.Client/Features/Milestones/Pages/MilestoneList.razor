@@ -1,0 +1,162 @@
+@page "/projects/{projectId:int}/milestones"
+@using Testify.Shared.Entities
+@using Testify.Client.Features.Milestones.Services
+@using Testify.Client.Features.Milestones.Components
+@using Testify.Client.Interfaces
+@inject IMilestoneService MilestoneService
+@rendermode InteractiveAuto
+
+<div class="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-[#E85D3F]/20 selection:text-[#E85D3F]">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+        
+        @* Header *@
+        <div class="mb-12 flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
+            <div class="space-y-4 max-w-3xl">
+                <div class="flex items-center gap-4">
+                     <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-900/5 text-[#E85D3F]">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+                    </span>
+                    <div>
+                         <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">Milestones</h1>
+                         <p class="text-sm font-medium text-slate-500">Project Roadmap</p>
+                    </div>
+                </div>
+                <p class="text-lg text-slate-600 leading-relaxed max-w-2xl">
+                    Track key deliverables and timelines. Ensure your project stays on the path to success with clear checkpoints.
+                </p>
+            </div>
+
+            <button @onclick="OpenCreateDialog" class="group flex items-center gap-3 rounded-2xl bg-slate-900 pl-4 pr-6 py-3.5 font-bold text-white shadow-xl shadow-slate-900/10 transition-all hover:scale-105 hover:bg-[#E85D3F] hover:shadow-[#E85D3F]/20 active:scale-95">
+                <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 transition-colors group-hover:bg-white/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+                </span>
+                <span class="tracking-wide">New Milestone</span>
+            </button>
+        </div>
+
+        @if (isLoading)
+        {
+             <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                @for (int i = 0; i < 3; i++)
+                {
+                    <div class="animate-pulse rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <div class="h-4 w-2/3 rounded bg-slate-100 mb-4"></div>
+                        <div class="h-3 w-1/3 rounded bg-slate-50 mb-8"></div>
+                        <div class="space-y-3">
+                             <div class="h-2 w-full rounded bg-slate-50"></div>
+                             <div class="h-2 w-5/6 rounded bg-slate-50"></div>
+                        </div>
+                         <div class="mt-8 pt-4 border-t border-slate-50 flex justify-between">
+                            <div class="h-3 w-1/4 rounded bg-slate-100"></div>
+                            <div class="h-3 w-1/4 rounded bg-slate-100"></div>
+                        </div>
+                    </div>
+                }
+             </div>
+        }
+        else if (milestones == null || !milestones.Any())
+        {
+            <div class="flex flex-col items-center justify-center rounded-[40px] border border-dashed border-slate-300 bg-white/50 p-24 text-center">
+                 <div class="mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-slate-50 shadow-inner ring-1 ring-slate-900/5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+                </div>
+                <h3 class="mb-3 text-2xl font-bold text-slate-900">No milestones yet</h3>
+                <p class="mb-10 max-w-md text-slate-500 leading-relaxed">Milestones help you break down your project into manageable chunks. Create your first one to get started.</p>
+                <button @onclick="OpenCreateDialog" class="font-bold text-[#E85D3F] hover:text-[#d14022] hover:underline underline-offset-8 decoration-2 transition-all">
+                    + Create First Milestone
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach (var milestone in milestones)
+                {
+                    <MilestoneCard Milestone="milestone" OnEdit="OpenEditDialog" OnDelete="DeleteMilestone" />
+                }
+            </div>
+        }
+    </div>
+
+    <MilestoneForm Show="showModal" Milestone="editingMilestone" OnSave="SaveMilestone" OnCancel="CloseModal" />
+</div>
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+
+    private List<Milestone>? milestones;
+    private Milestone editingMilestone = new();
+    private bool showModal = false;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMilestones();
+    }
+
+    private async Task LoadMilestones()
+    {
+        isLoading = true;
+        try
+        {
+            // Simulate minimal delay for smooth UX transition if real API is too fast (optional)
+            await Task.Delay(300); 
+            milestones = await MilestoneService.GetMilestonesByProjectAsync(ProjectId);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        editingMilestone = new Milestone { ProjectId = ProjectId };
+        showModal = true;
+    }
+
+    private void OpenEditDialog(Milestone milestone)
+    {
+        // Clone object to avoid direct mutation in list
+        editingMilestone = new Milestone
+        {
+            Id = milestone.Id,
+            ProjectId = milestone.ProjectId,
+            Name = milestone.Name,
+            Description = milestone.Description,
+            StartDate = milestone.StartDate,
+            EndDate = milestone.EndDate,
+            Status = milestone.Status
+        };
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
+    private async Task SaveMilestone()
+    {
+        if (editingMilestone.Id == 0)
+        {
+            await MilestoneService.CreateMilestoneAsync(editingMilestone);
+        }
+        else
+        {
+            await MilestoneService.UpdateMilestoneAsync(editingMilestone);
+        }
+        showModal = false;
+        await LoadMilestones();
+    }
+
+    private async Task DeleteMilestone(Milestone milestone)
+    {
+        // In a real app, you might want to show a specialized confirmation dialog here
+        // or ensure the `MilestoneService` handles the deletion confirmation logic if implemented there.
+        // For now, we proceed with the assumption of a deletion action.
+        
+        await MilestoneService.DeleteMilestoneAsync(milestone.Id);
+        await LoadMilestones();
+    }
+}

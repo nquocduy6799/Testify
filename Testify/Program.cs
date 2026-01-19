@@ -63,6 +63,7 @@ builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<IMilestoneService, Testify.Client.Features.Milestones.Services.MilestoneService>();
 
 
 // Add controllers for API endpoints

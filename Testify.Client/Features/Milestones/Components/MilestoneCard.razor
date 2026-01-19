@@ -1,0 +1,121 @@
+@using Testify.Shared.Entities
+
+<div class="group relative flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/50">
+    
+    @* Status Color Strip *@
+    <div class="absolute top-6 bottom-6 left-0 w-1 rounded-r-full transition-colors duration-300 @GetStatusColor(Milestone.Status)"></div>
+
+    <div class="mb-5 flex items-start justify-between pl-4">
+        <div class="space-y-2">
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider @GetStatusBadgeColor(Milestone.Status)">
+                @Milestone.Status
+            </span>
+            <h3 class="text-xl font-bold text-slate-900 leading-snug tracking-tight transition-colors group-hover:text-[#E85D3F]">
+                @Milestone.Name
+            </h3>
+        </div>
+        
+        <div class="relative">
+            <button @onclick="ToggleMenu" @onfocusout="CloseMenuAsync" class="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-700 @(isMenuOpen ? "bg-slate-100 text-slate-700" : "")">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></svg>
+            </button>
+            
+            @if (isMenuOpen)
+            {
+                <div class="absolute top-8 right-0 z-10 w-40 origin-top-right rounded-2xl border border-slate-100 bg-white p-1.5 shadow-xl ring-1 ring-slate-900/5 focus:outline-none animate-in fade-in zoom-in-95 duration-100">
+                    <button @onclick="EditMilestone" @onmousedown:preventDefault class="w-full text-left px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2.5 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg> 
+                        Edit
+                    </button>
+                    <button @onclick="DeleteMilestone" @onmousedown:preventDefault class="w-full text-left px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl flex items-center gap-2.5 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-400"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg> 
+                        Delete
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Milestone.Description))
+    {
+        <p class="mb-6 line-clamp-2 pl-4 text-sm leading-relaxed text-slate-500">@Milestone.Description</p>
+    }
+    else
+    {
+         <p class="mb-6 line-clamp-2 pl-4 text-sm leading-relaxed text-slate-400 italic">No description provided.</p>
+    }
+
+    <div class="mt-auto border-t border-slate-100 pt-5 pl-4">
+        <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-1">
+                <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400">Timeline</span>
+                 <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <span>@Milestone.StartDate.ToString("MMM dd")</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300"><path d="M5 12h14" /><path d="M12 5l7 7-7 7"/></svg>
+                    <span>@Milestone.EndDate.ToString("MMM dd, yyyy")</span>
+                 </div>
+            </div>
+             @* Optional: Can add a small avatar pile or urgency indicator here in future *@
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [Parameter] public Milestone Milestone { get; set; } = default!;
+    [Parameter] public EventCallback<Milestone> OnEdit { get; set; }
+    [Parameter] public EventCallback<Milestone> OnDelete { get; set; }
+
+    private bool isMenuOpen = false;
+
+    private void ToggleMenu()
+    {
+        isMenuOpen = !isMenuOpen;
+    }
+
+    private async Task CloseMenuAsync()
+    {
+        // Small delay to allow click events on menu items to register before the menu closes
+        await Task.Delay(150);
+        isMenuOpen = false;
+    }
+
+    private async Task EditMilestone()
+    {
+        // Don't close immediately to avoid UI glitch, parent will handle dialog
+        isMenuOpen = false;
+        await OnEdit.InvokeAsync(Milestone);
+    }
+
+    private async Task DeleteMilestone()
+    {
+        isMenuOpen = false;
+        await OnDelete.InvokeAsync(Milestone);
+    }
+
+    private string GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Completed" => "bg-blue-500",
+            "Active" => "bg-emerald-500",
+            "OnHold" => "bg-amber-500",
+            "Planned" => "bg-indigo-500",
+            "Closed" => "bg-slate-400",
+            _ => "bg-slate-300"
+        };
+    }
+
+    private string GetStatusBadgeColor(string status)
+    {
+        return status switch
+        {
+            "Completed" => "bg-blue-50 text-blue-700 ring-1 ring-blue-600/10",
+            "Active" => "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/10",
+            "OnHold" => "bg-amber-50 text-amber-700 ring-1 ring-amber-600/10",
+            "Planned" => "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/10",
+            "Closed" => "bg-slate-100 text-slate-600 ring-1 ring-slate-500/10",
+             _ => "bg-slate-50 text-slate-600 ring-1 ring-slate-400/10"
+        };
+    }
+}

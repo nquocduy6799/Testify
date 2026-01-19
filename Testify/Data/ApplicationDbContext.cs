@@ -4,7 +4,8 @@ using Testify.Entities;
 
 namespace Testify.Data
 {
-    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
+    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        : IdentityDbContext<ApplicationUser>(options)
     {
         // Project Management
         public DbSet<Project> Projects { get; set; }
@@ -12,7 +13,8 @@ namespace Testify.Data
         public DbSet<ProjectFolder> ProjectFolders { get; set; }
 
         // Milestone & Tasks
-        public DbSet<Milestone> Milestones { get; set; }
+        public DbSet<Testify.Shared.Entities.Milestone> Milestones { get; set; }
+
         public DbSet<KanbanTask> Tasks { get; set; }
 
         // Templates

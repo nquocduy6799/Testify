@@ -1,0 +1,97 @@
+@using System.ComponentModel.DataAnnotations
+@using Testify.Shared.Entities
+
+@if (Show)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        @* Backdrop *@
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @onclick="() => OnCancel.InvokeAsync()"></div>
+
+        @* Modal Card *@
+        <div class="animate-in fade-in zoom-in-95 relative w-full max-w-lg overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-900/5 duration-200">
+            
+            @* Header *@
+            <div class="flex items-center justify-between px-8 pt-8 pb-6">
+                <h3 class="text-2xl font-bold text-slate-900 tracking-tight">
+                    @(Milestone.Id == 0 ? "Create Milestone" : "Edit Milestone")
+                </h3>
+                <button @onclick="() => OnCancel.InvokeAsync()" class="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-900">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18" /><line x1="6" x2="18" y1="6" y2="18" /></svg>
+                </button>
+            </div>
+
+            <div class="px-8 pb-8">
+                <EditForm Model="@Milestone" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="mb-6 rounded-xl bg-red-50 p-4 text-xs font-bold text-red-600" />
+
+                    <div class="space-y-6">
+                        <div class="space-y-2">
+                            <label class="ml-1 text-[11px] font-bold tracking-wider text-slate-500 uppercase">Milestone Name</label>
+                            <InputText @bind-Value="Milestone.Name" class="w-full rounded-2xl border-0 bg-slate-50 px-5 py-3.5 text-sm font-bold text-slate-900 ring-1 ring-transparent transition-all placeholder:text-slate-400 focus:bg-white focus:ring-[#E85D3F]/20 focus:shadow-lg focus:shadow-[#E85D3F]/10 outline-none" placeholder="e.g. Phase 1 Delivery" />
+                            <ValidationMessage For="@(() => Milestone.Name)" class="text-xs text-red-500 ml-1 font-medium" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="ml-1 text-[11px] font-bold tracking-wider text-slate-500 uppercase">Description</label>
+                            <InputTextArea @bind-Value="Milestone.Description" rows="3" class="w-full rounded-2xl border-0 bg-slate-50 px-5 py-3.5 text-sm font-medium text-slate-900 ring-1 ring-transparent transition-all placeholder:text-slate-400 focus:bg-white focus:ring-[#E85D3F]/20 focus:shadow-lg focus:shadow-[#E85D3F]/10 outline-none" placeholder="Describe the objectives and deliverables..." />
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-5">
+                            <div class="space-y-2">
+                                <label class="ml-1 text-[11px] font-bold tracking-wider text-slate-500 uppercase">Start Date</label>
+                                <InputDate @bind-Value="Milestone.StartDate" class="w-full rounded-2xl border-0 bg-slate-50 px-5 py-3.5 text-sm font-bold text-slate-900 ring-1 ring-transparent transition-all focus:bg-white focus:ring-[#E85D3F]/20 focus:shadow-lg focus:shadow-[#E85D3F]/10 outline-none" />
+                            </div>
+                            <div class="space-y-2">
+                                <label class="ml-1 text-[11px] font-bold tracking-wider text-slate-500 uppercase">End Date</label>
+                                <InputDate @bind-Value="Milestone.EndDate" class="w-full rounded-2xl border-0 bg-slate-50 px-5 py-3.5 text-sm font-bold text-slate-900 ring-1 ring-transparent transition-all focus:bg-white focus:ring-[#E85D3F]/20 focus:shadow-lg focus:shadow-[#E85D3F]/10 outline-none" />
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="ml-1 text-[11px] font-bold tracking-wider text-slate-500 uppercase">Status</label>
+                            <div class="relative">
+                                <InputSelect @bind-Value="Milestone.Status" class="w-full appearance-none rounded-2xl border-0 bg-slate-50 px-5 py-3.5 text-sm font-bold text-slate-900 ring-1 ring-transparent transition-all focus:bg-white focus:ring-[#E85D3F]/20 focus:shadow-lg focus:shadow-[#E85D3F]/10 outline-none">
+                                    <option value="Planned">Planned</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="OnHold">On Hold</option>
+                                    <option value="Closed">Closed</option>
+                                </InputSelect>
+                                <div class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 pt-6">
+                            <button type="button" @onclick="() => OnCancel.InvokeAsync()" class="flex-1 rounded-2xl border border-slate-200 bg-white py-3.5 font-bold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300">
+                                Cancel
+                            </button>
+                            <button type="submit" class="flex-1 rounded-2xl bg-[#E85D3F] py-3.5 font-bold text-white shadow-xl shadow-[#E85D3F]/20 transition-all hover:-translate-y-0.5 hover:shadow-[#E85D3F]/40 active:translate-y-0 active:shadow-sm">
+                                Save Milestone
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public Milestone Milestone { get; set; } = new();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleSubmit()
+    {
+        if (!Milestone.IsValidDateRange())
+        {
+            // Ideally handle this with a custom validator or show a toast
+            return; 
+        }
+        await OnSave.InvokeAsync();
+    }
+}

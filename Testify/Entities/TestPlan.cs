@@ -9,7 +9,7 @@ namespace Testify.Entities
     {
         public int Id { get; set; }
         public int ProjectId { get; set; }
-        public int? MilestoneId { get; set; }
+
         public int? TaskId { get; set; }
         public TestPlanScope Scope { get; set; } = TestPlanScope.Project;
         public string Name { get; set; } = string.Empty;
@@ -21,9 +21,10 @@ namespace Testify.Entities
 
         // Navigation properties
         public virtual Project Project { get; set; } = null!;
-        public virtual Milestone? Milestone { get; set; }
+
         public virtual KanbanTask? Task { get; set; }
-        public virtual ICollection<TestPlanSuite> TestPlanSuites { get; set; } = new List<TestPlanSuite>();
+        public virtual ICollection<TestPlanSuite> TestPlanSuites { get; set; } =
+            new List<TestPlanSuite>();
         public virtual ICollection<TestRun> TestRuns { get; set; } = new List<TestRun>();
     }
 }
