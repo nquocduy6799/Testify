@@ -1,5 +1,5 @@
 @page "/projects/{projectId:int}/milestones"
-@using Testify.Shared.Entities
+@using Testify.Shared.DTOs.Milestones
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
@@ -84,8 +84,8 @@
 @code {
     [Parameter] public int ProjectId { get; set; }
 
-    private List<Milestone>? milestones;
-    private Milestone editingMilestone = new();
+    private List<MilestoneDTO>? milestones;
+    private MilestoneDTO editingMilestone = new();
     private bool showModal = false;
     private bool isLoading = true;
 
@@ -111,14 +111,19 @@
 
     private void OpenCreateDialog()
     {
-        editingMilestone = new Milestone { ProjectId = ProjectId };
+        editingMilestone = new MilestoneDTO 
+        { 
+            ProjectId = ProjectId,
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddDays(7)
+        };
         showModal = true;
     }
 
-    private void OpenEditDialog(Milestone milestone)
+    private void OpenEditDialog(MilestoneDTO milestone)
     {
         // Clone object to avoid direct mutation in list
-        editingMilestone = new Milestone
+        editingMilestone = new MilestoneDTO
         {
             Id = milestone.Id,
             ProjectId = milestone.ProjectId,
@@ -140,17 +145,34 @@
     {
         if (editingMilestone.Id == 0)
         {
-            await MilestoneService.CreateMilestoneAsync(editingMilestone);
+            var createDTO = new CreateMilestoneDTO
+            {
+                ProjectId = editingMilestone.ProjectId,
+                Name = editingMilestone.Name,
+                Description = editingMilestone.Description,
+                StartDate = editingMilestone.StartDate,
+                EndDate = editingMilestone.EndDate
+            };
+            await MilestoneService.CreateMilestoneAsync(createDTO);
         }
         else
         {
-            await MilestoneService.UpdateMilestoneAsync(editingMilestone);
+            var updateDTO = new UpdateMilestoneDTO
+            {
+                Id = editingMilestone.Id,
+                Name = editingMilestone.Name,
+                Description = editingMilestone.Description,
+                StartDate = editingMilestone.StartDate,
+                EndDate = editingMilestone.EndDate,
+                Status = editingMilestone.Status
+            };
+            await MilestoneService.UpdateMilestoneAsync(updateDTO);
         }
         showModal = false;
         await LoadMilestones();
     }
 
-    private async Task DeleteMilestone(Milestone milestone)
+    private async Task DeleteMilestone(MilestoneDTO milestone)
     {
         // In a real app, you might want to show a specialized confirmation dialog here
         // or ensure the `MilestoneService` handles the deletion confirmation logic if implemented there.

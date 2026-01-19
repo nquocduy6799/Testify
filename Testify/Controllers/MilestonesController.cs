@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Testify.Data;
-using Testify.Shared.Entities;
+using Testify.Entities;
+using Testify.Shared.DTOs.Milestones;
 
 namespace Testify.Controllers
 {
@@ -13,17 +14,30 @@ namespace Testify.Controllers
 
         // GET: api/Milestones/project/{projectId}
         [HttpGet("project/{projectId}")]
-        public async Task<ActionResult<IEnumerable<Milestone>>> GetMilestonesByProject(int projectId)
+        public async Task<ActionResult<IEnumerable<MilestoneDTO>>> GetMilestonesByProject(int projectId)
         {
-            return await _context.Milestones
+            var milestones = await _context.Milestones
                 .Where(m => m.ProjectId == projectId)
                 .OrderBy(m => m.StartDate)
                 .ToListAsync();
+
+            var dtos = milestones.Select(m => new MilestoneDTO
+            {
+                Id = m.Id,
+                ProjectId = m.ProjectId,
+                Name = m.Name,
+                Description = m.Description,
+                StartDate = m.StartDate,
+                EndDate = m.EndDate,
+                Status = m.Status
+            }).ToList();
+
+            return dtos;
         }
 
         // GET: api/Milestones/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Milestone>> GetMilestone(int id)
+        public async Task<ActionResult<MilestoneDTO>> GetMilestone(int id)
         {
             var milestone = await _context.Milestones.FindAsync(id);
 
@@ -32,39 +46,81 @@ namespace Testify.Controllers
                 return NotFound();
             }
 
-            return milestone;
+            return new MilestoneDTO
+            {
+                Id = milestone.Id,
+                ProjectId = milestone.ProjectId,
+                Name = milestone.Name,
+                Description = milestone.Description,
+                StartDate = milestone.StartDate,
+                EndDate = milestone.EndDate,
+                Status = milestone.Status
+            };
         }
 
         // POST: api/Milestones
         [HttpPost]
-        public async Task<ActionResult<Milestone>> CreateMilestone(Milestone milestone)
+        public async Task<ActionResult<MilestoneDTO>> CreateMilestone(CreateMilestoneDTO dto)
         {
-            if (!milestone.IsValidDateRange())
+            if (!dto.IsValidDateRange())
             {
                 ModelState.AddModelError("EndDate", "End Date must be greater than or equal to Start Date.");
                 return BadRequest(ModelState);
             }
+
+            var milestone = new Milestone
+            {
+                ProjectId = dto.ProjectId,
+                Name = dto.Name,
+                Description = dto.Description,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
+                Status = "Planned"
+            };
 
             _context.Milestones.Add(milestone);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetMilestone", new { id = milestone.Id }, milestone);
+            var resultDTO = new MilestoneDTO
+            {
+                Id = milestone.Id,
+                ProjectId = milestone.ProjectId,
+                Name = milestone.Name,
+                Description = milestone.Description,
+                StartDate = milestone.StartDate,
+                EndDate = milestone.EndDate,
+                Status = milestone.Status
+            };
+
+            return CreatedAtAction("GetMilestone", new { id = milestone.Id }, resultDTO);
         }
 
         // PUT: api/Milestones/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateMilestone(int id, Milestone milestone)
+        public async Task<IActionResult> UpdateMilestone(int id, UpdateMilestoneDTO dto)
         {
-            if (id != milestone.Id)
+            if (id != dto.Id)
             {
                 return BadRequest();
             }
 
-            if (!milestone.IsValidDateRange())
+            if (!dto.IsValidDateRange())
             {
                 ModelState.AddModelError("EndDate", "End Date must be greater than or equal to Start Date.");
                 return BadRequest(ModelState);
             }
+
+            var milestone = await _context.Milestones.FindAsync(id);
+            if (milestone == null)
+            {
+                return NotFound();
+            }
+
+            milestone.Name = dto.Name;
+            milestone.Description = dto.Description;
+            milestone.StartDate = dto.StartDate;
+            milestone.EndDate = dto.EndDate;
+            milestone.Status = dto.Status;
 
             _context.Entry(milestone).State = EntityState.Modified;
 

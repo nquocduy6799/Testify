@@ -1,13 +1,13 @@
-using Testify.Shared.Entities;
+using Testify.Shared.DTOs.Milestones;
 
 namespace Testify.Client.Interfaces
 {
     public interface IMilestoneService
     {
-        Task<List<Milestone>> GetMilestonesByProjectAsync(int projectId);
-        Task<Milestone> GetMilestoneAsync(int id);
-        Task CreateMilestoneAsync(Milestone milestone);
-        Task UpdateMilestoneAsync(Milestone milestone);
+        Task<List<MilestoneDTO>> GetMilestonesByProjectAsync(int projectId);
+        Task<MilestoneDTO> GetMilestoneAsync(int id);
+        Task CreateMilestoneAsync(CreateMilestoneDTO request);
+        Task UpdateMilestoneAsync(UpdateMilestoneDTO request);
         Task DeleteMilestoneAsync(int id);
     }
 }

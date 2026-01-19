@@ -13,7 +13,7 @@ namespace Testify.Data
         public DbSet<ProjectFolder> ProjectFolders { get; set; }
 
         // Milestone & Tasks
-        public DbSet<Testify.Shared.Entities.Milestone> Milestones { get; set; }
+        public DbSet<Milestone> Milestones { get; set; }
 
         public DbSet<KanbanTask> Tasks { get; set; }
 

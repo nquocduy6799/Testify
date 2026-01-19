@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using Testify.Client.Interfaces;
-using Testify.Shared.Entities;
+using Testify.Shared.DTOs.Milestones;
 
 namespace Testify.Client.Features.Milestones.Services
 {
@@ -8,25 +8,25 @@ namespace Testify.Client.Features.Milestones.Services
     {
         private readonly HttpClient _httpClient = httpClient;
 
-        public async Task<List<Milestone>> GetMilestonesByProjectAsync(int projectId)
+        public async Task<List<MilestoneDTO>> GetMilestonesByProjectAsync(int projectId)
         {
-            return await _httpClient.GetFromJsonAsync<List<Milestone>>($"api/Milestones/project/{projectId}") ?? [];
+            return await _httpClient.GetFromJsonAsync<List<MilestoneDTO>>($"api/Milestones/project/{projectId}") ?? [];
         }
 
-        public async Task<Milestone> GetMilestoneAsync(int id)
+        public async Task<MilestoneDTO> GetMilestoneAsync(int id)
         {
-            return await _httpClient.GetFromJsonAsync<Milestone>($"api/Milestones/{id}")
+            return await _httpClient.GetFromJsonAsync<MilestoneDTO>($"api/Milestones/{id}")
                 ?? throw new Exception("Milestone not found");
         }
 
-        public async Task CreateMilestoneAsync(Milestone milestone)
+        public async Task CreateMilestoneAsync(CreateMilestoneDTO request)
         {
-            await _httpClient.PostAsJsonAsync("api/Milestones", milestone);
+            await _httpClient.PostAsJsonAsync("api/Milestones", request);
         }
 
-        public async Task UpdateMilestoneAsync(Milestone milestone)
+        public async Task UpdateMilestoneAsync(UpdateMilestoneDTO request)
         {
-            await _httpClient.PutAsJsonAsync($"api/Milestones/{milestone.Id}", milestone);
+            await _httpClient.PutAsJsonAsync($"api/Milestones/{request.Id}", request);
         }
 
         public async Task DeleteMilestoneAsync(int id)

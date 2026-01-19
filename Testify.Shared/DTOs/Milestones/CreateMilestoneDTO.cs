@@ -1,14 +1,10 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace Testify.Shared.Entities
+namespace Testify.Shared.DTOs.Milestones
 {
-    public class Milestone
+    public class CreateMilestoneDTO
     {
-        public int Id { get; set; }
-
-        public int ProjectId { get; set; }
-
         [Required(ErrorMessage = "Milestone name is required")]
         [StringLength(100, ErrorMessage = "Name cannot be longer than 100 characters")]
         public string Name { get; set; } = string.Empty;
@@ -18,8 +14,9 @@ namespace Testify.Shared.Entities
         public DateTime StartDate { get; set; } = DateTime.Today;
 
         public DateTime EndDate { get; set; } = DateTime.Today.AddDays(7);
-
-        public string Status { get; set; } = "Planned"; // Planned, Active, Completed, OnHold
+        
+        [Required]
+        public int ProjectId { get; set; }
 
         public bool IsValidDateRange()
         {
