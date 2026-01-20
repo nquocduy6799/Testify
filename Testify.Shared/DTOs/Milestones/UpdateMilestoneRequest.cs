@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using static Testify.Shared.Enums.MilestoneEnum;
 
 namespace Testify.Shared.DTOs.Milestones
 {
@@ -17,7 +18,7 @@ namespace Testify.Shared.DTOs.Milestones
 
         public DateTime EndDate { get; set; }
 
-        public string Status { get; set; } = "Planned";
+        public MilestoneStatus Status { get; set; } = MilestoneStatus.Active;
 
         public bool IsValidDateRange()
         {

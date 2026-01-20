@@ -17,7 +17,7 @@ namespace Testify.Entities
         public TestPlanOutcome? Outcome { get; set; }
         public DateTime StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
-        public string Priority { get; set; } = "Medium";
+        public TestPlanPriority Priority { get; set; } = TestPlanPriority.Medium;
 
         // Navigation properties
         public virtual Project Project { get; set; } = null!;

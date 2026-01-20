@@ -1,16 +1,27 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Testify.Data;
 using Testify.Entities;
+using Testify.Interfaces;
+using Testify.Shared.DTOs.KanbanTasks;
 using Testify.Shared.DTOs.Milestones;
+using static Testify.Shared.Enums.MilestoneEnum;
 
 namespace Testify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class MilestonesController(ApplicationDbContext context) : ControllerBase
+    public class MilestonesController: ControllerBase
     {
-        private readonly ApplicationDbContext _context = context;
+        private readonly ApplicationDbContext _context;
+        private readonly IKanbanTaskRepository _kanbanTaskRepository;
+
+        public MilestonesController(ApplicationDbContext context, IKanbanTaskRepository kanbanTaskRepository)
+        {
+            _context = context;
+            _kanbanTaskRepository = kanbanTaskRepository;
+        }
 
         // GET: api/Milestones/project/{projectId}
         [HttpGet("project/{projectId}")]
@@ -21,16 +32,24 @@ namespace Testify.Controllers
                 .OrderBy(m => m.StartDate)
                 .ToListAsync();
 
-            var response = milestones.Select(m => new MilestoneResponse
+            var response = new List<MilestoneResponse>();
+
+            foreach (var milestone in milestones)
             {
-                Id = m.Id,
-                ProjectId = m.ProjectId,
-                Name = m.Name,
-                Description = m.Description,
-                StartDate = m.StartDate,
-                EndDate = m.EndDate,
-                Status = m.Status,
-            }).ToList();
+                var tasks = await _kanbanTaskRepository.GetTasksByMilestoneIdAsync(milestone.Id);
+
+                response.Add(new MilestoneResponse
+                {
+                    Id = milestone.Id,
+                    ProjectId = milestone.ProjectId,
+                    Name = milestone.Name,
+                    Description = milestone.Description,
+                    StartDate = milestone.StartDate,
+                    EndDate = milestone.EndDate,
+                    Status = milestone.Status,
+                    Tasks = tasks.ToList()
+                });
+            }
 
             return response;
         }
@@ -62,6 +81,8 @@ namespace Testify.Controllers
         [HttpPost]
         public async Task<ActionResult<MilestoneResponse>> CreateMilestone(CreateMilestoneRequest request)
         {
+            var userName = User.Identity?.Name ?? "System";
+
             if (!request.IsValidDateRange())
             {
                 ModelState.AddModelError("EndDate", "End Date must be greater than or equal to Start Date.");
@@ -75,8 +96,10 @@ namespace Testify.Controllers
                 Description = request.Description,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
-                Status = "Planned"
+                Status = MilestoneStatus.Active
             };
+
+            milestone.MarkAsCreated(userName);
 
             _context.Milestones.Add(milestone);
             await _context.SaveChangesAsync();
@@ -99,6 +122,8 @@ namespace Testify.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateMilestone(int id, UpdateMilestoneRequest request)
         {
+            var userName = User.Identity?.Name ?? "System";
+
             if (id != request.Id)
             {
                 return BadRequest();
@@ -121,6 +146,8 @@ namespace Testify.Controllers
             milestone.StartDate = request.StartDate;
             milestone.EndDate = request.EndDate;
             milestone.Status = request.Status;
+
+            milestone.MarkAsUpdated(userName);
 
             _context.Entry(milestone).State = EntityState.Modified;
 

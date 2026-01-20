@@ -10,7 +10,7 @@ namespace Testify.Entities
     {
         public int Id { get; set; }
         public int RoomId { get; set; }
-        public string SenderId { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
         public MessageType MessageType { get; set; } = MessageType.Text;
         public string Content { get; set; } = string.Empty;
         public bool IsDeleted { get; set; } = false;
@@ -19,7 +19,7 @@ namespace Testify.Entities
 
         // Navigation properties
         public virtual ChatRoom Room { get; set; } = null!;
-        public virtual ApplicationUser Sender { get; set; } = null!;
+        public virtual ApplicationUser User { get; set; } = null!;
         public virtual ChatMessage? ParentMessage { get; set; }
         public virtual ICollection<ChatMessage> Replies { get; set; } = new List<ChatMessage>();
         public virtual ICollection<ChatMessageAttachment> Attachments { get; set; } = new List<ChatMessageAttachment>();

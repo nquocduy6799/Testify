@@ -25,6 +25,13 @@ namespace Testify.Shared.Enums
         Completed
     }
 
+    public enum TestPlanPriority
+    {
+        Low = 1,
+        Medium = 2,
+        High = 3
+    }
+
     public enum TestPlanOutcome
     {
         ReleaseReady,

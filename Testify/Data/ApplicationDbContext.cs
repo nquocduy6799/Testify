@@ -47,5 +47,62 @@ namespace Testify.Data
 
         // Notifications
         public DbSet<Notification> Notifications { get; set; }
+
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            // Chat System - prevent cascade delete conflicts
+            builder.Entity<ChatMessageReaction>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<ChatMessageRead>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<ChatMessage>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<ChatPinnedMessage>()
+                .HasOne(pm => pm.Room)
+                .WithMany(r => r.PinnedMessages)
+                .HasForeignKey(pm => pm.RoomId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Test Plans - prevent cascade delete conflicts
+            builder.Entity<TestPlanSuite>()
+                .HasOne(tps => tps.TestPlan)
+                .WithMany(tp => tp.TestPlanSuites)
+                .HasForeignKey(tps => tps.TestPlanId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<TestRun>()
+                .HasOne(tr => tr.TestPlan)
+                .WithMany(p => p.TestRuns)
+                .HasForeignKey(tr => tr.PlanId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // TaskLinkedRunStep - prevent multiple cascade paths
+            builder.Entity<TaskLinkedRunStep>()
+                .HasOne(tlrs => tlrs.Task)
+                .WithMany(t => t.LinkedRunSteps)
+                .HasForeignKey(tlrs => tlrs.TaskId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<TaskLinkedRunStep>()
+                .HasOne(tlrs => tlrs.RunStep)
+                .WithMany(rs => rs.LinkedTasks)
+                .HasForeignKey(tlrs => tlrs.RunStepId)
+                .OnDelete(DeleteBehavior.NoAction);
+        }
     }
 }

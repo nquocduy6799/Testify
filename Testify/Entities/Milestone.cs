@@ -1,5 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using Testify.Shared.Enums;
+using static Testify.Shared.Enums.MilestoneEnum;
 
 namespace Testify.Entities
 {
@@ -19,7 +21,7 @@ namespace Testify.Entities
 
         public DateTime EndDate { get; set; } = DateTime.Today.AddDays(7);
 
-        public string Status { get; set; } = "Planned"; // Planned, Active, Completed, OnHold
+        public MilestoneStatus Status { get; set; } = MilestoneStatus.Active;
 
         // Navigation properties
         public virtual Project Project { get; set; } = null!;

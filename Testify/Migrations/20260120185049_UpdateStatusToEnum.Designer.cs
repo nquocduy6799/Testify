@@ -12,8 +12,8 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260117060846_ModifyProjectTable")]
-    partial class ModifyProjectTable
+    [Migration("20260120185049_UpdateStatusToEnum")]
+    partial class UpdateStatusToEnum
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -187,6 +187,9 @@ namespace Testify.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -288,15 +291,15 @@ namespace Testify.Migrations
                     b.Property<int>("RoomId")
                         .HasColumnType("int");
 
-                    b.Property<string>("SenderId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
@@ -304,7 +307,7 @@ namespace Testify.Migrations
 
                     b.HasIndex("RoomId");
 
-                    b.HasIndex("SenderId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("ChatMessages");
                 });
@@ -423,9 +426,8 @@ namespace Testify.Migrations
                     b.Property<int?>("MessageId")
                         .HasColumnType("int");
 
-                    b.Property<string>("NotificationType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("NotificationType")
+                        .HasColumnType("int");
 
                     b.Property<int>("RoomId")
                         .HasColumnType("int");
@@ -634,7 +636,7 @@ namespace Testify.Migrations
 
                     b.HasIndex("MilestoneId");
 
-                    b.ToTable("Tasks");
+                    b.ToTable("KanbanTasks");
                 });
 
             modelBuilder.Entity("Testify.Entities.Milestone", b =>
@@ -645,15 +647,32 @@ namespace Testify.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("ProjectId")
                         .HasColumnType("int");
@@ -661,8 +680,13 @@ namespace Testify.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -741,9 +765,6 @@ namespace Testify.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Client")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Color")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -908,9 +929,8 @@ namespace Testify.Migrations
                     b.Property<string>("Preconditions")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
 
                     b.Property<int>("SuiteId")
                         .HasColumnType("int");
@@ -994,9 +1014,8 @@ namespace Testify.Migrations
                     b.Property<int?>("Outcome")
                         .HasColumnType("int");
 
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
 
                     b.Property<int>("ProjectId")
                         .HasColumnType("int");
@@ -1456,17 +1475,17 @@ namespace Testify.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Testify.Data.ApplicationUser", "Sender")
+                    b.HasOne("Testify.Data.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("ParentMessage");
 
                     b.Navigation("Room");
 
-                    b.Navigation("Sender");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Testify.Entities.ChatMessageAttachment", b =>
@@ -1491,7 +1510,7 @@ namespace Testify.Migrations
                     b.HasOne("Testify.Data.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Message");
@@ -1510,7 +1529,7 @@ namespace Testify.Migrations
                     b.HasOne("Testify.Data.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Message");
@@ -1558,7 +1577,7 @@ namespace Testify.Migrations
                     b.HasOne("Testify.Entities.ChatRoom", "Room")
                         .WithMany("PinnedMessages")
                         .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Message");
@@ -1609,7 +1628,7 @@ namespace Testify.Migrations
                         .HasForeignKey("AssigneeId");
 
                     b.HasOne("Testify.Entities.Milestone", "Milestone")
-                        .WithMany("Tasks")
+                        .WithMany("KanbanTasks")
                         .HasForeignKey("MilestoneId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1622,7 +1641,7 @@ namespace Testify.Migrations
             modelBuilder.Entity("Testify.Entities.Milestone", b =>
                 {
                     b.HasOne("Testify.Entities.Project", "Project")
-                        .WithMany("Milestones")
+                        .WithMany()
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1682,13 +1701,13 @@ namespace Testify.Migrations
                     b.HasOne("Testify.Entities.TestRunStep", "RunStep")
                         .WithMany("LinkedTasks")
                         .HasForeignKey("RunStepId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Testify.Entities.KanbanTask", "Task")
                         .WithMany("LinkedRunSteps")
                         .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("RunStep");
@@ -1720,7 +1739,7 @@ namespace Testify.Migrations
 
             modelBuilder.Entity("Testify.Entities.TestPlan", b =>
                 {
-                    b.HasOne("Testify.Entities.Milestone", "Milestone")
+                    b.HasOne("Testify.Entities.Milestone", null)
                         .WithMany("TestPlans")
                         .HasForeignKey("MilestoneId");
 
@@ -1734,8 +1753,6 @@ namespace Testify.Migrations
                         .WithMany("TestPlans")
                         .HasForeignKey("TaskId");
 
-                    b.Navigation("Milestone");
-
                     b.Navigation("Project");
 
                     b.Navigation("Task");
@@ -1746,7 +1763,7 @@ namespace Testify.Migrations
                     b.HasOne("Testify.Entities.TestPlan", "TestPlan")
                         .WithMany("TestPlanSuites")
                         .HasForeignKey("TestPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Testify.Entities.TestSuite", "TestSuite")
@@ -1766,10 +1783,10 @@ namespace Testify.Migrations
                         .WithMany()
                         .HasForeignKey("ExecutedById");
 
-                    b.HasOne("Testify.Entities.TestPlan", "Plan")
+                    b.HasOne("Testify.Entities.TestPlan", "TestPlan")
                         .WithMany("TestRuns")
                         .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Testify.Entities.TestCase", "TestCase")
@@ -1780,9 +1797,9 @@ namespace Testify.Migrations
 
                     b.Navigation("ExecutedBy");
 
-                    b.Navigation("Plan");
-
                     b.Navigation("TestCase");
+
+                    b.Navigation("TestPlan");
                 });
 
             modelBuilder.Entity("Testify.Entities.TestRunStep", b =>
@@ -1898,7 +1915,7 @@ namespace Testify.Migrations
 
             modelBuilder.Entity("Testify.Entities.Milestone", b =>
                 {
-                    b.Navigation("Tasks");
+                    b.Navigation("KanbanTasks");
 
                     b.Navigation("TestPlans");
                 });
@@ -1908,8 +1925,6 @@ namespace Testify.Migrations
                     b.Navigation("ChatRooms");
 
                     b.Navigation("Folders");
-
-                    b.Navigation("Milestones");
 
                     b.Navigation("TeamMembers");
 

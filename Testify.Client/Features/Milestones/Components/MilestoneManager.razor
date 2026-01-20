@@ -2,6 +2,7 @@
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
+@using static Testify.Shared.Enums.MilestoneEnum
 @inject IMilestoneService MilestoneService
 
 <div class="animate-in fade-in space-y-8 pb-20 duration-500">
@@ -22,7 +23,7 @@
                 <div class="h-8 w-[1px] bg-slate-100"></div>
                 <div class="flex flex-col">
                     <span class="font-black tracking-widest text-[10px] text-[#E85D3F] uppercase">Active</span>
-                    <span class="text-xl font-black text-[#E85D3F]">@milestones?.Count(m => m.Status == "Active")</span>
+                    <span class="text-xl font-black text-[#E85D3F]">@milestones?.Count(m => m.Status == MilestoneStatus.Active)</span>
                 </div>
             </div>
 
@@ -36,9 +37,9 @@
 
     @* --- FILTER BAR --- *@
     <div class="flex w-fit items-center rounded-[32px] border border-white bg-white/50 p-2 shadow-sm backdrop-blur-md">
-        @foreach (var filter in new[] { "All", "Active", "Completed", "Planned", "Closed" })
+        @foreach (var filter in Enum.GetValues<MilestoneStatus>())
         {
-            <button @onclick="() => activeFilter = filter" 
+            <button @onclick="() => activeFilter = filter"
                     class="@(activeFilter == filter ? "bg-white text-slate-900 shadow-md" : "text-slate-500 hover:text-slate-800") rounded-[24px] px-6 py-2.5 text-xs font-bold transition-all duration-300 uppercase tracking-wide">
                 @filter
             </button>
@@ -59,14 +60,15 @@
         @* Empty State *@
         <div class="flex flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-slate-50/50 p-24 text-center">
             <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-[32px] bg-white text-slate-300 shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" x2="4" y1="22" y2="15" /></svg>
             </div>
             <h3 class="text-xl font-black text-slate-900">No milestones found</h3>
             <p class="mt-2 max-w-xs text-sm font-medium text-slate-500">
-                @(activeFilter == "All" ? "Start by creating your first project milestone." : $"No {activeFilter.ToLower()} milestones match your filter.")
+                @(activeFilter == MilestoneStatus.All ? "Start by creating your first project milestone." : $"No {activeFilter.ToString().ToLower()} milestones match your filter.")
             </p>
-            @if(activeFilter == "All") {
-                 <button @onclick="OpenCreateDialog" class="mt-6 font-bold text-[#E85D3F] hover:underline">Create Now</button>
+            @if (activeFilter == MilestoneStatus.All)
+            {
+                <button @onclick="OpenCreateDialog" class="mt-6 font-bold text-[#E85D3F] hover:underline">Create Now</button>
             }
         </div>
     }
@@ -93,7 +95,7 @@
 
     private List<MilestoneResponse>? milestones;
     private bool isLoading = true;
-    private string activeFilter = "All";
+    private MilestoneStatus activeFilter = MilestoneStatus.All;
     
     // Form State
     private bool showModal = false;
@@ -101,7 +103,7 @@
 
     private IEnumerable<MilestoneResponse>? filteredMilestones =>
         milestones?.Where(m => 
-            activeFilter == "All" ||
+            activeFilter == MilestoneStatus.All ||
             m.Status == activeFilter
         );
 
@@ -134,7 +136,7 @@
             ProjectId = ProjectId,
              StartDate = DateTime.Today,
             EndDate = DateTime.Today.AddDays(7),
-            Status = "Active"
+            Status = MilestoneStatus.Active
         };
         showModal = true;
     }
@@ -200,17 +202,15 @@
                 Description = milestone.Description,
                 StartDate = milestone.StartDate,
                 EndDate = milestone.EndDate,
-                Status = "Closed" // Chuyển trạng thái sang Closed
+				Status = MilestoneStatus.Closed
             };
             await MilestoneService.UpdateMilestoneAsync(updateDTO);
-            await LoadMilestones(); // Load lại dữ liệu để cập nhật UI
+            await LoadMilestones(); 
         }
     }
 
     private void OpenAddTaskDialog(int milestoneId)
     {
-        // Placeholder cho chức năng thêm Task nhanh
-        // Sau này bạn có thể thêm biến isTaskFormOpen = true ở đây
         Console.WriteLine($"[TODO] Open Quick Task Form for Milestone ID: {milestoneId}");
     }
 }

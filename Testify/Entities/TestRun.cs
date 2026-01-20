@@ -17,7 +17,7 @@ namespace Testify.Entities
         public string? Comments { get; set; }
 
         // Navigation properties
-        public virtual TestPlan Plan { get; set; } = null!;
+        public virtual TestPlan TestPlan { get; set; } = null!;
         public virtual TestCase TestCase { get; set; } = null!;
         public virtual ApplicationUser? ExecutedBy { get; set; }
         public virtual ICollection<TestRunStep> TestRunSteps { get; set; } = new List<TestRunStep>();

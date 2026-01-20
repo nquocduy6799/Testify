@@ -145,7 +145,7 @@
     {
         if (editingMilestone.Id == 0)
         {
-            var createDTO = new CreateMilestoneRequest
+            var request = new CreateMilestoneRequest
             {
                 ProjectId = editingMilestone.ProjectId,
                 Name = editingMilestone.Name,
@@ -153,11 +153,11 @@
                 StartDate = editingMilestone.StartDate,
                 EndDate = editingMilestone.EndDate
             };
-            await MilestoneService.CreateMilestoneAsync(createDTO);
+            await MilestoneService.CreateMilestoneAsync(request);
         }
         else
         {
-            var updateDTO = new UpdateMilestoneRequest
+            var request = new UpdateMilestoneRequest
             {
                 Id = editingMilestone.Id,
                 Name = editingMilestone.Name,
@@ -166,7 +166,7 @@
                 EndDate = editingMilestone.EndDate,
                 Status = editingMilestone.Status
             };
-            await MilestoneService.UpdateMilestoneAsync(updateDTO);
+            await MilestoneService.UpdateMilestoneAsync(request);
         }
         showModal = false;
         await LoadMilestones();

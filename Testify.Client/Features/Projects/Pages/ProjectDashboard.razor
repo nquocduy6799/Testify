@@ -1,4 +1,4 @@
-@page "/projects/{Id:int}"
+﻿@page "/projects/{Id:int}"
 @using Testify.Shared.DTOs.Projects
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
@@ -7,7 +7,7 @@
 @rendermode InteractiveWebAssembly
 
 <div class="min-h-screen bg-white font-sans text-slate-900">
-    <div class="mx-auto max-w-[1400px] px-8 py-8 animate-in fade-in duration-700">
+    <div class="animate-in fade-in mx-auto max-w-[1400px] px-8 py-8 duration-700">
         
         @if (isLoading)
         {
@@ -49,7 +49,7 @@
                         @* Controls / Tabs *@
                         <div class="flex items-center gap-4">
                             @* UPDATE: Tab Navigation Pill WITH ICONS *@
-                            <div class="flex rounded-[32px] border border-white bg-white/60 p-1.5 shadow-sm backdrop-blur-md overflow-x-auto">
+                            <div class="flex overflow-x-auto rounded-[32px] border border-white bg-white/60 p-1.5 shadow-sm backdrop-blur-md">
                                 
                                 @* Tab Overview *@
                                 <button @onclick='() => activeTab = "Overview"'
@@ -93,7 +93,7 @@
                     <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         @if (activeTab == "Milestones")
                         {
-                            <Testify.Client.Features.Milestones.Components.MilestoneManager ProjectId="Id" />
+                            <MilestoneManager ProjectId="Id" />
                         }
                         else if (activeTab == "Overview")
                         {

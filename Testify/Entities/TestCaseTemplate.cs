@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Testify.Shared.Enums;
 
 namespace Testify.Entities
 {
@@ -9,7 +10,7 @@ namespace Testify.Entities
         public int Id { get; set; }
         public int SuiteTemplateId { get; set; }
         public string Title { get; set; } = string.Empty;
-        public int Priority { get; set; } = 2;
+        public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
 
         // Navigation properties
         public virtual TestSuiteTemplate SuiteTemplate { get; set; } = null!;

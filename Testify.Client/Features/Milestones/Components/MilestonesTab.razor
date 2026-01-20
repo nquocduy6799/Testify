@@ -2,6 +2,7 @@
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
+@using static Testify.Shared.Enums.MilestoneEnum
 @inject IMilestoneService MilestoneService
 
 <div class="animate-in fade-in space-y-8 duration-500">
@@ -61,8 +62,8 @@
                     @* Left: Status & Info *@
                     <div class="flex-1 space-y-3">
                         <div class="flex items-center gap-3">
-                             <span class="@(milestone.Status == "Completed" ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700") rounded-full px-3 py-1 font-extrabold tracking-wide text-[10px] uppercase">
-                                @(string.IsNullOrEmpty(milestone.Status) ? "ACTIVE" : milestone.Status.ToUpper())
+                             <span class="@(milestone.Status == MilestoneStatus.Completed ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700") rounded-full px-3 py-1 font-extrabold tracking-wide text-[10px] uppercase">
+								@milestone.Status 
                             </span>
                         </div>
                         <div>
@@ -94,7 +95,7 @@
 
                     @* Right: Actions *@
                     <div class="flex shrink-0 items-center gap-3 border-t border-slate-50 pt-4 md:border-t-0 md:border-l md:pt-0 md:pl-6">
-                        @if (milestone.Status != "Completed")
+                        @if (milestone.Status != MilestoneStatus.Completed)
                         {
                             <button @onclick="() => CloseMilestone(milestone)" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900">
                                 Complete
@@ -128,8 +129,8 @@
         milestones?
         .Where(m => 
             activeFilter == "All" ||
-            (activeFilter == "Active" && m.Status != "Completed") ||
-            (activeFilter == "Completed" && m.Status == "Completed")
+            (activeFilter == "Active" && m.Status != MilestoneStatus.Completed) ||
+            (activeFilter == "Completed" && m.Status == MilestoneStatus.Completed)
         );
 
     protected override async Task OnInitializedAsync()
@@ -223,7 +224,7 @@
             Description = milestone.Description,
             StartDate = milestone.StartDate,
             EndDate = milestone.EndDate,
-            Status = "Completed"
+            Status = MilestoneStatus.Completed
         };
         await MilestoneService.UpdateMilestoneAsync(updateDTO);
         await LoadMilestones();

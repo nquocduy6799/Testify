@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Testify.Shared.Enums;
 
 namespace Testify.Entities
 {
@@ -11,7 +12,7 @@ namespace Testify.Entities
         public string Title { get; set; } = string.Empty;
         public string? Preconditions { get; set; }
         public string? Postconditions { get; set; }
-        public string Priority { get; set; } = "Medium";
+        public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
         public DateTime? LastRun { get; set; }
 
         // Navigation properties

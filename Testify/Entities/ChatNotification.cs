@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Testify.Data;
+using Testify.Shared.Enums;
 
 namespace Testify.Entities
 {
@@ -11,7 +12,7 @@ namespace Testify.Entities
         public string UserId { get; set; } = string.Empty;
         public int RoomId { get; set; }
         public int? MessageId { get; set; }
-        public string NotificationType { get; set; } = string.Empty;
+        public NotificationType NotificationType { get; set; } = NotificationType.NewMessage;
         public bool IsRead { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
