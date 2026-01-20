@@ -17,7 +17,7 @@ namespace Testify.Repositories
 
         public async Task<IEnumerable<KanbanTaskResponse>> GetTasksByMilestoneIdAsync(int milestoneId)
         {
-            return await _context.Tasks
+            return await _context.KanbanTasks
                 .Where(t => t.MilestoneId == milestoneId && !t.IsDeleted)
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
@@ -27,7 +27,7 @@ namespace Testify.Repositories
 
         public async Task<KanbanTaskResponse?> GetTaskByTaskIdAsync(int id)
         {
-            var task = await _context.Tasks
+            var task = await _context.KanbanTasks
                 .Where(t => t.Id == id && !t.IsDeleted)
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
@@ -50,7 +50,7 @@ namespace Testify.Repositories
 
             task.MarkAsCreated(userName);
 
-            _context.Tasks.Add(task);
+            _context.KanbanTasks.Add(task);
             await _context.SaveChangesAsync();
 
             // Reload with navigation properties
@@ -67,7 +67,7 @@ namespace Testify.Repositories
 
         public async Task<bool> UpdateTaskAsync(int id, UpdateKanbanTaskRequest request, string userName)
         {
-            var task = await _context.Tasks.FindAsync(id);
+            var task = await _context.KanbanTasks.FindAsync(id);
 
             if (task == null || task.IsDeleted)
                 return false;
@@ -96,7 +96,7 @@ namespace Testify.Repositories
 
         public async Task<bool> DeleteTaskAsync(int id, string userName)
         {
-            var task = await _context.Tasks.FindAsync(id);
+            var task = await _context.KanbanTasks.FindAsync(id);
 
             if (task == null || task.IsDeleted)
                 return false;
@@ -108,7 +108,7 @@ namespace Testify.Repositories
 
         private async Task<bool> TaskExistsAsync(int id)
         {
-            return await _context.Tasks.AnyAsync(t => t.Id == id && !t.IsDeleted);
+            return await _context.KanbanTasks.AnyAsync(t => t.Id == id && !t.IsDeleted);
         }
 
         private static KanbanTaskResponse MapToResponse(KanbanTask task)

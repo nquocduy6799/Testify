@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Testify.Shared.DTOs.Milestones
 {
-    public class CreateMilestoneDTO
+    public class CreateMilestoneRequest
     {
         [Required(ErrorMessage = "Milestone name is required")]
         [StringLength(100, ErrorMessage = "Name cannot be longer than 100 characters")]

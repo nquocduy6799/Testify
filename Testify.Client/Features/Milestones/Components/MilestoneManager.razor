@@ -1,33 +1,33 @@
-@using Testify.Shared.DTOs.Milestones
+﻿@using Testify.Shared.DTOs.Milestones
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
 @inject IMilestoneService MilestoneService
 
-<div class="space-y-8 animate-in fade-in duration-500 pb-20">
+<div class="animate-in fade-in space-y-8 pb-20 duration-500">
     @* --- HEADER & ACTIONS --- *@
     <div class="flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div>
-            <h2 class="text-3xl font-black text-slate-900 tracking-tight">Project Milestones</h2>
+            <h2 class="text-3xl font-black tracking-tight text-slate-900">Project Milestones</h2>
             <p class="mt-2 font-medium text-slate-500">Define delivery cycles and track progress across the project timeline.</p>
         </div>
         
         <div class="flex items-center gap-6">
             @* Stats Card (Visual Placeholder) *@
-            <div class="hidden md:flex items-center gap-4 rounded-[32px] bg-white px-6 py-3 shadow-sm border border-slate-50">
+            <div class="hidden items-center gap-4 rounded-[32px] border border-slate-50 bg-white px-6 py-3 shadow-sm md:flex">
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total</span>
+                    <span class="font-black tracking-widest text-[10px] text-slate-400 uppercase">Total</span>
                     <span class="text-xl font-black text-slate-900">@milestones?.Count</span>
                 </div>
                 <div class="h-8 w-[1px] bg-slate-100"></div>
                 <div class="flex flex-col">
-                    <span class="text-[10px] font-black uppercase tracking-widest text-[#E85D3F]">Active</span>
+                    <span class="font-black tracking-widest text-[10px] text-[#E85D3F] uppercase">Active</span>
                     <span class="text-xl font-black text-[#E85D3F]">@milestones?.Count(m => m.Status == "Active")</span>
                 </div>
             </div>
 
             @* Add Button *@
-            <button @onclick="OpenCreateDialog" class="flex items-center gap-2 rounded-[32px] bg-[#1C1D2A] px-8 py-4 text-xs font-bold text-white shadow-xl shadow-slate-900/10 transition-all hover:bg-[#E85D3F] hover:shadow-[#E85D3F]/20 hover:-translate-y-0.5">
+            <button @onclick="OpenCreateDialog" class="flex items-center gap-2 rounded-[32px] bg-[#1C1D2A] px-8 py-4 text-xs font-bold text-white shadow-xl shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-[#E85D3F] hover:shadow-[#E85D3F]/20">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 New Milestone
             </button>
@@ -35,7 +35,7 @@
     </div>
 
     @* --- FILTER BAR --- *@
-    <div class="flex w-fit items-center rounded-[32px] bg-white/50 p-2 shadow-sm backdrop-blur-md border border-white">
+    <div class="flex w-fit items-center rounded-[32px] border border-white bg-white/50 p-2 shadow-sm backdrop-blur-md">
         @foreach (var filter in new[] { "All", "Active", "Completed", "Planned", "Closed" })
         {
             <button @onclick="() => activeFilter = filter" 
@@ -58,7 +58,7 @@
     {
         @* Empty State *@
         <div class="flex flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-slate-50/50 p-24 text-center">
-            <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-[32px] bg-white shadow-sm text-slate-300">
+            <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-[32px] bg-white text-slate-300 shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
             </div>
             <h3 class="text-xl font-black text-slate-900">No milestones found</h3>
@@ -91,15 +91,15 @@
 @code {
     [Parameter] public int ProjectId { get; set; }
 
-    private List<MilestoneDTO>? milestones;
+    private List<MilestoneResponse>? milestones;
     private bool isLoading = true;
     private string activeFilter = "All";
     
     // Form State
     private bool showModal = false;
-    private MilestoneDTO editingMilestone = new();
+    private MilestoneResponse editingMilestone = new();
 
-    private IEnumerable<MilestoneDTO>? filteredMilestones =>
+    private IEnumerable<MilestoneResponse>? filteredMilestones =>
         milestones?.Where(m => 
             activeFilter == "All" ||
             m.Status == activeFilter
@@ -129,7 +129,7 @@
 
     private void OpenCreateDialog()
     {
-        editingMilestone = new MilestoneDTO 
+        editingMilestone = new MilestoneResponse 
         { 
             ProjectId = ProjectId,
              StartDate = DateTime.Today,
@@ -139,9 +139,9 @@
         showModal = true;
     }
 
-    private void OpenEditDialog(MilestoneDTO milestone)
+    private void OpenEditDialog(MilestoneResponse milestone)
     {
-        editingMilestone = new MilestoneDTO
+        editingMilestone = new MilestoneResponse
         {
             Id = milestone.Id,
             ProjectId = milestone.ProjectId,
@@ -160,7 +160,7 @@
     {
         if (editingMilestone.Id == 0)
         {
-            var createDTO = new CreateMilestoneDTO
+            var createDTO = new CreateMilestoneRequest
             {
                 ProjectId = editingMilestone.ProjectId,
                 Name = editingMilestone.Name,
@@ -172,7 +172,7 @@
         }
         else
         {
-            var updateDTO = new UpdateMilestoneDTO
+            var updateDTO = new UpdateMilestoneRequest
             {
                 Id = editingMilestone.Id,
                 Name = editingMilestone.Name,
@@ -193,7 +193,7 @@
         var milestone = milestones?.FirstOrDefault(m => m.Id == milestoneId);
         if (milestone != null)
         {
-            var updateDTO = new UpdateMilestoneDTO
+            var updateDTO = new UpdateMilestoneRequest
             {
                 Id = milestone.Id,
                 Name = milestone.Name,

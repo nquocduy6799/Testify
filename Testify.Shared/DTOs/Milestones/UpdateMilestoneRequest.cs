@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Testify.Shared.DTOs.Milestones
 {
-    public class UpdateMilestoneDTO
+    public class UpdateMilestoneRequest
     {
         public int Id { get; set; }
 

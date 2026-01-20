@@ -4,10 +4,10 @@ namespace Testify.Client.Interfaces
 {
     public interface IMilestoneService
     {
-        Task<List<MilestoneDTO>> GetMilestonesByProjectAsync(int projectId);
-        Task<MilestoneDTO> GetMilestoneAsync(int id);
-        Task CreateMilestoneAsync(CreateMilestoneDTO request);
-        Task UpdateMilestoneAsync(UpdateMilestoneDTO request);
+        Task<List<MilestoneResponse>> GetMilestonesByProjectAsync(int projectId);
+        Task<MilestoneResponse> GetMilestoneAsync(int id);
+        Task CreateMilestoneAsync(CreateMilestoneRequest request);
+        Task UpdateMilestoneAsync(UpdateMilestoneRequest request);
         Task DeleteMilestoneAsync(int id);
     }
 }

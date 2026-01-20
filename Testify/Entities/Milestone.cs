@@ -23,7 +23,7 @@ namespace Testify.Entities
 
         // Navigation properties
         public virtual Project Project { get; set; } = null!;
-        public virtual ICollection<KanbanTask> Tasks { get; set; } = new List<KanbanTask>();
+        public virtual ICollection<KanbanTask> KanbanTasks { get; set; } = new List<KanbanTask>();
         public virtual ICollection<TestPlan> TestPlans { get; set; } = new List<TestPlan>();
 
         public bool IsValidDateRange()

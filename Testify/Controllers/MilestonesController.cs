@@ -14,14 +14,14 @@ namespace Testify.Controllers
 
         // GET: api/Milestones/project/{projectId}
         [HttpGet("project/{projectId}")]
-        public async Task<ActionResult<IEnumerable<MilestoneDTO>>> GetMilestonesByProject(int projectId)
+        public async Task<ActionResult<IEnumerable<MilestoneResponse>>> GetMilestonesByProject(int projectId)
         {
             var milestones = await _context.Milestones
                 .Where(m => m.ProjectId == projectId)
                 .OrderBy(m => m.StartDate)
                 .ToListAsync();
 
-            var dtos = milestones.Select(m => new MilestoneDTO
+            var response = milestones.Select(m => new MilestoneResponse
             {
                 Id = m.Id,
                 ProjectId = m.ProjectId,
@@ -29,15 +29,15 @@ namespace Testify.Controllers
                 Description = m.Description,
                 StartDate = m.StartDate,
                 EndDate = m.EndDate,
-                Status = m.Status
+                Status = m.Status,
             }).ToList();
 
-            return dtos;
+            return response;
         }
 
         // GET: api/Milestones/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<MilestoneDTO>> GetMilestone(int id)
+        public async Task<ActionResult<MilestoneResponse>> GetMilestone(int id)
         {
             var milestone = await _context.Milestones.FindAsync(id);
 
@@ -46,7 +46,7 @@ namespace Testify.Controllers
                 return NotFound();
             }
 
-            return new MilestoneDTO
+            return new MilestoneResponse
             {
                 Id = milestone.Id,
                 ProjectId = milestone.ProjectId,
@@ -60,9 +60,9 @@ namespace Testify.Controllers
 
         // POST: api/Milestones
         [HttpPost]
-        public async Task<ActionResult<MilestoneDTO>> CreateMilestone(CreateMilestoneDTO dto)
+        public async Task<ActionResult<MilestoneResponse>> CreateMilestone(CreateMilestoneRequest request)
         {
-            if (!dto.IsValidDateRange())
+            if (!request.IsValidDateRange())
             {
                 ModelState.AddModelError("EndDate", "End Date must be greater than or equal to Start Date.");
                 return BadRequest(ModelState);
@@ -70,18 +70,18 @@ namespace Testify.Controllers
 
             var milestone = new Milestone
             {
-                ProjectId = dto.ProjectId,
-                Name = dto.Name,
-                Description = dto.Description,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
+                ProjectId = request.ProjectId,
+                Name = request.Name,
+                Description = request.Description,
+                StartDate = request.StartDate,
+                EndDate = request.EndDate,
                 Status = "Planned"
             };
 
             _context.Milestones.Add(milestone);
             await _context.SaveChangesAsync();
 
-            var resultDTO = new MilestoneDTO
+            var response = new MilestoneResponse
             {
                 Id = milestone.Id,
                 ProjectId = milestone.ProjectId,
@@ -92,19 +92,19 @@ namespace Testify.Controllers
                 Status = milestone.Status
             };
 
-            return CreatedAtAction("GetMilestone", new { id = milestone.Id }, resultDTO);
+            return CreatedAtAction("GetMilestone", new { id = milestone.Id }, response);
         }
 
         // PUT: api/Milestones/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateMilestone(int id, UpdateMilestoneDTO dto)
+        public async Task<IActionResult> UpdateMilestone(int id, UpdateMilestoneRequest request)
         {
-            if (id != dto.Id)
+            if (id != request.Id)
             {
                 return BadRequest();
             }
 
-            if (!dto.IsValidDateRange())
+            if (!request.IsValidDateRange())
             {
                 ModelState.AddModelError("EndDate", "End Date must be greater than or equal to Start Date.");
                 return BadRequest(ModelState);
@@ -116,11 +116,11 @@ namespace Testify.Controllers
                 return NotFound();
             }
 
-            milestone.Name = dto.Name;
-            milestone.Description = dto.Description;
-            milestone.StartDate = dto.StartDate;
-            milestone.EndDate = dto.EndDate;
-            milestone.Status = dto.Status;
+            milestone.Name = request.Name;
+            milestone.Description = request.Description;
+            milestone.StartDate = request.StartDate;
+            milestone.EndDate = request.EndDate;
+            milestone.Status = request.Status;
 
             _context.Entry(milestone).State = EntityState.Modified;
 

@@ -1,8 +1,9 @@
 using System;
+using Testify.Shared.DTOs.KanbanTasks;
 
 namespace Testify.Shared.DTOs.Milestones
 {
-    public class MilestoneDTO
+    public class MilestoneResponse
     {
         public int Id { get; set; }
         public int ProjectId { get; set; }
@@ -11,7 +12,7 @@ namespace Testify.Shared.DTOs.Milestones
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string Status { get; set; } = "Planned";
-        public List<Testify.Shared.DTOs.Tasks.TaskDto> Tasks { get; set; } = new();
+        public List<KanbanTaskResponse> Tasks { get; set; } = new();
 
         public bool IsValidDateRange()
         {

@@ -15,7 +15,7 @@ namespace Testify.Data
         // Milestone & Tasks
         public DbSet<Milestone> Milestones { get; set; }
 
-        public DbSet<KanbanTask> Tasks { get; set; }
+        public DbSet<KanbanTask> KanbanTasks { get; set; }
 
         // Templates
         public DbSet<TestSuiteTemplate> TestSuiteTemplates { get; set; }

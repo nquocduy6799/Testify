@@ -8,23 +8,23 @@ namespace Testify.Client.Features.Milestones.Services
     {
         private readonly HttpClient _httpClient = httpClient;
 
-        public async Task<List<MilestoneDTO>> GetMilestonesByProjectAsync(int projectId)
+        public async Task<List<MilestoneResponse>> GetMilestonesByProjectAsync(int projectId)
         {
-            return await _httpClient.GetFromJsonAsync<List<MilestoneDTO>>($"api/Milestones/project/{projectId}") ?? [];
+            return await _httpClient.GetFromJsonAsync<List<MilestoneResponse>>($"api/Milestones/project/{projectId}") ?? [];
         }
 
-        public async Task<MilestoneDTO> GetMilestoneAsync(int id)
+        public async Task<MilestoneResponse> GetMilestoneAsync(int id)
         {
-            return await _httpClient.GetFromJsonAsync<MilestoneDTO>($"api/Milestones/{id}")
+            return await _httpClient.GetFromJsonAsync<MilestoneResponse>($"api/Milestones/{id}")
                 ?? throw new Exception("Milestone not found");
         }
 
-        public async Task CreateMilestoneAsync(CreateMilestoneDTO request)
+        public async Task CreateMilestoneAsync(CreateMilestoneRequest request)
         {
             await _httpClient.PostAsJsonAsync("api/Milestones", request);
         }
 
-        public async Task UpdateMilestoneAsync(UpdateMilestoneDTO request)
+        public async Task UpdateMilestoneAsync(UpdateMilestoneRequest request)
         {
             await _httpClient.PutAsJsonAsync($"api/Milestones/{request.Id}", request);
         }
