@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Testify.Client.Features.Kanban.Services;
+using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Projects.Services;
 using Testify.Client.Interfaces;
 
@@ -18,6 +19,6 @@ builder.Services.AddScoped(sp => new HttpClient
 // Register services here
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
-builder.Services.AddScoped<IMilestoneService, Testify.Client.Features.Milestones.Services.MilestoneService>();
+builder.Services.AddScoped<IMilestoneService, MilestoneService>();
 
 await builder.Build().RunAsync();
