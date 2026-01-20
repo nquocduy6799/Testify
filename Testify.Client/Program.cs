@@ -18,5 +18,6 @@ builder.Services.AddScoped(sp => new HttpClient
 // Register services here
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
+builder.Services.AddScoped<IMilestoneService, Testify.Client.Features.Milestones.Services.MilestoneService>();
 
 await builder.Build().RunAsync();

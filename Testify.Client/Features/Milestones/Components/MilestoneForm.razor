@@ -1,0 +1,107 @@
+@using System.ComponentModel.DataAnnotations
+@using Testify.Shared.DTOs.Milestones
+
+@if (Show)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-12">
+        @* Backdrop *@
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" @onclick="() => OnCancel.InvokeAsync()"></div>
+        
+        @* Modal Content *@
+        <div class="relative bg-white w-full max-w-xl rounded-[48px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 fade-in duration-300">
+            @* Header *@
+            <div class="p-10 border-b border-slate-100 flex items-start justify-between bg-slate-50/50">
+                <div>
+                    <h2 class="text-3xl font-black text-slate-800">
+                        @(Milestone.Id == 0 ? "New Milestone" : "Edit Milestone")
+                    </h2>
+                    <p class="text-slate-400 text-sm mt-1">Configure project cycle parameters</p>
+                </div>
+                <button @onclick="() => OnCancel.InvokeAsync()" class="p-3 hover:bg-white rounded-full text-slate-400 transition-colors shadow-sm">
+                    @* Icon: X *@
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>
+                </button>
+            </div>
+
+            <div class="p-10">
+                <EditForm Model="@Milestone" OnValidSubmit="HandleSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="space-y-6">
+                        @* Name Field *@
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                @* Icon: CheckCircle2 (Orange) *@
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#E85D3F]"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                                Milestone Title
+                            </label>
+                            <InputText @bind-Value="Milestone.Name" class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800" placeholder="e.g. Phase 1 Delivery" />
+                            <ValidationMessage For="@(() => Milestone.Name)" class="text-xs text-red-500 font-bold" />
+                        </div>
+
+                        @* Date Fields *@
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    @* Icon: Calendar (Blue) *@
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#7E96E1]"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                    Start Date
+                                </label>
+                                <InputDate @bind-Value="Milestone.StartDate" class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800" />
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    @* Icon: Calendar (Blue) *@
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#7E96E1]"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                    End Date
+                                </label>
+                                <InputDate @bind-Value="Milestone.EndDate" class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800" />
+                            </div>
+                        </div>
+
+                        @* Description Field *@
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                @* Icon: FileText (Gray) *@
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                                Detailed Description
+                            </label>
+                            <InputTextArea @bind-Value="Milestone.Description" rows="3" class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-medium text-slate-600 resize-none" placeholder="What are the key goals for this milestone?" />
+                        </div>
+
+                        @* Status Field (Bổ sung để khớp với Logic edit) *@
+                         <div class="space-y-1.5">
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                Status
+                            </label>
+                            <InputSelect @bind-Value="Milestone.Status" class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800">
+                                <option value="Planned">Planned</option>
+                                <option value="Active">Active</option>
+                                <option value="Completed">Completed</option>
+                                <option value="OnHold">On Hold</option>
+                                <option value="Closed">Closed</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="pt-6">
+                            <button type="submit" class="w-full py-5 bg-[#1C1D2A] text-white font-black text-lg rounded-2xl hover:bg-slate-800 hover:shadow-xl hover:scale-[1.01] transition-all active:scale-95 shadow-lg shadow-slate-200">
+                                @(Milestone.Id == 0 ? "Initialize Milestone" : "Update Milestone")
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public MilestoneDTO Milestone { get; set; } = new();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private async Task HandleSubmit()
+    {
+        await OnSave.InvokeAsync();
+    }
+}
