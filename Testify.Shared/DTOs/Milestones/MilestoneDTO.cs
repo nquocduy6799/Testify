@@ -11,6 +11,7 @@ namespace Testify.Shared.DTOs.Milestones
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string Status { get; set; } = "Planned";
+        public List<Testify.Shared.DTOs.Tasks.TaskDto> Tasks { get; set; } = new();
 
         public bool IsValidDateRange()
         {

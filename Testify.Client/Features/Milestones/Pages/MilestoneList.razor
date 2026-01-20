@@ -174,10 +174,6 @@
 
     private async Task DeleteMilestone(MilestoneDTO milestone)
     {
-        // In a real app, you might want to show a specialized confirmation dialog here
-        // or ensure the `MilestoneService` handles the deletion confirmation logic if implemented there.
-        // For now, we proceed with the assumption of a deletion action.
-        
         await MilestoneService.DeleteMilestoneAsync(milestone.Id);
         await LoadMilestones();
     }

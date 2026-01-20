@@ -1,137 +1,149 @@
 @using Testify.Shared.DTOs.Milestones
+@using Testify.Shared.DTOs.Tasks
 
-<div class="group relative flex flex-col justify-between overflow-hidden rounded-[40px] bg-white p-7 shadow-sm transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/50 border border-slate-50 h-full">
+<div class="bg-white rounded-[40px] p-8 border border-slate-50 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden flex flex-col h-full">
     
-    @* Top Accent Bar *@
-    <div class="absolute top-0 left-0 w-full h-1.5 @GetStatusColor(Milestone.Status)"></div>
+    @* Decorative Progress Bar *@
+    <div class="absolute top-0 left-0 h-1.5 bg-[#E85D3F] transition-all duration-1000" 
+         style="width: @(Progress)%"></div>
 
-    <div>
-        <div class="mb-6 flex items-start justify-between">
-            <span class="inline-flex items-center rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest @GetStatusBadgeColor(Milestone.Status)">
-                @Milestone.Status
-            </span>
-            
-            <div class="relative">
-                <button @onclick="ToggleMenu" @onfocusout="CloseMenuAsync" class="flex h-8 w-8 items-center justify-center rounded-full text-slate-300 transition-all hover:bg-slate-50 hover:text-slate-900">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" /></svg>
-                </button>
-                
-                @if (isMenuOpen)
-                {
-                    <div class="absolute top-8 right-0 z-10 w-40 origin-top-right rounded-2xl border border-slate-100 bg-white p-1.5 shadow-xl ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-100">
-                         <button @onclick="EditMilestone" @onmousedown:preventDefault class="w-full text-left px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl flex items-center gap-2 transition-colors">
-                            Edit
-                        </button>
-                        <button @onclick="DeleteMilestone" @onmousedown:preventDefault class="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl flex items-center gap-2 transition-colors">
-                            Delete
-                        </button>
-                    </div>
-                }
+    @* --- HEADER --- *@
+    <div class="flex justify-between items-start mb-6">
+        <div class="space-y-1">
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider @GetStatusBadgeColor(Milestone.Status)">
+                    @Milestone.Status
+                </span>
+                <span class="text-[10px] font-bold text-slate-400">ID: MS-@Milestone.Id.ToString().PadLeft(4, '0')</span>
             </div>
+            <h3 class="text-2xl font-bold text-slate-800 group-hover:text-[#E85D3F] transition-colors line-clamp-1">
+                @Milestone.Name
+            </h3>
         </div>
-
-        <h3 class="mb-3 text-2xl font-black text-slate-900 leading-tight tracking-tight group-hover:text-[#E85D3F] transition-colors">
-            @Milestone.Name
-        </h3>
-
-        <p class="mb-8 line-clamp-2 text-sm font-medium leading-relaxed text-slate-500">
-            @(string.IsNullOrEmpty(Milestone.Description) ? "No description provided." : Milestone.Description)
-        </p>
-
-        @* Stats Grid *@
-        <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="rounded-3xl bg-slate-50 p-4">
-                <p class="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Tasks</p>
-                <p class="text-xl font-black text-slate-900">0<span class="text-slate-400">/0</span></p>
-            </div>
-             <div class="rounded-3xl bg-slate-50 p-4">
-                <p class="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Timeline</p>
-                <p class="text-sm font-bold text-slate-900">@Milestone.EndDate.ToString("dd/MM/yyyy")</p>
-            </div>
-        </div>
-    </div>
-
-    @* Footer *@
-    <div class="mt-auto flex items-center justify-between border-t border-slate-50 pt-6">
-        @if (Milestone.Status != "Completed")
-        {
-             <button class="rounded-[20px] bg-[#1C1D2A] px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                Close Milestone
-            </button>
-        }
-        else
-        {
-            <span class="rounded-[20px] bg-emerald-100 px-5 py-2.5 text-xs font-bold text-emerald-700">
-                Completed
-            </span>
-        }
-
-        <button @onclick="EditMilestone" class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:border-[#E85D3F] hover:text-[#E85D3F]">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+        
+        @* Edit Button *@
+        <button @onclick="() => OnEdit.InvokeAsync(Milestone)" class="p-2 hover:bg-slate-50 rounded-full transition-all text-slate-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         </button>
     </div>
-    @if (Milestone.Status != "Completed")
-    {
-        <p class="mt-3 text-center text-[10px] font-bold text-[#E85D3F]/80">Complete all tasks to close</p>
-    }
 
+    @* Description *@
+    <p class="text-slate-400 text-sm mb-8 line-clamp-2 min-h-[40px]">
+        @(string.IsNullOrEmpty(Milestone.Description) ? "No description provided for this milestone." : Milestone.Description)
+    </p>
+
+    @* --- STATS GRID --- *@
+    <div class="grid grid-cols-2 gap-4 mb-8">
+        
+        @* Tasks Box *@
+        <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100/50 relative group/stats">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tasks</p>
+            <p class="text-2xl font-black text-slate-800">
+                @DoneTasks<span class="text-slate-300 font-medium">/@TotalTasks</span>
+            </p>
+            
+            @if (Milestone.Status != "Closed")
+            {
+                <button @onclick="AddQuickTask" @onclick:stopPropagation="true" 
+                        class="absolute top-4 right-4 text-[#7E96E1] hover:text-[#E85D3F] transition-colors opacity-0 group-hover/stats:opacity-100" 
+                        title="Add Task">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                </button>
+            }
+        </div>
+
+        @* Timeline Box *@
+        <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100/50">
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Timeline</p>
+            <div class="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#7E96E1]"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                @Milestone.EndDate.ToString("dd/MM/yyyy")
+            </div>
+        </div>
+    </div>
+
+    @* --- FOOTER --- *@
+    <div class="mt-auto space-y-4">
+        
+        @* Progress Bar *@
+        <div class="space-y-2">
+            <div class="flex justify-between items-center text-[10px] font-bold uppercase">
+                <span class="text-slate-400">Completion Rate</span>
+                <span class="text-[#E85D3F]">@Math.Round(Progress)%</span>
+            </div>
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-[#E85D3F] to-[#ff7d61] transition-all duration-1000"
+                     style="width: @(Progress)%"></div>
+            </div>
+        </div>
+
+        @* Action Buttons *@
+        <div class="flex gap-2">
+            @if (Milestone.Status != "Closed")
+            {
+                <button disabled="@(!CanClose)" 
+                        @onclick="() => OnClose.InvokeAsync(Milestone.Id)"
+                        class="flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-95 shadow-lg
+                               @(CanClose ? "bg-[#1C1D2A] text-white hover:bg-slate-800 shadow-slate-200" : "bg-slate-100 text-slate-300 cursor-not-allowed shadow-none")">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                    Close Milestone
+                </button>
+            }
+            else
+            {
+                <div class="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                    Finalized
+                </div>
+            }
+            
+            <button class="p-3 bg-white border border-slate-100 hover:border-[#7E96E1] text-[#7E96E1] rounded-2xl transition-all group/btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>
+            </button>
+        </div>
+
+        @if (!CanClose && Milestone.Status != "Closed")
+        {
+           <p class="text-[10px] text-[#E85D3F] font-bold flex items-center gap-1">
+             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+             Requires all tasks to be 'Done' or 'Cancelled' to close.
+           </p>
+        }
+    </div>
 </div>
 
 @code {
     [Parameter] public MilestoneDTO Milestone { get; set; } = default!;
+    
+    // --- ĐÂY LÀ PHẦN QUAN TRỌNG BẠN ĐANG THIẾU ---
     [Parameter] public EventCallback<MilestoneDTO> OnEdit { get; set; }
-    [Parameter] public EventCallback<MilestoneDTO> OnDelete { get; set; }
+    [Parameter] public EventCallback<int> OnClose { get; set; } 
+    [Parameter] public EventCallback<int> OnAddTask { get; set; }
+    // ----------------------------------------------
 
-    private bool isMenuOpen = false;
+    private int TotalTasks => Milestone.Tasks?.Count ?? 0;
+    
+    private int DoneTasks => Milestone.Tasks?
+        .Count(t => t.Status == "Done" || t.Status == "Cancelled") ?? 0;
 
-    private void ToggleMenu()
+    private double Progress => TotalTasks > 0 ? (double)DoneTasks / TotalTasks * 100 : 0;
+
+    private bool CanClose => TotalTasks > 0 && 
+        (Milestone.Tasks?.All(t => t.Status == "Done" || t.Status == "Cancelled") ?? false);
+
+    private async Task AddQuickTask()
     {
-        isMenuOpen = !isMenuOpen;
-    }
-
-    private async Task CloseMenuAsync()
-    {
-        // Small delay to allow click events on menu items to register before the menu closes
-        await Task.Delay(150);
-        isMenuOpen = false;
-    }
-
-    private async Task EditMilestone()
-    {
-        // Don't close immediately to avoid UI glitch, parent will handle dialog
-        isMenuOpen = false;
-        await OnEdit.InvokeAsync(Milestone);
-    }
-
-    private async Task DeleteMilestone()
-    {
-        isMenuOpen = false;
-        await OnDelete.InvokeAsync(Milestone);
-    }
-
-    private string GetStatusColor(string status)
-    {
-        return status switch
+        if (OnAddTask.HasDelegate)
         {
-            "Completed" => "bg-blue-500",
-            "Active" => "bg-emerald-500",
-            "OnHold" => "bg-amber-500",
-            "Planned" => "bg-indigo-500",
-            "Closed" => "bg-slate-400",
-            _ => "bg-slate-300"
-        };
+            await OnAddTask.InvokeAsync(Milestone.Id);
+        }
     }
 
-    private string GetStatusBadgeColor(string status)
+    private string GetStatusBadgeColor(string status) => status switch
     {
-        return status switch
-        {
-            "Completed" => "bg-blue-50 text-blue-700 ring-1 ring-blue-600/10",
-            "Active" => "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/10",
-            "OnHold" => "bg-amber-50 text-amber-700 ring-1 ring-amber-600/10",
-            "Planned" => "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/10",
-            "Closed" => "bg-slate-100 text-slate-600 ring-1 ring-slate-500/10",
-             _ => "bg-slate-50 text-slate-600 ring-1 ring-slate-400/10"
-        };
-    }
+        "Active" => "bg-[#E85D3F] text-white",
+        "Closed" => "bg-slate-800 text-white",
+        "Planned" => "bg-[#7E96E1] text-white",
+        _ => "bg-[#7E96E1] text-white"
+    };
 }

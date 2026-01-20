@@ -10,103 +10,125 @@
     <div class="mx-auto max-w-[1400px] px-8 py-8 animate-in fade-in duration-700">
         
         @if (isLoading)
-{
-    <div class="flex h-screen w-full items-center justify-center">
-        <div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-[#E85D3F]"></div>
-    </div>
-}
-else if (project == null)
-{
-    <div class="flex h-screen w-full flex-col items-center justify-center gap-4 text-center">
-        <h2 class="text-2xl font-bold text-slate-800">Project Not Found</h2>
-        <a href="/projects" class="font-bold text-[#E85D3F] hover:underline">Return to Projects</a>
-    </div>
-}
-else
-{
-    @* --- DASHBOARD LAYOUT --- *@
-    <div class="min-h-screen bg-slate-50/50 pb-20 font-sans text-slate-900">
-        
-        @* HEADER CONTAINER *@
-        <div class="sticky top-0 z-30 bg-white/80 px-8 py-6 backdrop-blur-xl transition-all">
-            <div class="mx-auto flex max-w-[1400px] flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        {
+            <div class="flex h-screen w-full items-center justify-center">
+                <div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-[#E85D3F]"></div>
+            </div>
+        }
+        else if (project == null)
+        {
+            <div class="flex h-screen w-full flex-col items-center justify-center gap-4 text-center">
+                <h2 class="text-2xl font-bold text-slate-800">Project Not Found</h2>
+                <a href="/projects" class="font-bold text-[#E85D3F] hover:underline">Return to Projects</a>
+            </div>
+        }
+        else
+        {
+            @* --- DASHBOARD LAYOUT --- *@
+            <div class="min-h-screen bg-slate-50/50 pb-20 font-sans text-slate-900">
                 
-                @* Breadcrumb / Title *@
-                <div class="flex items-center gap-4">
-                    <a href="/projects" class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-sm transition-all hover:border-[#E85D3F] hover:text-[#E85D3F]">
-                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                    </a>
-                    <div class="h-8 w-[1px] bg-slate-200"></div>
-                    <div class="flex items-center gap-3">
-                        <div class="h-3 w-3 rounded-full shadow-sm" style="background-color: @(project.Color ?? "#E85D3F")"></div>
-                         <h1 class="text-xl font-black tracking-tight text-slate-900 uppercase">@project.Name</h1>
-                        <span class="text-slate-300">/</span>
-                        <span class="font-bold text-slate-500">@activeTab</span>
+                @* HEADER CONTAINER *@
+                <div class="sticky top-0 z-30 bg-white/80 px-8 py-6 backdrop-blur-xl transition-all">
+                    <div class="mx-auto flex max-w-[1400px] flex-col gap-6 md:flex-row md:items-center md:justify-between">
+                        
+                        @* Breadcrumb / Title *@
+                        <div class="flex items-center gap-4">
+                            <a href="/projects" class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-sm transition-all hover:border-[#E85D3F] hover:text-[#E85D3F]">
+                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                            </a>
+                            <div class="h-8 w-[1px] bg-slate-200"></div>
+                            <div class="flex items-center gap-3">
+                                <div class="h-3 w-3 rounded-full shadow-sm" style="background-color: @(project.Color ?? "#E85D3F")"></div>
+                                @* UPDATE: tracking-widest *@
+                                <h1 class="text-xl font-black tracking-widest text-slate-900 uppercase">@project.Name</h1>
+                                <span class="text-slate-300">/</span>
+                                <span class="font-bold text-slate-500">@activeTab</span>
+                            </div>
+                        </div>
+
+                        @* Controls / Tabs *@
+                        <div class="flex items-center gap-4">
+                            @* UPDATE: Tab Navigation Pill WITH ICONS *@
+                            <div class="flex rounded-[32px] border border-white bg-white/60 p-1.5 shadow-sm backdrop-blur-md overflow-x-auto">
+                                
+                                @* Tab Overview *@
+                                <button @onclick='() => activeTab = "Overview"'
+                                        class="@(activeTab == "Overview" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 rounded-3xl px-6 py-3 text-sm font-black transition-all whitespace-nowrap">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
+                                    Overview
+                                </button>
+
+                                @* Tab Kanban Board *@
+                                <button @onclick='() => activeTab = "Kanban Board"'
+                                        class="@(activeTab == "Kanban Board" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 rounded-3xl px-6 py-3 text-sm font-black transition-all whitespace-nowrap">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M8 7v7" /><path d="M12 7v4" /><path d="M16 7v10" /></svg>
+                                    Kanban Board
+                                </button>
+
+                                @* Tab Milestones *@
+                                <button @onclick='() => activeTab = "Milestones"'
+                                        class="@(activeTab == "Milestones" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 rounded-3xl px-6 py-3 text-sm font-black transition-all whitespace-nowrap">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" x2="4" y1="22" y2="15" /></svg>
+                                    Milestones
+                                </button>
+
+                                @* Tab Team Members *@
+                                <button @onclick='() => activeTab = "Team Members"'
+                                        class="@(activeTab == "Team Members" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 rounded-3xl px-6 py-3 text-sm font-black transition-all whitespace-nowrap">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                                    Team Members
+                                </button>
+                            </div>
+                            
+                            @* Project Settings *@
+                             <button class="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                @* Controls / Tabs *@
-                <div class="flex items-center gap-4">
-                     @* Tab Navigation Pill *@
-                    <div class="flex rounded-[32px] border border-white bg-white/60 p-1.5 shadow-sm backdrop-blur-md">
-                        @foreach (var tab in new[] { "Overview", "Kanban Board", "Milestones", "Team Members" })
+                @* MAIN CONTENT AREA *@
+                <div class="mx-auto max-w-[1400px] px-8 py-8">
+                    <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        @if (activeTab == "Milestones")
                         {
-                            <button @onclick="() => activeTab = tab"
-                                    class="@(activeTab == tab ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600") rounded-3xl px-6 py-2.5 text-xs font-bold transition-all duration-300">
-                                @tab
-                            </button>
+                            <Testify.Client.Features.Milestones.Components.MilestoneManager ProjectId="Id" />
+                        }
+                        else if (activeTab == "Overview")
+                        {
+                            <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
+                                <div class="mb-4 rounded-full bg-slate-50 p-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-700">Project Overview</h3>
+                                <p>Detailed project statistics and summary coming soon.</p>
+                            </div>
+                        }
+                        else if (activeTab == "Kanban Board")
+                        {
+                           <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
+                                <div class="mb-4 rounded-full bg-slate-50 p-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v10"/></svg>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-700">Kanban Board</h3>
+                                <p>Task management board coming soon.</p>
+                            </div>
+                        }
+                        else if (activeTab == "Team Members")
+                        {
+                            <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
+                                 <div class="mb-4 rounded-full bg-slate-50 p-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                </div>
+                                <h3 class="text-lg font-bold text-slate-700">Team Members</h3>
+                                <p>Member management coming soon.</p>
+                            </div>
                         }
                     </div>
-                    
-                    @* Project Settings *@
-                     <button class="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
                 </div>
             </div>
-        </div>
-
-        @* MAIN CONTENT AREA *@
-        <div class="mx-auto max-w-[1400px] px-8 py-8">
-            <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                @if (activeTab == "Milestones")
-                {
-                    <Testify.Client.Features.Milestones.Components.MilestoneManager ProjectId="Id" />
-                }
-                else if (activeTab == "Overview")
-                {
-                    <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
-                        <div class="mb-4 rounded-full bg-slate-50 p-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-700">Project Overview</h3>
-                        <p>Detailed project statistics and summary coming soon.</p>
-                    </div>
-                }
-                else if (activeTab == "Kanban Board")
-                {
-                   <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
-                        <div class="mb-4 rounded-full bg-slate-50 p-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v10"/></svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-700">Kanban Board</h3>
-                        <p>Task management board coming soon.</p>
-                    </div>
-                }
-                else if (activeTab == "Team Members")
-                {
-                    <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
-                         <div class="mb-4 rounded-full bg-slate-50 p-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-700">Team Members</h3>
-                        <p>Member management coming soon.</p>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-}
+        }
     </div>
 </div>
 
@@ -115,7 +137,7 @@ else
 
     private ProjectResponse? project;
     private bool isLoading = true;
-    private string activeTab = "Milestones"; // Default as requested since it's the active feature
+    private string activeTab = "Milestones"; 
 
     protected override async Task OnInitializedAsync()
     {
