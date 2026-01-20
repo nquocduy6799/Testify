@@ -20,7 +20,6 @@
 
   <ItemGroup>
     <Folder Include="Features\Kanban\Components\" />
-    <Folder Include="Features\Kanban\Services\" />
     <Folder Include="Features\Milestones\Components\" />
     <Folder Include="Features\Milestones\Services\" />
     <Folder Include="Features\Milestones\Pages\" />
