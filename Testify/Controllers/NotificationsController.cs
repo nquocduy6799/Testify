@@ -8,7 +8,6 @@ namespace Testify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
     public class NotificationsController : ControllerBase
     {
         private readonly INotificationRepository _notificationRepository;
@@ -18,7 +17,6 @@ namespace Testify.Controllers
             _notificationRepository = notificationRepository;
         }
 
-        // GET: api/Notifications
         [HttpGet]
         public async Task<ActionResult<IEnumerable<NotificationResponse>>> GetNotifications()
         {
@@ -34,7 +32,6 @@ namespace Testify.Controllers
             return Ok(notifications);
         }
 
-        // GET: api/Notifications/5
         [HttpGet("{id}")]
         public async Task<ActionResult<NotificationResponse>> GetNotification(long id)
         {
@@ -48,7 +45,6 @@ namespace Testify.Controllers
             return Ok(notification);
         }
 
-        // POST: api/Notifications/{id}/accept
         [HttpPost("{id}/accept")]
         public async Task<IActionResult> AcceptInvitation(long id)
         {
@@ -91,7 +87,6 @@ namespace Testify.Controllers
             return Ok(new { message = "Invitation declined" });
         }
 
-        // POST: api/Notifications/{id}/read
         [HttpPost("{id}/read")]
         public async Task<IActionResult> MarkAsRead(long id)
         {
