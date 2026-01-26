@@ -110,5 +110,41 @@ namespace Testify.Controllers
 
             return Ok(role);
         }
+
+        // GET: api/Projects/5/members
+        [HttpGet("{projectId}/members")]
+        public async Task<ActionResult<IEnumerable<TeamMemberResponse>>> GetProjectMembers(int projectId)
+        {
+            var members = await _projectRepository.GetProjectMembersAsync(projectId);
+            return Ok(members);
+        }
+
+        // DELETE: api/Projects/5/members/{memberId}
+        [HttpDelete("{projectId}/members/{memberId}")]
+        public async Task<IActionResult> RemoveMember(int projectId, int memberId)
+        {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return Unauthorized();
+            }
+
+            // Check if current user is PM
+            var currentUserRole = await _projectRepository.GetUserRoleInProjectAsync(projectId, currentUserId);
+            if (currentUserRole != ProjectRole.PM)
+            {
+                return StatusCode(403, new { message = "Only Project Managers can remove members" });
+            }
+
+            var removed = await _projectRepository.RemoveMemberAsync(projectId, memberId, currentUserId);
+
+            if (!removed)
+            {
+                return NotFound(new { message = "Member not found or cannot be removed" });
+            }
+
+            return Ok(new { message = "Member removed successfully" });
+        }
     }
 }

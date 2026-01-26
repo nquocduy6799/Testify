@@ -1,0 +1,215 @@
+@page "/notifications"
+@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs.Notifications
+@using Testify.Shared.Enums
+@inject INotificationService NotificationService
+@rendermode InteractiveServer
+
+<div class="mx-auto max-w-3xl px-4 py-8">
+    @* Page Header *@
+    <div class="mb-6 flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-slate-900">Notifications</h1>
+        
+        @if (_notifications.Any())
+        {
+            <div class="flex items-center gap-2">
+                @if (UnreadCount > 0)
+                {
+                    <span class="rounded-full bg-[#E85D3F] px-3 py-1 text-xs font-bold text-white">
+                        @UnreadCount new
+                    </span>
+                }
+            </div>
+        }
+    </div>
+
+    @* Notification List *@
+    <div class="flex flex-col gap-4">
+        @if (_isLoading)
+        {
+            @for (int i = 0; i < 3; i++)
+            {
+                <div class="flex animate-pulse flex-col gap-2 rounded-2xl bg-white p-6 shadow-sm">
+                    <div class="h-4 w-3/4 rounded bg-slate-200"></div>
+                    <div class="h-3 w-1/2 rounded bg-slate-200"></div>
+                </div>
+            }
+        }
+        else if (!_notifications.Any())
+        {
+            <div class="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 py-16 text-center">
+                <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300">
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">No notifications yet</h3>
+                <p class="text-sm text-slate-500">We'll notify you when something important happens.</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var notification in _notifications)
+            {
+                <div class="group relative flex flex-col gap-4 rounded-2xl border border-slate-100 p-6 transition-all hover:shadow-md sm:flex-row sm:items-start
+                            @(!notification.IsRead ? "bg-white shadow-sm border-l-4 border-l-[#E85D3F]" : "bg-slate-50/50 opacity-90")">
+                    
+                    @* Icon / Avatar *@
+                    <div class="flex-shrink-0">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-full @GetIconClass(notification.Type)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                @if (notification.Type == NotificationType.ProjectInvitation)
+                                {
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>
+                                }
+                                else
+                                {
+                                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                                }
+                            </svg>
+                        </div>
+                    </div>
+
+                    @* Content *@
+                    <div class="flex-1">
+                        <div class="mb-1 flex items-start justify-between">
+                            <h3 class="font-bold text-slate-800 @(!notification.IsRead ? "text-slate-900" : "text-slate-700")">
+                                @notification.Title
+                            </h3>
+                            <span class="text-xs font-medium text-slate-400 whitespace-nowrap ml-2">@FormatTime(notification.CreatedAt)</span>
+                        </div>
+                        
+                        <p class="mb-4 text-sm text-slate-600">@notification.Content</p>
+
+                        @* Invitation Actions *@
+                        @if (notification.Type == NotificationType.ProjectInvitation && notification.InvitationStatus == InvitationStatus.Pending)
+                        {
+                            <div class="flex gap-3">
+                                <button @onclick="() => AcceptInvitation(notification.Id)"
+                                        disabled="@_isProcessing"
+                                        class="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    Accept Invitation
+                                </button>
+                                <button @onclick="() => DeclineInvitation(notification.Id)"
+                                        disabled="@_isProcessing"
+                                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 transition-all hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Decline
+                                </button>
+                            </div>
+                        }
+                        else if (notification.Type == NotificationType.ProjectInvitation)
+                        {
+                            <div class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold @GetStatusClass(notification.InvitationStatus)">
+                                @if (notification.InvitationStatus == InvitationStatus.Accepted)
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <span>Accepted</span>
+                                }
+                                else
+                                {
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
+                                    <span>Declined</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<NotificationResponse> _notifications = new();
+    private bool _isLoading = true;
+    private bool _isProcessing = false;
+
+    private int UnreadCount => _notifications.Count(n => !n.IsRead);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotifications();
+    }
+
+    private async Task LoadNotifications()
+    {
+        _isLoading = true;
+        try
+        {
+            _notifications = await NotificationService.GetNotificationsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading notifications: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task AcceptInvitation(long notificationId)
+    {
+        if (_isProcessing) return;
+        _isProcessing = true;
+        try
+        {
+            var success = await NotificationService.AcceptInvitationAsync(notificationId);
+            if (success)
+            {
+                await LoadNotifications();
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private async Task DeclineInvitation(long notificationId)
+    {
+        if (_isProcessing) return;
+        _isProcessing = true;
+        try
+        {
+            var success = await NotificationService.DeclineInvitationAsync(notificationId);
+            if (success)
+            {
+                await LoadNotifications();
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private string FormatTime(DateTime dateTime)
+    {
+        var diff = DateTime.Now - dateTime;
+        if (diff.TotalMinutes < 1) return "Just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return dateTime.ToString("MMM dd, yyyy");
+    }
+
+    private string GetIconClass(NotificationType type)
+    {
+        return type == NotificationType.ProjectInvitation 
+            ? "bg-indigo-100 text-indigo-600" 
+            : "bg-orange-100 text-orange-600";
+    }
+
+    private string GetStatusClass(InvitationStatus? status)
+    {
+        return status switch
+        {
+            InvitationStatus.Accepted => "bg-emerald-100 text-emerald-700",
+            InvitationStatus.Declined => "bg-slate-100 text-slate-500",
+            _ => "bg-amber-100 text-amber-700"
+        };
+    }
+}

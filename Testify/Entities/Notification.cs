@@ -16,7 +16,14 @@ namespace Testify.Entities
         public NotificationType Type { get; set; } = NotificationType.NewMessage;
         public bool IsRead { get; set; } = false;
 
+        // Invitation-specific metadata
+        public int? ProjectId { get; set; }
+        public string? SenderUserId { get; set; }
+        public InvitationStatus? InvitationStatus { get; set; }
+
         // Navigation properties
         public virtual ApplicationUser User { get; set; } = null!;
+        public virtual Project? Project { get; set; }
+        public virtual ApplicationUser? Sender { get; set; }
     }
 }

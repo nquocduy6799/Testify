@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
 using Testify.Client.Features.Milestones.Services;
+using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
 using Testify.Client.Interfaces;
 using Testify.Components;
@@ -63,11 +65,14 @@ builder.Services.AddScoped(sp =>
 // Register repositories
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
 builder.Services.AddScoped<IMilestoneService, MilestoneService>();
+builder.Services.AddScoped<INotificationService, Testify.Services.ServerNotificationService>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();

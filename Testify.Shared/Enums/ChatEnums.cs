@@ -41,6 +41,9 @@ namespace Testify.Shared.Enums
 
         // System/Media
         FileShared = 20,
-        MissedCall = 21
+        MissedCall = 21,
+
+        // Project Events
+        ProjectInvitation = 30
     }
 }

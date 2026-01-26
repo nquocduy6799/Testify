@@ -1,0 +1,179 @@
+@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs.Invitations
+@using Testify.Shared.Enums
+@inject IInvitationService InvitationService
+
+@if (IsVisible)
+{
+    <div class="fixed inset-0 z-[200] flex items-center justify-center">
+        @* Backdrop *@
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @onclick="Close"></div>
+
+        @* Modal *@
+        <div class="animate-in fade-in zoom-in-95 relative z-10 w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl duration-200">
+            @* Header *@
+            <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Invite Team Member</h2>
+                    <p class="text-xs text-slate-500">Send an invitation to join this project</p>
+                </div>
+                <button @onclick="Close" class="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            @* Form *@
+            <EditForm Model="@_request" OnValidSubmit="HandleSubmit" class="p-6">
+                <DataAnnotationsValidator/>
+
+                @* Email Input *@
+                <div class="mb-5">
+                    <label for="email" class="mb-2 block text-sm font-semibold text-slate-700">Email Address</label>
+                    <div class="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400">
+                            <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                        </svg>
+                        <InputText id="email" @bind-Value="_request.Email"
+                                   placeholder="colleague@company.com"
+                                   class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pr-4 pl-12 text-sm transition-all focus:border-[#E85D3F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20"/>
+                    </div>
+                    <ValidationMessage For="@(() => _request.Email)" class="mt-1 text-xs text-red-500"/>
+                </div>
+
+                @* Role Selection *@
+                <div class="mb-6">
+                    <label for="role" class="mb-2 block text-sm font-semibold text-slate-700">Role</label>
+                    <InputSelect id="role" @bind-Value="_request.Role"
+                                 class="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm transition-all focus:border-[#E85D3F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20">
+                        <option value="@ProjectRole.Tester">Tester</option>
+                        <option value="@ProjectRole.Dev">Developer</option>
+                        <option value="@ProjectRole.PM">Project Manager</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => _request.Role)" class="mt-1 text-xs text-red-500"/>
+                </div>
+
+                @* Error Message *@
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
+                            </svg>
+                            @_errorMessage
+                        </div>
+                    </div>
+                }
+
+                @* Success Message *@
+                @if (!string.IsNullOrEmpty(_successMessage))
+                {
+                    <div class="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-600">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>
+                            </svg>
+                            @_successMessage
+                        </div>
+                    </div>
+                }
+
+                @* Actions *@
+                <div class="flex gap-3">
+                    <button type="button" @onclick="Close"
+                            class="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-slate-50 cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" disabled="@_isSubmitting"
+                            class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#E85D3F] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[#d54e32] disabled:opacity-50 cursor-pointer">
+                        @if (_isSubmitting)
+                        {
+                            <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                            <span>Sending...</span>
+                        }
+                        else
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+                            </svg>
+                            <span>Send Invitation</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public int ProjectId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnInvitationSent { get; set; }
+
+    private SendInvitationRequest _request = new();
+    private bool _isSubmitting = false;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible)
+        {
+            // Reset form when modal opens
+            _request = new SendInvitationRequest
+            {
+                ProjectId = ProjectId,
+                Role = ProjectRole.Tester
+            };
+            _errorMessage = null;
+            _successMessage = null;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        _isSubmitting = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            _request.ProjectId = ProjectId;
+            var response = await InvitationService.SendInvitationAsync(_request);
+
+            if (response.Success)
+            {
+                _successMessage = response.Message;
+                await OnInvitationSent.InvokeAsync();
+
+                // Close modal after a short delay
+                await Task.Delay(1500);
+                await Close();
+            }
+            else
+            {
+                _errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task Close()
+    {
+        _request = new SendInvitationRequest();
+        _errorMessage = null;
+        _successMessage = null;
+        await OnClose.InvokeAsync();
+    }
+
+}

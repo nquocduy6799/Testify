@@ -1,6 +1,7 @@
 ﻿@page "/projects/{Id:int}"
 @using Testify.Shared.DTOs.Projects
 @using Testify.Client.Features.Milestones.Components
+@using Testify.Client.Features.Projects.Components
 @using Testify.Client.Interfaces
 @inject IProjectService ProjectService
 @inject NavigationManager Navigation
@@ -8,7 +9,7 @@
 
 <div class="min-h-screen bg-white text-slate-900">
     <div class="animate-in fade-in mx-auto max-w-[1400px] px-8 py-8 duration-700">
-        
+
         @if (isLoading)
         {
             <div class="flex h-screen w-full items-center justify-center">
@@ -26,15 +27,17 @@
         {
             @* --- DASHBOARD LAYOUT --- *@
             <div class="min-h-screen bg-slate-50/50 text-slate-900">
-                
+
                 @* HEADER CONTAINER *@
                 <div class="sticky top-0 z-30 bg-white/80 px-8 backdrop-blur-xl transition-all">
                     <div class="mx-auto flex max-w-[1400px] flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                        
+
                         @* Breadcrumb / Title *@
                         <div class="flex items-center gap-4">
                             <a href="/projects" class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 shadow-sm transition-all hover:border-[#E85D3F] hover:text-[#E85D3F]">
-                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m15 18-6-6 6-6"/>
+                                </svg>
                             </a>
                             <div class="h-8 w-[1px] bg-slate-200"></div>
                             <div class="flex items-center gap-3">
@@ -56,28 +59,36 @@
                         @* Tab Overview *@
                         <button @onclick='() => activeTab = "Overview"'
                                 class="@(activeTab == "Overview" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 rounded-3xl px-6 py-3 text-sm font-black transition-all whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>
+                            </svg>
                             Overview
                         </button>
 
                         @* Tab Kanban Board *@
                         <button @onclick='() => activeTab = "Kanban Board"'
                                 class="@(activeTab == "Kanban Board" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 rounded-3xl px-6 py-3 text-sm font-black transition-all whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M8 7v7" /><path d="M12 7v4" /><path d="M16 7v10" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v10"/>
+                            </svg>
                             Kanban Board
                         </button>
 
                         @* Tab Milestones *@
                         <button @onclick='() => activeTab = "Milestones"'
                                 class="@(activeTab == "Milestones" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 rounded-3xl px-6 py-3 text-sm font-black transition-all whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" x2="4" y1="22" y2="15" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>
+                            </svg>
                             Milestones
                         </button>
 
                         @* Tab Team Members *@
                         <button @onclick='() => activeTab = "Team Members"'
                                 class="@(activeTab == "Team Members" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 rounded-3xl px-6 py-3 text-sm font-black transition-all whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
                             Team Members
                         </button>
                     </div>
@@ -88,13 +99,15 @@
                     <div class="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         @if (activeTab == "Milestones")
                         {
-                            <MilestoneManager ProjectId="Id" />
+                            <MilestoneManager ProjectId="Id"/>
                         }
                         else if (activeTab == "Overview")
                         {
                             <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
                                 <div class="mb-4 rounded-full bg-slate-50 p-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>
+                                    </svg>
                                 </div>
                                 <h3 class="text-lg font-bold text-slate-700">Project Overview</h3>
                                 <p>Detailed project statistics and summary coming soon.</p>
@@ -102,9 +115,11 @@
                         }
                         else if (activeTab == "Kanban Board")
                         {
-                           <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
+                            <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
                                 <div class="mb-4 rounded-full bg-slate-50 p-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v10"/></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 7v7"/><path d="M12 7v4"/><path d="M16 7v10"/>
+                                    </svg>
                                 </div>
                                 <h3 class="text-lg font-bold text-slate-700">Kanban Board</h3>
                                 <p>Task management board coming soon.</p>
@@ -112,13 +127,7 @@
                         }
                         else if (activeTab == "Team Members")
                         {
-                            <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
-                                 <div class="mb-4 rounded-full bg-slate-50 p-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                                </div>
-                                <h3 class="text-lg font-bold text-slate-700">Team Members</h3>
-                                <p>Member management coming soon.</p>
-                            </div>
+                            <TeamManagement ProjectId="@Id"/>
                         }
                     </div>
                 </div>
@@ -132,7 +141,7 @@
 
     private ProjectResponse? project;
     private bool isLoading = true;
-    private string activeTab = "Milestones"; 
+    private string activeTab = "Milestones";
 
     protected override async Task OnInitializedAsync()
     {
@@ -150,4 +159,5 @@
             isLoading = false;
         }
     }
+
 }

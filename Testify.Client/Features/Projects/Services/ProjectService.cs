@@ -98,5 +98,31 @@ namespace Testify.Client.Features.Projects.Services
                 return null;
             }
         }
+
+        public async Task<List<TeamMemberResponse>> GetMembersAsync(int projectId)
+        {
+            try
+            {
+                var members = await _httpClient.GetFromJsonAsync<List<TeamMemberResponse>>($"{ApiEndpoint}/{projectId}/members");
+                return members ?? new List<TeamMemberResponse>();
+            }
+            catch (HttpRequestException)
+            {
+                return new List<TeamMemberResponse>();
+            }
+        }
+
+        public async Task<bool> RemoveMemberAsync(int projectId, int memberId)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"{ApiEndpoint}/{projectId}/members/{memberId}");
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException)
+            {
+                return false;
+            }
+        }
     }
 }

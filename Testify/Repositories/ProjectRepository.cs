@@ -151,5 +151,58 @@ namespace Testify.Repositories
 
             return teamMember?.Role;
         }
+
+        public async Task<IEnumerable<TeamMemberResponse>> GetProjectMembersAsync(int projectId)
+        {
+            var members = await _context.ProjectTeamMembers
+                .Include(tm => tm.User)
+                .Where(tm => tm.ProjectId == projectId)
+                .OrderBy(tm => tm.JoinedAt)
+                .ToListAsync();
+
+            return members.Select(tm => new TeamMemberResponse
+            {
+                Id = tm.Id,
+                UserId = tm.UserId,
+                UserName = tm.User.UserName ?? "",
+                FullName = tm.User.FullName,
+                Email = tm.User.Email ?? "",
+                AvatarUrl = tm.User.AvatarUrl,
+                Role = tm.Role,
+                JoinedAt = tm.JoinedAt
+            }).ToList();
+        }
+
+        public async Task<bool> RemoveMemberAsync(int projectId, int memberId, string removedBy)
+        {
+            var member = await _context.ProjectTeamMembers
+                .FirstOrDefaultAsync(tm => tm.Id == memberId && tm.ProjectId == projectId);
+
+            if (member == null)
+                return false;
+
+            // Prevent removing the last PM
+            if (member.Role == ProjectRole.PM)
+            {
+                var pmCount = await _context.ProjectTeamMembers
+                    .CountAsync(tm => tm.ProjectId == projectId && tm.Role == ProjectRole.PM);
+
+                if (pmCount <= 1)
+                    return false;
+            }
+
+            _context.ProjectTeamMembers.Remove(member);
+
+            // Update project members count
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project != null)
+            {
+                project.MembersCount = await _context.ProjectTeamMembers
+                    .CountAsync(tm => tm.ProjectId == projectId) - 1;
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

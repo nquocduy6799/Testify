@@ -103,6 +103,25 @@ namespace Testify.Data
                 .WithMany(rs => rs.LinkedTasks)
                 .HasForeignKey(tlrs => tlrs.RunStepId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            // Notifications - prevent cascade delete conflicts
+            builder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Notification>()
+                .HasOne(n => n.Sender)
+                .WithMany()
+                .HasForeignKey(n => n.SenderUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Notification>()
+                .HasOne(n => n.Project)
+                .WithMany()
+                .HasForeignKey(n => n.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

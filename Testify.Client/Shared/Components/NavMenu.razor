@@ -46,24 +46,25 @@
             @if (IsClientMode)
             {
                 <div class="mr-2 hidden items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-4 py-1.5 font-bold tracking-widest text-white text-[10px] uppercase lg:flex">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#E85D3F]"><rect width="16" height="20" x="4" y="2" rx="2" ry="2" /><path d="M9 22v-4h6v4" /><path d="M8 6h.01" /><path d="M16 6h.01" /><path d="M12 6h.01" /><path d="M12 10h.01" /><path d="M12 14h.01" /><path d="M16 10h.01" /><path d="M16 14h.01" /><path d="M8 10h.01" /><path d="M8 14h.01" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#E85D3F]">
+                        <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>
+                    </svg>
                     Client Mode
                 </div>
             }
 
             @* Search Bar *@
             <div class="group relative hidden sm:block">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 transition-colors group-hover:text-slate-600"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400 transition-colors group-hover:text-slate-600">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
                 <input type="text"
                        placeholder="@(IsClientMode ? "Search talent..." : "Quick search...")"
-                       class="w-48 rounded-full border border-transparent bg-white py-2 pr-4 pl-10 text-sm shadow-sm transition-all focus:w-64 focus:border-slate-200 focus:bg-white focus:outline-none" />
+                       class="w-48 rounded-full border border-transparent bg-white py-2 pr-4 pl-10 text-sm shadow-sm transition-all focus:w-64 focus:border-slate-200 focus:bg-white focus:outline-none"/>
             </div>
 
-            @* Notification Bell *@
-            <button class="relative rounded-xl border-none bg-transparent p-2.5 text-slate-500 transition-all hover:bg-white hover:shadow-md">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></svg>
-                <span class="absolute top-2.5 right-2.5 h-2 w-2 rounded-full border-2 border-[#F3F5F9] bg-red-500"></span>
-            </button>
+            @* Notification Dropdown *@
+            <NotificationDropdown/>
 
             @* --- AUTHENTICATION & PROFILE DROPDOWN --- *@
             <AuthorizeView>
@@ -74,15 +75,19 @@
                             <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100 shadow-sm">
                                 @if (IsClientMode)
                                 {
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><rect width="16" height="20" x="4" y="2" rx="2" ry="2" /><path d="M9 22v-4h6v4" /><path d="M8 6h.01" /><path d="M16 6h.01" /><path d="M12 6h.01" /><path d="M12 10h.01" /><path d="M12 14h.01" /><path d="M16 10h.01" /><path d="M16 14h.01" /><path d="M8 10h.01" /><path d="M8 14h.01" /></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400">
+                                        <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>
+                                    </svg>
                                 }
                                 else
                                 {
                                     @* Use context.User.Identity.Name or a placeholder image *@
-                                    <img src="https://picsum.photos/seed/user-dev/100/100" alt="Profile" class="h-full w-full object-cover" />
+                                    <img src="https://picsum.photos/seed/user-dev/100/100" alt="Profile" class="h-full w-full object-cover"/>
                                 }
                             </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 transition-transform duration-300 @(_isMenuOpen ? "rotate-180 text-[#E85D3F]" : "")"><path d="m6 9 6 6 6-6" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 transition-transform duration-300 @(_isMenuOpen ? "rotate-180 text-[#E85D3F]" : "")">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
                         </button>
 
                         @if (_isMenuOpen)
@@ -96,17 +101,21 @@
 
                                 <div class="p-2">
                                     <a href="Account/Manage" class="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-slate-600 no-underline transition-all hover:bg-slate-50 hover:text-[#E85D3F]">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                        </svg>
                                         @(IsClientMode ? "Organization Profile" : "My Profile")
                                     </a>
                                 </div>
 
                                 <div class="border-t border-slate-50 bg-slate-50/20 p-2">
                                     <form action="Account/Logout" method="post">
-                                        <AntiforgeryToken />
-                                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                                        <AntiforgeryToken/>
+                                        <input type="hidden" name="ReturnUrl" value="@currentUrl"/>
                                         <button type="submit" class="flex w-full items-center gap-3 rounded-2xl border-none bg-transparent p-3 text-sm font-bold text-rose-500 transition-all hover:bg-rose-50">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+                                            </svg>
                                             Log out
                                         </button>
                                     </form>
@@ -159,9 +168,9 @@
     {
         // Try to get the full name from claims
         var fullName = authState.User.FindFirst("name")?.Value
-                    ?? authState.User.FindFirst(ClaimTypes.Name)?.Value
-                    ?? authState.User.Identity?.Name
-                    ?? "User";
+                       ?? authState.User.FindFirst(ClaimTypes.Name)?.Value
+                       ?? authState.User.Identity?.Name
+                       ?? "User";
 
         return fullName;
     }
@@ -170,8 +179,8 @@
     {
         // Get email from claims
         var email = authState.User.FindFirst(ClaimTypes.Email)?.Value
-                 ?? authState.User.FindFirst("email")?.Value
-                 ?? "No email available";
+                    ?? authState.User.FindFirst("email")?.Value
+                    ?? "No email available";
 
         return email;
     }
@@ -180,6 +189,7 @@
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
+
 }
 
 

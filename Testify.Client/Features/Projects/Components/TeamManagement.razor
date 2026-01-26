@@ -1,0 +1,334 @@
+@using Testify.Client.Interfaces
+@using Testify.Client.Features.Invitations.Components
+@using Testify.Shared.DTOs.Projects
+@using Testify.Shared.DTOs.Invitations
+@using Testify.Shared.Enums
+@inject IProjectService ProjectService
+@inject IInvitationService InvitationService
+
+<div class="space-y-6">
+    @* Header *@
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-xl font-bold text-slate-800">Team Management</h2>
+            <p class="text-sm text-slate-500">Manage project members and invitations</p>
+        </div>
+        <button @onclick="OpenInviteModal" class="flex items-center gap-2 rounded-2xl bg-[#E85D3F] px-4 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#d54e32] cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>
+            </svg>
+            Invite Member
+        </button>
+    </div>
+
+    @* Section A: Active Members *@
+    <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-800">Active Members</h3>
+            <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+                @_members.Count member@(_members.Count != 1 ? "s" : "")
+            </span>
+        </div>
+
+        @if (_isLoadingMembers)
+        {
+            <div class="flex items-center justify-center py-8">
+                <div class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#E85D3F]"></div>
+            </div>
+        }
+        else if (!_members.Any())
+        {
+            <div class="py-8 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-slate-300">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                </svg>
+                <p class="text-sm text-slate-400">No members found</p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-3">
+                @foreach (var member in _members)
+                {
+                    <div class="flex items-center justify-between rounded-2xl bg-slate-50/50 p-4 transition-colors hover:bg-slate-100/50">
+                        <div class="flex items-center gap-4">
+                            @* Avatar *@
+                            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-sm font-bold text-slate-600">
+                                @GetInitials(member.FullName ?? member.UserName)
+                            </div>
+                            @* Info *@
+                            <div>
+                                <p class="text-sm font-semibold text-slate-800">@(member.FullName ?? member.UserName)</p>
+                                <p class="text-xs text-slate-500">@member.Email</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            @* Role Badge *@
+                            <span class="rounded-full px-3 py-1 text-xs font-bold @GetRoleBadgeClass(member.Role)">
+                                @GetRoleName(member.Role)
+                            </span>
+                            @* Remove Button *@
+                            @if (member.Role != ProjectRole.PM || _members.Count(m => m.Role == ProjectRole.PM) > 1)
+                            {
+                                <button @onclick="() => ConfirmRemoveMember(member)"
+                                        disabled="@_isProcessing"
+                                        class="rounded-xl p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-50 cursor-pointer">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                    </svg>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @* Section B: Pending Invitations *@
+    <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-800">Pending Invitations</h3>
+            @if (_pendingInvitations.Any())
+            {
+                <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+                    @_pendingInvitations.Count pending
+                </span>
+            }
+        </div>
+
+        @if (_isLoadingInvitations)
+        {
+            <div class="flex items-center justify-center py-8">
+                <div class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#E85D3F]"></div>
+            </div>
+        }
+        else if (!_pendingInvitations.Any())
+        {
+            <div class="py-8 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-slate-300">
+                    <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+                </svg>
+                <p class="text-sm text-slate-400">No pending invitations</p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-3">
+                @foreach (var invitation in _pendingInvitations)
+                {
+                    <div class="flex items-center justify-between rounded-2xl bg-slate-50/50 p-4 transition-colors hover:bg-slate-100/50">
+                        <div class="flex items-center gap-4">
+                            @* Email icon *@
+                            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-amber-200 text-amber-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                                </svg>
+                            </div>
+                            @* Info *@
+                            <div>
+                                <p class="text-sm font-semibold text-slate-800">@invitation.Email</p>
+                                <p class="text-xs text-slate-500">Sent @FormatDate(invitation.SentAt) by @invitation.SenderName</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            @* Status Badge *@
+                            <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                                Pending
+                            </span>
+                            @* Revoke Button *@
+                            <button @onclick="() => RevokeInvitation(invitation)"
+                                    disabled="@_isProcessing"
+                                    class="rounded-xl bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-red-100 hover:text-red-600 disabled:opacity-50 cursor-pointer">
+                                Revoke
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    @* Confirmation Dialog *@
+    @if (_memberToRemove != null)
+    {
+        <div class="fixed inset-0 z-[200] flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @onclick="CancelRemove"></div>
+            <div class="relative z-10 w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl">
+                <h3 class="mb-2 text-lg font-bold text-slate-800">Remove Member</h3>
+                <p class="mb-6 text-sm text-slate-500">
+                    Are you sure you want to remove <strong>@(_memberToRemove.FullName ?? _memberToRemove.UserName)</strong> from this project?
+                </p>
+                <div class="flex gap-3">
+                    <button @onclick="CancelRemove" class="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">
+                        Cancel
+                    </button>
+                    <button @onclick="ExecuteRemoveMember" disabled="@_isProcessing" class="flex-1 rounded-2xl bg-red-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-50 cursor-pointer">
+                        @if (_isProcessing)
+                        {
+                            <span>Removing...</span>
+                        }
+                        else
+                        {
+                            <span>Remove</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@* Invite Member Modal *@
+<InviteMemberModal
+    IsVisible="_showInviteModal"
+    ProjectId="ProjectId"
+    OnClose="CloseInviteModal"
+    OnInvitationSent="OnInvitationSent"/>
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+
+    private List<TeamMemberResponse> _members = new();
+    private List<PendingInvitationResponse> _pendingInvitations = new();
+    private bool _isLoadingMembers;
+    private bool _isLoadingInvitations;
+    private bool _isProcessing;
+    private bool _showInviteModal;
+    private TeamMemberResponse? _memberToRemove;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        await Task.WhenAll(LoadMembers(), LoadPendingInvitations());
+    }
+
+    private async Task LoadMembers()
+    {
+        _isLoadingMembers = true;
+        try
+        {
+            _members = await ProjectService.GetMembersAsync(ProjectId);
+        }
+        finally
+        {
+            _isLoadingMembers = false;
+        }
+    }
+
+    private async Task LoadPendingInvitations()
+    {
+        _isLoadingInvitations = true;
+        try
+        {
+            _pendingInvitations = await InvitationService.GetPendingInvitationsAsync(ProjectId);
+        }
+        finally
+        {
+            _isLoadingInvitations = false;
+        }
+    }
+
+    private void OpenInviteModal()
+    {
+        _showInviteModal = true;
+    }
+
+    private void CloseInviteModal()
+    {
+        _showInviteModal = false;
+    }
+
+    private async Task OnInvitationSent()
+    {
+        // Auto-refresh pending invitations when a new invite is sent
+        await LoadPendingInvitations();
+    }
+
+    private void ConfirmRemoveMember(TeamMemberResponse member)
+    {
+        _memberToRemove = member;
+    }
+
+    private void CancelRemove()
+    {
+        _memberToRemove = null;
+    }
+
+    private async Task ExecuteRemoveMember()
+    {
+        if (_memberToRemove == null) return;
+
+        _isProcessing = true;
+        try
+        {
+            var success = await ProjectService.RemoveMemberAsync(ProjectId, _memberToRemove.Id);
+            if (success)
+            {
+                await LoadMembers();
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+            _memberToRemove = null;
+        }
+    }
+
+    private async Task RevokeInvitation(PendingInvitationResponse invitation)
+    {
+        _isProcessing = true;
+        try
+        {
+            var success = await InvitationService.RevokeInvitationAsync(invitation.Id);
+            if (success)
+            {
+                await LoadPendingInvitations();
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private static string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return parts[0].Length >= 2 ? parts[0][..2].ToUpper() : parts[0].ToUpper();
+    }
+
+    private static string GetRoleName(ProjectRole role) => role switch
+    {
+        ProjectRole.PM => "Project Manager",
+        ProjectRole.Tester => "Tester",
+        ProjectRole.Dev => "Developer",
+        _ => role.ToString()
+    };
+
+    private static string GetRoleBadgeClass(ProjectRole role) => role switch
+    {
+        ProjectRole.PM => "bg-purple-100 text-purple-700",
+        ProjectRole.Tester => "bg-blue-100 text-blue-700",
+        ProjectRole.Dev => "bg-emerald-100 text-emerald-700",
+        _ => "bg-slate-100 text-slate-700"
+    };
+
+    private static string FormatDate(DateTime date)
+    {
+        var diff = DateTime.Now - date;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return date.ToString("MMM dd");
+    }
+
+}
