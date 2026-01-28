@@ -1,10 +1,13 @@
 @using Testify.Client.Interfaces
 @using Testify.Client.Features.Invitations.Components
+@using Testify.Client.Services
 @using Testify.Shared.DTOs.Projects
 @using Testify.Shared.DTOs.Invitations
 @using Testify.Shared.Enums
 @inject IProjectService ProjectService
 @inject IInvitationService InvitationService
+@inject IServiceProvider ServiceProvider
+@implements IAsyncDisposable
 <div class="space-y-8 pb-12">
     @* Header *@
     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -66,8 +69,13 @@
                                     @GetInitials(member.FullName ?? member.UserName)
                                 </div>
                             </div>
-                            @* Status Dot *@
-                            <div class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-4 border-white bg-emerald-500"></div>
+                            @* Status Dot - Real-time *@
+                            <div class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-4 border-white @GetStatusDotColor(member.UserId)">
+                                @if (IsUserOnline(member.UserId))
+                                {
+                                    <span class="absolute inset-0 rounded-full @GetStatusDotColor(member.UserId) animate-ping opacity-75"></span>
+                                }
+                            </div>
                         </div>
 
                         @if (CanManageMember(member))
@@ -89,7 +97,9 @@
                     <div class="flex items-center gap-2 mt-1">
                         <span class="text-[10px] font-black uppercase tracking-widest @GetRoleTextColor(member.Role)">@GetRoleName(member.Role)</span>
                         <div class="w-1 h-1 bg-slate-200 rounded-full"></div>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase">Online</span>
+                        <span class="text-[10px] font-bold uppercase @GetStatusTextColor(member.UserId)">
+                            @(IsUserOnline(member.UserId) ? "Online" : "Offline")
+                        </span>
                     </div>
 
                     <div class="mt-8 grid grid-cols-2 gap-4">
@@ -232,10 +242,38 @@
     private bool _isProcessing;
     private bool _showInviteModal;
     private TeamMemberResponse? _memberToRemove;
+    private NotificationHubService? _hubService;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Get HubService if available (WebAssembly mode)
+            _hubService = ServiceProvider.GetService<NotificationHubService>();
+            
+            if (_hubService != null)
+            {
+                // Subscribe to status changes
+                _hubService.OnUserStatusChanged += HandleUserStatusChanged;
+                Console.WriteLine("[TeamManagement] Subscribed to user status changes");
+            }
+        }
+    }
+
+    private void HandleUserStatusChanged(string userId, bool isOnline)
+    {
+        // Check if this user is in our team
+        if (_members.Any(m => m.UserId == userId))
+        {
+            Console.WriteLine($"[TeamManagement] Team member {userId} is now {(isOnline ? "ONLINE" : "OFFLINE")}");
+            // Trigger UI update
+            InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadData()
@@ -387,6 +425,29 @@
     {
         // Can't remove yourself or the last PM
         return member.Role != ProjectRole.PM || _members.Count(m => m.Role == ProjectRole.PM) > 1;
+    }
+
+    private bool IsUserOnline(string userId)
+    {
+        return _hubService?.IsUserOnline(userId) ?? false;
+    }
+
+    private string GetStatusDotColor(string userId)
+    {
+        return IsUserOnline(userId) ? "bg-emerald-500" : "bg-slate-300";
+    }
+
+    private string GetStatusTextColor(string userId)
+    {
+        return IsUserOnline(userId) ? "text-emerald-500" : "text-slate-400";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubService != null)
+        {
+            _hubService.OnUserStatusChanged -= HandleUserStatusChanged;
+        }
     }
 
 }

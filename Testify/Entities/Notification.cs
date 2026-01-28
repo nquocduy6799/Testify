@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Testify.Data;
@@ -20,6 +20,7 @@ namespace Testify.Entities
         public int? ProjectId { get; set; }
         public string? SenderUserId { get; set; }
         public InvitationStatus? InvitationStatus { get; set; }
+        public ProjectRole? InvitedRole { get; set; }
 
         // Navigation properties
         public virtual ApplicationUser User { get; set; } = null!;

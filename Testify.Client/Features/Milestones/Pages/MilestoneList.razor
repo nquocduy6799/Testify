@@ -1,4 +1,4 @@
-﻿@page "/projects/{projectId:int}/milestones"
+@page "/projects/{projectId:int}/milestones"
 @using Testify.Shared.DTOs.Milestones
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
@@ -72,7 +72,7 @@
             <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach (var milestone in milestones)
                 {
-                    <MilestoneCard Milestone="milestone" OnEdit="OpenEditDialog" OnDelete="DeleteMilestone" />
+                    <MilestoneCard Milestone="milestone" OnEdit="OpenEditDialog" OnDelete="async (id) => await DeleteMilestoneById(id)" />
                 }
             </div>
         }
@@ -175,6 +175,12 @@
     private async Task DeleteMilestone(MilestoneResponse milestone)
     {
         await MilestoneService.DeleteMilestoneAsync(milestone.Id);
+        await LoadMilestones();
+    }
+
+    private async Task DeleteMilestoneById(int milestoneId)
+    {
+        await MilestoneService.DeleteMilestoneAsync(milestoneId);
         await LoadMilestones();
     }
 }

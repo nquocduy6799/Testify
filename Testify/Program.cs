@@ -11,6 +11,7 @@ using Testify.Components.Account;
 using Testify.Data;
 using Testify.Interfaces;
 using Testify.Repositories;
+using Testify.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +78,9 @@ builder.Services.AddScoped<IInvitationService, InvitationService>();
 // Add controllers for API endpoints
 builder.Services.AddControllers();
 
+// Add SignalR for real-time notifications
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 // Seed users and roles
@@ -116,6 +120,9 @@ app.MapStaticAssets();
 
 // Map API controllers
 app.MapControllers();
+
+// Map SignalR Hub
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

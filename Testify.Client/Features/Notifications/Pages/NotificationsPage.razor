@@ -80,7 +80,7 @@
                             <span class="text-xs font-medium text-slate-400 whitespace-nowrap ml-2">@FormatTime(notification.CreatedAt)</span>
                         </div>
                         
-                        <p class="mb-4 text-sm text-slate-600">@notification.Content</p>
+                        <p class="mb-4 text-sm text-slate-600">@((MarkupString)(notification.Content ?? ""))</p>
 
                         @* Invitation Actions *@
                         @if (notification.Type == NotificationType.ProjectInvitation && notification.InvitationStatus == InvitationStatus.Pending)

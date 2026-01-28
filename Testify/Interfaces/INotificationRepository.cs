@@ -10,6 +10,6 @@ namespace Testify.Interfaces
         Task<bool> AcceptInvitationAsync(long notificationId, string userId, string userName);
         Task<bool> DeclineInvitationAsync(long notificationId, string userId);
         Task<bool> MarkAsReadAsync(long notificationId, string userId);
-        Task<NotificationResponse> CreateInvitationAsync(int projectId, string targetUserId, string senderUserId, string senderName, string projectName, string createdBy);
+        Task<NotificationResponse> CreateInvitationAsync(int projectId, string targetUserId, string senderUserId, string senderName, string projectName, ProjectRole invitedRole, string createdBy);
     }
 }

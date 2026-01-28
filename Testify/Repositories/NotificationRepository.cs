@@ -74,7 +74,7 @@ namespace Testify.Repositories
                 {
                     ProjectId = notification.ProjectId.Value,
                     UserId = userId,
-                    Role = ProjectRole.Tester, // Default role for invited members
+                    Role = notification.InvitedRole ?? ProjectRole.Tester, // Use invited role or default to Tester
                     JoinedAt = DateTimeHelper.GetVietnamTime()
                 };
                 _context.ProjectTeamMembers.Add(teamMember);
@@ -132,18 +132,30 @@ namespace Testify.Repositories
             string senderUserId,
             string senderName,
             string projectName,
+            ProjectRole invitedRole,
             string createdBy)
         {
-            System.Console.WriteLine($"[Repo] CreateInvitationAsync - TargetUserId: {targetUserId}");
+            System.Console.WriteLine($"[Repo] CreateInvitationAsync - TargetUserId: {targetUserId}, Role: {invitedRole}");
+            
+            // Get role display name
+            var roleDisplay = invitedRole switch
+            {
+                ProjectRole.Tester => "Tester",
+                ProjectRole.Dev => "Developer",
+                ProjectRole.PM => "Project Manager",
+                _ => "Team Member"
+            };
+            
             var notification = new Notification
             {
                 UserId = targetUserId,
                 Title = "Project Invitation",
-                Content = $"{senderName} invited you to join project \"{projectName}\"",
+                Content = $"{senderName} invited you to join project \"{projectName}\" as <strong>{roleDisplay}</strong>",
                 Type = NotificationType.ProjectInvitation,
                 ProjectId = projectId,
                 SenderUserId = senderUserId,
                 InvitationStatus = InvitationStatus.Pending,
+                InvitedRole = invitedRole,
                 IsRead = false,
                 Link = $"/projects/{projectId}"
             };
@@ -171,7 +183,8 @@ namespace Testify.Repositories
                 ProjectId = notification.ProjectId,
                 ProjectName = notification.Project?.Name,
                 SenderName = notification.Sender?.UserName,
-                InvitationStatus = notification.InvitationStatus
+                InvitationStatus = notification.InvitationStatus,
+                InvitedRole = notification.InvitedRole
             };
         }
     }

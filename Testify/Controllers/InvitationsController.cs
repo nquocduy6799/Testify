@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Testify.Data;
+using Testify.Hubs;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.Invitations;
 using Testify.Shared.Enums;
@@ -16,15 +18,18 @@ namespace Testify.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly INotificationRepository _notificationRepository;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
         public InvitationsController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            INotificationRepository notificationRepository)
+            INotificationRepository notificationRepository,
+            IHubContext<NotificationHub> hubContext)
         {
             _context = context;
             _userManager = userManager;
             _notificationRepository = notificationRepository;
+            _hubContext = hubContext;
         }
 
         // POST: api/invitations/send
@@ -127,7 +132,14 @@ namespace Testify.Controllers
                 senderUserId: currentUserId,
                 senderName: senderName,
                 projectName: project.Name,
+                invitedRole: request.Role,
                 createdBy: currentUserName);
+
+            // Send real-time notification via SignalR
+            await _hubContext.Clients.Group($"user_{targetUser.Id}")
+                .SendAsync("ReceiveNotification", notification);
+            
+            Console.WriteLine($"[SignalR] Sent notification to user_{targetUser.Id}");
 
             return Ok(new InvitationResponse
             {

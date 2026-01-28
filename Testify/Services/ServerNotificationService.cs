@@ -23,20 +23,26 @@ namespace Testify.Services
         private async Task<string?> GetCurrentUserIdAsync()
         {
             var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
-            return authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            Console.WriteLine($"[ServerNotificationService] GetCurrentUserIdAsync: {userId ?? "NULL"}");
+            return userId;
         }
 
         public async Task<List<NotificationResponse>> GetNotificationsAsync()
         {
             var userId = await GetCurrentUserIdAsync();
+            Console.WriteLine($"[ServerNotificationService] Getting notifications for userId: {userId ?? "NULL"}");
+            
             if (string.IsNullOrEmpty(userId))
             {
+                Console.WriteLine("[ServerNotificationService] UserId is null, returning empty list");
                 return new List<NotificationResponse>();
             }
 
             using var scope = _scopeFactory.CreateScope();
             var repo = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
             var notifications = await repo.GetUserNotificationsAsync(userId);
+            Console.WriteLine($"[ServerNotificationService] Found {notifications.Count()} notifications");
             return notifications.ToList();
         }
 

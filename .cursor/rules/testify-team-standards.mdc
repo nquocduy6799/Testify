@@ -1,0 +1,206 @@
+---
+description: Testify Team Project Standards - Coding rules for group project
+alwaysApply: true
+---
+
+# Testify Team Project Standards
+
+## 🏗️ Project Structure
+
+**CRITICAL**: This is a **GROUP PROJECT**. Follow the established structure strictly.
+
+### Directory Structure
+
+```
+Testify/                    ← Server-side (ASP.NET Core)
+├── Controllers/           ← API Controllers only
+├── Repositories/          ← Data access layer
+├── Services/             ← Server-side services (direct DB/Repository access)
+├── Entities/             ← Database entities
+├── Data/                 ← DbContext, User entities
+├── Interfaces/           ← Repository interfaces
+└── Migrations/           ← EF Core migrations
+
+Testify.Client/            ← Client-side (Blazor WebAssembly/Server)
+├── Features/             ← Feature-based organization
+│   ├── {FeatureName}/
+│   │   ├── Pages/       ← Razor pages for feature
+│   │   ├── Components/  ← Razor components for feature
+│   │   └── Services/    ← Client services (HTTP API calls)
+├── Shared/
+│   └── Components/      ← Shared components
+└── Interfaces/          ← Client interfaces
+
+Testify.Shared/           ← Shared code between Server & Client
+├── DTOs/                ← Data Transfer Objects
+├── Enums/               ← Shared enumerations
+└── Helpers/             ← Shared helper classes
+```
+
+## ✅ DO's
+
+### 1. Follow Feature-Based Organization (Client)
+
+```csharp
+// ✅ GOOD - New notification feature
+Testify.Client/Features/Notifications/
+├── Pages/NotificationsPage.razor
+├── Components/NotificationItem.razor
+└── Services/NotificationService.cs
+```
+
+### 2. Respect Service Layer Separation
+
+```csharp
+// ✅ GOOD - Server service (direct Repository access)
+namespace Testify.Services
+{
+    public class ServerNotificationService : INotificationService
+    {
+        private readonly INotificationRepository _repository;
+        // Direct database access via Repository
+    }
+}
+
+// ✅ GOOD - Client service (HTTP calls)
+namespace Testify.Client.Features.Notifications.Services
+{
+    public class NotificationService : INotificationService
+    {
+        private readonly HttpClient _httpClient;
+        // HTTP API calls
+    }
+}
+```
+
+### 3. Use Proper Render Modes
+
+```razor
+@* ✅ GOOD - Parent component has rendermode *@
+@rendermode InteractiveServer
+
+@* Child components inherit from parent *@
+<NotificationDropdown />
+```
+
+### 4. DTOs in Shared Project
+
+```csharp
+// ✅ GOOD - DTOs belong in Testify.Shared
+namespace Testify.Shared.DTOs.Notifications
+{
+    public class NotificationResponse
+    {
+        public long Id { get; set; }
+        public string Title { get; set; }
+    }
+}
+```
+
+## ❌ DON'Ts
+
+### 1. Don't Modify Files Outside Your Feature
+
+```
+❌ BAD - Modifying unrelated features
+Working on: Notifications feature
+Modified:
+- ✅ Testify.Client/Features/Notifications/...
+- ❌ Testify.Client/Features/Projects/...      ← WRONG!
+- ❌ Testify.Client/Features/Kanban/...        ← WRONG!
+```
+
+**Exception**: Only modify shared files if absolutely necessary and document why.
+
+### 2. Don't Create Wrong Service Types
+
+```csharp
+// ❌ BAD - Server service using HttpClient
+namespace Testify.Services
+{
+    public class SomeService
+    {
+        private readonly HttpClient _httpClient; // WRONG!
+    }
+}
+
+// ❌ BAD - Client service accessing Repository directly
+namespace Testify.Client.Features.SomeFeature.Services
+{
+    public class SomeService
+    {
+        private readonly IRepository _repository; // WRONG!
+    }
+}
+```
+
+### 3. Don't Break Naming Conventions
+
+```csharp
+// ❌ BAD
+Controllers/notification_controller.cs
+Entities/notificationEntity.cs
+
+// ✅ GOOD
+Controllers/NotificationsController.cs
+Entities/Notification.cs
+```
+
+## 🎨 Code Quality Standards
+
+### Clean Code Principles
+
+1. **Self-documenting code**: Variable/method names should be clear
+2. **Single Responsibility**: Each class/method does ONE thing
+3. **DRY**: Don't Repeat Yourself
+4. **Consistent formatting**: Follow existing patterns
+
+### Example
+
+```csharp
+// ❌ BAD
+public async Task<List<NotificationResponse>> Get(string id)
+{
+    var x = await _repo.GetUserNotificationsAsync(id);
+    return x.ToList();
+}
+
+// ✅ GOOD
+public async Task<List<NotificationResponse>> GetNotificationsAsync(string userId)
+{
+    var notifications = await _notificationRepository.GetUserNotificationsAsync(userId);
+    return notifications.ToList();
+}
+```
+
+## 🔧 When Making Changes
+
+**Before coding, ask yourself:**
+
+1. ✅ Is this change within my assigned feature?
+2. ✅ Am I following the existing directory structure?
+3. ✅ Am I using the correct service type (Server vs Client)?
+4. ✅ Have I checked for similar patterns in the codebase?
+5. ✅ Will this change affect other team members' work?
+
+**If unsure, DON'T modify - ask the team first!**
+
+## 📝 Migration & Database
+
+```bash
+# Create migration
+dotnet ef migrations add MigrationName --project Testify/Testify.csproj
+
+# Apply migration
+dotnet ef database update --project Testify/Testify.csproj
+```
+
+**Always test migrations locally before committing!**
+
+## 🚀 Summary
+
+- **Follow the tree structure**: Don't create new top-level folders
+- **Stay in your lane**: Only modify files related to your feature
+- **Match existing patterns**: Look at similar features for guidance
+- **Clean code**: Write maintainable, readable code
+- **Test before commit**: Ensure your changes don't break existing functionality

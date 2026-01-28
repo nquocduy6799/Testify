@@ -3,108 +3,145 @@
 @using Testify.Shared.Enums
 @inject IInvitationService InvitationService
 
+<style>
+    @@keyframes zoomIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+</style>
+
 @if (IsVisible)
 {
-    <div class="fixed inset-0 z-[200] flex items-center justify-center">
-        @* Backdrop *@
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @onclick="Close"></div>
-
-        @* Modal *@
-        <div class="animate-in fade-in zoom-in-95 relative z-10 w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl duration-200">
-            @* Header *@
-            <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-4">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-800">Invite Team Member</h2>
-                    <p class="text-xs text-slate-500">Send an invitation to join this project</p>
-                </div>
-                <button @onclick="Close" class="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+    @* Success State Modal *@
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
+            <div class="relative w-full max-w-sm rounded-[48px] bg-white p-12 text-center shadow-2xl animate-[zoomIn_0.3s_ease-out]">
+                <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 shadow-lg shadow-emerald-200">
+                    <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
                     </svg>
-                </button>
+                </div>
+                <h2 class="text-2xl font-black text-slate-800">Invitation Sent!</h2>
+                <p class="mt-2 font-medium text-slate-400">The invitation has been sent successfully.</p>
             </div>
-
-            @* Form *@
-            <EditForm Model="@_request" OnValidSubmit="HandleSubmit" class="p-6">
-                <DataAnnotationsValidator/>
-
-                @* Email Input *@
-                <div class="mb-5">
-                    <label for="email" class="mb-2 block text-sm font-semibold text-slate-700">Email Address</label>
-                    <div class="relative">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute top-1/2 left-4 -translate-y-1/2 text-slate-400">
-                            <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                        </svg>
-                        <InputText id="email" @bind-Value="_request.Email"
-                                   placeholder="colleague@company.com"
-                                   class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pr-4 pl-12 text-sm transition-all focus:border-[#E85D3F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20"/>
-                    </div>
-                    <ValidationMessage For="@(() => _request.Email)" class="mt-1 text-xs text-red-500"/>
-                </div>
-
-                @* Role Selection *@
-                <div class="mb-6">
-                    <label for="role" class="mb-2 block text-sm font-semibold text-slate-700">Role</label>
-                    <InputSelect id="role" @bind-Value="_request.Role"
-                                 class="w-full cursor-pointer rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm transition-all focus:border-[#E85D3F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20">
-                        <option value="@ProjectRole.Tester">Tester</option>
-                        <option value="@ProjectRole.Dev">Developer</option>
-                        <option value="@ProjectRole.PM">Project Manager</option>
-                    </InputSelect>
-                    <ValidationMessage For="@(() => _request.Role)" class="mt-1 text-xs text-red-500"/>
-                </div>
-
-                @* Error Message *@
-                @if (!string.IsNullOrEmpty(_errorMessage))
-                {
-                    <div class="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">
-                        <div class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>
-                            </svg>
-                            @_errorMessage
-                        </div>
-                    </div>
-                }
-
-                @* Success Message *@
-                @if (!string.IsNullOrEmpty(_successMessage))
-                {
-                    <div class="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-600">
-                        <div class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>
-                            </svg>
-                            @_successMessage
-                        </div>
-                    </div>
-                }
-
-                @* Actions *@
-                <div class="flex gap-3">
-                    <button type="button" @onclick="Close"
-                            class="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-slate-50 cursor-pointer">
-                        Cancel
-                    </button>
-                    <button type="submit" disabled="@_isSubmitting"
-                            class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#E85D3F] px-4 py-3 text-sm font-bold text-white transition-all hover:bg-[#d54e32] disabled:opacity-50 cursor-pointer">
-                        @if (_isSubmitting)
-                        {
-                            <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-                            <span>Sending...</span>
-                        }
-                        else
-                        {
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
-                            </svg>
-                            <span>Send Invitation</span>
-                        }
-                    </button>
-                </div>
-            </EditForm>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            @* Backdrop *@
+            <div class="absolute inset-0 animate-[fadeIn_0.3s_ease-out] bg-slate-900/60 backdrop-blur-md" @onclick="Close"></div>
+
+            @* Modal *@
+            <div class="relative flex w-full max-w-xl flex-col overflow-hidden rounded-[48px] bg-white shadow-2xl animate-[zoomIn_0.3s_ease-out]" @onclick:stopPropagation="true">
+                @* Header *@
+                <div class="flex items-start justify-between border-b border-slate-50 bg-slate-50/50 p-10">
+                    <div class="flex items-center gap-4">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#1C1D2A] text-white shadow-lg">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-800">Expand Team</h2>
+                            <p class="mt-0.5 text-[10px] font-black uppercase tracking-widest text-slate-400">Project Resource Provisioning</p>
+                        </div>
+                    </div>
+                    <button @onclick="Close" class="rounded-2xl p-3 text-slate-400 transition-all hover:bg-white cursor-pointer">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                @* Form *@
+                <EditForm Model="@_request" OnValidSubmit="HandleSubmit" class="space-y-8 p-10">
+                    <DataAnnotationsValidator/>
+
+                    <div class="space-y-6">
+                        @* Email Input *@
+                        <div class="relative space-y-1.5">
+                            <label for="email" class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                                Professional Email
+                            </label>
+                            <InputText id="email" @bind-Value="_request.Email"
+                                       placeholder="name@testify.io"
+                                       class="w-full rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-bold text-slate-800 outline-none transition-all focus:border-[#7E96E1] focus:bg-white"/>
+                            <ValidationMessage For="@(() => _request.Email)" class="text-xs font-bold text-red-500"/>
+                        </div>
+
+                        @* Role Selection *@
+                        <div class="space-y-3">
+                            <label for="role" class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                                Project Role
+                            </label>
+                            <div class="relative">
+                                <InputSelect id="role" @bind-Value="_request.Role"
+                                             class="w-full appearance-none cursor-pointer rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-bold text-slate-800 outline-none transition-all focus:border-[#7E96E1] focus:bg-white">
+                                    <option value="@ProjectRole.Tester">Tester</option>
+                                    <option value="@ProjectRole.Dev">Developer</option>
+                                </InputSelect>
+                                <svg class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 rotate-90 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                            <ValidationMessage For="@(() => _request.Role)" class="text-xs font-bold text-red-500"/>
+                        </div>
+                    </div>
+
+                    @* Error Message *@
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="rounded-2xl bg-red-50 p-4 text-sm font-bold text-red-600">
+                            <div class="flex items-center gap-3">
+                                <svg class="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>@_errorMessage</span>
+                            </div>
+                        </div>
+                    }
+
+                    @* Submit Button *@
+                    <div class="pt-4">
+                        <button type="submit" disabled="@_isSubmitting"
+                                class="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#1C1D2A] py-5 text-lg font-black text-white transition-all hover:bg-slate-800 hover:shadow-xl active:scale-95 disabled:opacity-70 cursor-pointer">
+                            @if (_isSubmitting)
+                            {
+                                <div class="h-6 w-6 animate-spin rounded-full border-4 border-white/20 border-t-white"></div>
+                            }
+                            else
+                            {
+                                <span>Issue Invitation</span>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            }
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
 }
 
 @code {

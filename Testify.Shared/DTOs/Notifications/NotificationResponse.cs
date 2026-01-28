@@ -19,5 +19,6 @@ namespace Testify.Shared.DTOs.Notifications
         public string? ProjectName { get; set; }
         public string? SenderName { get; set; }
         public InvitationStatus? InvitationStatus { get; set; }
+        public ProjectRole? InvitedRole { get; set; }
     }
 }

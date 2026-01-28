@@ -1,49 +1,72 @@
-﻿@using Testify.Shared.DTOs.Milestones
+@using Testify.Shared.DTOs.Milestones
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
 @using static Testify.Shared.Enums.MilestoneEnum
 @inject IMilestoneService MilestoneService
 
+<style>
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+</style>
+
 <div class="animate-in fade-in space-y-8 pb-20 duration-500">
     @* --- HEADER & ACTIONS --- *@
     <div class="flex flex-col justify-between gap-6 md:flex-row md:items-end">
         <div>
-            <h2 class="text-3xl font-black tracking-tight text-slate-900">Project Milestones</h2>
-            <p class="mt-2 font-medium text-slate-500">Define delivery cycles and track progress across the project timeline.</p>
+            <h2 class="text-3xl font-black tracking-tight text-slate-800">Project Milestones</h2>
+            <p class="mt-2 font-medium text-slate-400">Define delivery cycles and track progress across the project timeline.</p>
         </div>
         
-        <div class="flex items-center gap-6">
-            @* Stats Card (Visual Placeholder) *@
-            <div class="hidden items-center gap-4 rounded-[32px] border border-slate-50 bg-white px-6 py-3 shadow-sm md:flex">
-                <div class="flex flex-col">
-                    <span class="font-black tracking-widest text-[10px] text-slate-400 uppercase">Total</span>
-                    <span class="text-xl font-black text-slate-900">@milestones?.Count</span>
+        <div class="flex items-center gap-3">
+            @* Active Stats Badge *@
+            <div class="group flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-2.5 shadow-sm transition-all hover:shadow-md">
+                <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-50">
+                    <svg class="h-4 w-4 text-[#E85D3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
                 </div>
-                <div class="h-8 w-[1px] bg-slate-100"></div>
-                <div class="flex flex-col">
-                    <span class="font-black tracking-widest text-[10px] text-[#E85D3F] uppercase">Active</span>
-                    <span class="text-xl font-black text-[#E85D3F]">@milestones?.Count(m => m.Status == MilestoneStatus.Active)</span>
+                <div>
+                    <p class="mb-1 text-[9px] font-black uppercase leading-none tracking-widest text-slate-400">Active</p>
+                    <p class="text-lg font-black leading-none text-slate-800">@(milestones?.Count(m => m.Status == MilestoneStatus.Active) ?? 0)</p>
                 </div>
             </div>
 
             @* Add Button *@
-            <button @onclick="OpenCreateDialog" class="flex items-center gap-2 rounded-[32px] bg-[#1C1D2A] px-8 py-4 text-xs font-bold text-white shadow-xl shadow-slate-900/10 transition-all hover:-translate-y-0.5 hover:bg-[#E85D3F] hover:shadow-[#E85D3F]/20">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                New Milestone
+            <button @onclick="OpenCreateDialog" 
+                    class="flex items-center gap-2 rounded-2xl bg-[#E85D3F] px-6 py-3 text-sm font-bold text-white shadow-[0_10px_20px_-5px_rgba(232,93,63,0.3)] transition-all hover:bg-orange-600 hover:shadow-[0_12px_25px_-5px_rgba(232,93,63,0.4)] active:scale-95">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span class="hidden sm:inline">Add Milestone</span>
             </button>
         </div>
     </div>
 
     @* --- FILTER BAR --- *@
-    <div class="flex w-fit items-center rounded-[32px] border border-white bg-white/50 p-2 shadow-sm backdrop-blur-md">
-        @foreach (var filter in Enum.GetValues<MilestoneStatus>())
-        {
-            <button @onclick="() => activeFilter = filter"
-                    class="@(activeFilter == filter ? "bg-white text-slate-900 shadow-md" : "text-slate-500 hover:text-slate-800") rounded-[24px] px-6 py-2.5 text-xs font-bold transition-all duration-300 uppercase tracking-wide">
-                @filter
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-[32px] border border-white bg-white/50 p-2 shadow-sm backdrop-blur-md">
+        <div class="flex w-full overflow-x-auto rounded-2xl bg-slate-100/50 p-1 no-scrollbar sm:w-auto">
+            <button @onclick="() => activeFilter = MilestoneStatus.All"
+                    class="@(activeFilter == MilestoneStatus.All ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600") whitespace-nowrap rounded-xl px-6 py-2 text-[11px] font-black uppercase tracking-widest transition-all">
+                All
             </button>
-        }
+            @foreach (var filter in Enum.GetValues<MilestoneStatus>())
+            {
+                @if (filter != MilestoneStatus.All)
+                {
+                    <button @onclick="() => activeFilter = filter"
+                            class="@(activeFilter == filter ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600") whitespace-nowrap rounded-xl px-6 py-2 text-[11px] font-black uppercase tracking-widest transition-all">
+                        @filter
+                    </button>
+                }
+            }
+        </div>
     </div>
 
     @* --- MILESTONE GRID --- *@
@@ -58,18 +81,16 @@
     else if (filteredMilestones == null || !filteredMilestones.Any())
     {
         @* Empty State *@
-        <div class="flex flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-slate-50/50 p-24 text-center">
-            <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-[32px] bg-white text-slate-300 shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" x2="4" y1="22" y2="15" /></svg>
-            </div>
-            <h3 class="text-xl font-black text-slate-900">No milestones found</h3>
-            <p class="mt-2 max-w-xs text-sm font-medium text-slate-500">
-                @(activeFilter == MilestoneStatus.All ? "Start by creating your first project milestone." : $"No {activeFilter.ToString().ToLower()} milestones match your filter.")
-            </p>
-            @if (activeFilter == MilestoneStatus.All)
-            {
-                <button @onclick="OpenCreateDialog" class="mt-6 font-bold text-[#E85D3F] hover:underline">Create Now</button>
-            }
+        <div class="col-span-full flex flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/40 py-24 text-center">
+            <svg class="mb-6 h-10 w-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <h3 class="text-2xl font-black text-slate-800">No milestones yet</h3>
+            <p class="mt-2 max-w-sm font-medium text-slate-400">Create your first milestone to start tracking phases.</p>
+            <button @onclick="OpenCreateDialog" 
+                    class="mt-8 rounded-2xl bg-[#E85D3F] px-8 py-3 font-black text-white shadow-lg shadow-orange-100 transition-all hover:shadow-xl">
+                Initialize Milestone
+            </button>
         </div>
     }
     else
@@ -81,7 +102,9 @@
                     Milestone="milestone" 
                     OnEdit="OpenEditDialog" 
                     OnClose="CloseMilestone" 
-                    OnAddTask="OpenAddTaskDialog" 
+                    OnAddTask="OpenAddTaskDialog"
+                    OnDelete="DeleteMilestone"
+                    OnViewPlans="ViewTestPlans"
                 />
             }
         </div>
@@ -212,5 +235,25 @@
     private void OpenAddTaskDialog(int milestoneId)
     {
         Console.WriteLine($"[TODO] Open Quick Task Form for Milestone ID: {milestoneId}");
+    }
+
+    private async Task DeleteMilestone(int milestoneId)
+    {
+        // TODO: Add confirmation dialog
+        try
+        {
+            await MilestoneService.DeleteMilestoneAsync(milestoneId);
+            await LoadMilestones();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting milestone: {ex.Message}");
+        }
+    }
+
+    private void ViewTestPlans(int milestoneId)
+    {
+        Console.WriteLine($"[TODO] View Test Plans for Milestone ID: {milestoneId}");
+        // TODO: Navigate to test plans page or open modal
     }
 }
