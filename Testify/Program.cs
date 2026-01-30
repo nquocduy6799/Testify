@@ -72,7 +72,7 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
 builder.Services.AddScoped<IMilestoneService, MilestoneService>();
-builder.Services.AddScoped<INotificationService, Testify.Services.ServerNotificationService>();
+builder.Services.AddScoped<INotificationService, ServerNotificationRepository>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 
 // Add controllers for API endpoints
@@ -133,10 +133,6 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
-
-
-
-
 
 
 

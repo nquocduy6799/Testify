@@ -5,14 +5,14 @@ using Testify.Client.Interfaces;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.Notifications;
 
-namespace Testify.Services
+namespace Testify.Repositories
 {
-    public class ServerNotificationService : INotificationService
+    public class ServerNotificationRepository : INotificationService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly AuthenticationStateProvider _authenticationStateProvider;
 
-        public ServerNotificationService(
+        public ServerNotificationRepository(
             IServiceScopeFactory scopeFactory,
             AuthenticationStateProvider authenticationStateProvider)
         {
