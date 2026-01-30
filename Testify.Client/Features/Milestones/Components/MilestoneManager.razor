@@ -2,8 +2,11 @@
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
+@using Testify.Client.Services
 @using static Testify.Shared.Enums.MilestoneEnum
 @inject IMilestoneService MilestoneService
+@inject IServiceProvider ServiceProvider
+@implements IAsyncDisposable
 
 <style>
     .no-scrollbar::-webkit-scrollbar {
@@ -123,6 +126,9 @@
     // Form State
     private bool showModal = false;
     private MilestoneResponse editingMilestone = new();
+    
+    // Real-time
+    private NotificationHubService? _hubService;
 
     private IEnumerable<MilestoneResponse>? filteredMilestones =>
         milestones?.Where(m => 
@@ -133,6 +139,61 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadMilestones();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _hubService = ServiceProvider.GetService<NotificationHubService>();
+            
+            if (_hubService != null)
+            {
+                _hubService.OnMilestoneCreated += HandleMilestoneCreated;
+                _hubService.OnMilestoneUpdated += HandleMilestoneUpdated;
+                _hubService.OnMilestoneDeleted += HandleMilestoneDeleted;
+                Console.WriteLine("[MilestoneManager] Subscribed to real-time milestone events");
+            }
+        }
+    }
+
+    private async void HandleMilestoneCreated(int projectId)
+    {
+        if (projectId == ProjectId)
+        {
+            Console.WriteLine($"[MilestoneManager] Milestone created in project {projectId}, reloading...");
+            await InvokeAsync(async () =>
+            {
+                await LoadMilestones();
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async void HandleMilestoneUpdated(int projectId)
+    {
+        if (projectId == ProjectId)
+        {
+            Console.WriteLine($"[MilestoneManager] Milestone updated in project {projectId}, reloading...");
+            await InvokeAsync(async () =>
+            {
+                await LoadMilestones();
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async void HandleMilestoneDeleted(int projectId, int milestoneId)
+    {
+        if (projectId == ProjectId)
+        {
+            Console.WriteLine($"[MilestoneManager] Milestone {milestoneId} deleted from project {projectId}, reloading...");
+            await InvokeAsync(async () =>
+            {
+                await LoadMilestones();
+                StateHasChanged();
+            });
+        }
     }
 
     private async Task LoadMilestones()
@@ -255,5 +316,15 @@
     {
         Console.WriteLine($"[TODO] View Test Plans for Milestone ID: {milestoneId}");
         // TODO: Navigate to test plans page or open modal
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubService != null)
+        {
+            _hubService.OnMilestoneCreated -= HandleMilestoneCreated;
+            _hubService.OnMilestoneUpdated -= HandleMilestoneUpdated;
+            _hubService.OnMilestoneDeleted -= HandleMilestoneDeleted;
+        }
     }
 }

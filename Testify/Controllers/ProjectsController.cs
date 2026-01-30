@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
+using Testify.Hubs;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.Projects;
 using Testify.Shared.Enums;
@@ -13,10 +15,12 @@ namespace Testify.Controllers
     public class ProjectsController : ControllerBase
     {
         private readonly IProjectRepository _projectRepository;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public ProjectsController(IProjectRepository projectRepository)
+        public ProjectsController(IProjectRepository projectRepository, IHubContext<NotificationHub> hubContext)
         {
             _projectRepository = projectRepository;
+            _hubContext = hubContext;
         }
 
         // GET: api/Projects
@@ -137,11 +141,22 @@ namespace Testify.Controllers
                 return StatusCode(403, new { message = "Only Project Managers can remove members" });
             }
 
+            // Get member info before removing
+            var members = await _projectRepository.GetProjectMembersAsync(projectId);
+            var memberToRemove = members.FirstOrDefault(m => m.Id == memberId);
+            
             var removed = await _projectRepository.RemoveMemberAsync(projectId, memberId, currentUserId);
 
             if (!removed)
             {
                 return NotFound(new { message = "Member not found or cannot be removed" });
+            }
+
+            // Broadcast team member removed via SignalR
+            if (memberToRemove != null)
+            {
+                await _hubContext.Clients.All.SendAsync("TeamMemberRemoved", projectId, memberToRemove.UserId);
+                Console.WriteLine($"[ProjectsController] Broadcast TeamMemberRemoved - Project {projectId}, User {memberToRemove.UserId}");
             }
 
             return Ok(new { message = "Member removed successfully" });

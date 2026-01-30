@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Testify.Data;
 using Testify.Entities;
+using Testify.Hubs;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
 using Testify.Shared.DTOs.Milestones;
@@ -16,11 +18,13 @@ namespace Testify.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IKanbanTaskRepository _kanbanTaskRepository;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public MilestonesController(ApplicationDbContext context, IKanbanTaskRepository kanbanTaskRepository)
+        public MilestonesController(ApplicationDbContext context, IKanbanTaskRepository kanbanTaskRepository, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
             _kanbanTaskRepository = kanbanTaskRepository;
+            _hubContext = hubContext;
         }
 
         // GET: api/Milestones/project/{projectId}
@@ -115,6 +119,10 @@ namespace Testify.Controllers
                 Status = milestone.Status
             };
 
+            // Broadcast milestone created via SignalR
+            await _hubContext.Clients.All.SendAsync("MilestoneCreated", milestone.ProjectId, response);
+            Console.WriteLine($"[MilestonesController] Broadcast MilestoneCreated - Project {milestone.ProjectId}");
+
             return CreatedAtAction("GetMilestone", new { id = milestone.Id }, response);
         }
 
@@ -154,6 +162,21 @@ namespace Testify.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                
+                // Broadcast milestone updated via SignalR
+                var updatedResponse = new MilestoneResponse
+                {
+                    Id = milestone.Id,
+                    ProjectId = milestone.ProjectId,
+                    Name = milestone.Name,
+                    Description = milestone.Description,
+                    StartDate = milestone.StartDate,
+                    EndDate = milestone.EndDate,
+                    Status = milestone.Status
+                };
+                
+                await _hubContext.Clients.All.SendAsync("MilestoneUpdated", milestone.ProjectId, updatedResponse);
+                Console.WriteLine($"[MilestonesController] Broadcast MilestoneUpdated - Project {milestone.ProjectId}");
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -180,8 +203,14 @@ namespace Testify.Controllers
                 return NotFound();
             }
 
+            var projectId = milestone.ProjectId;
+            
             _context.Milestones.Remove(milestone);
             await _context.SaveChangesAsync();
+
+            // Broadcast milestone deleted via SignalR
+            await _hubContext.Clients.All.SendAsync("MilestoneDeleted", projectId, id);
+            Console.WriteLine($"[MilestonesController] Broadcast MilestoneDeleted - Project {projectId}, Milestone {id}");
 
             return NoContent();
         }

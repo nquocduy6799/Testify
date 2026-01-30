@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Testify.Data;
 using Testify.Entities;
+using Testify.Hubs;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.Notifications;
 using Testify.Shared.Enums;
@@ -11,10 +13,12 @@ namespace Testify.Repositories
     public class NotificationRepository : INotificationRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public NotificationRepository(ApplicationDbContext context)
+        public NotificationRepository(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task<IEnumerable<NotificationResponse>> GetUserNotificationsAsync(string userId)
@@ -89,6 +93,14 @@ namespace Testify.Repositories
             }
 
             await _context.SaveChangesAsync();
+            
+            // Broadcast team member added event via SignalR
+            if (notification.ProjectId.HasValue)
+            {
+                await _hubContext.Clients.All.SendAsync("TeamMemberAdded", notification.ProjectId.Value, userId, userName);
+                Console.WriteLine($"[NotificationRepository] Broadcast TeamMemberAdded - Project {notification.ProjectId}, User {userName}");
+            }
+            
             return true;
         }
 

@@ -260,7 +260,12 @@
             {
                 // Subscribe to status changes
                 _hubService.OnUserStatusChanged += HandleUserStatusChanged;
-                Console.WriteLine("[TeamManagement] Subscribed to user status changes");
+                
+                // Subscribe to team member changes
+                _hubService.OnTeamMemberAdded += HandleTeamMemberAdded;
+                _hubService.OnTeamMemberRemoved += HandleTeamMemberRemoved;
+                
+                Console.WriteLine("[TeamManagement] Subscribed to real-time events");
             }
         }
     }
@@ -273,6 +278,34 @@
             Console.WriteLine($"[TeamManagement] Team member {userId} is now {(isOnline ? "ONLINE" : "OFFLINE")}");
             // Trigger UI update
             InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async void HandleTeamMemberAdded(int projectId, string userId, string userName)
+    {
+        // Only reload if this is our project
+        if (projectId == ProjectId)
+        {
+            Console.WriteLine($"[TeamManagement] New member {userName} added to project {projectId}, reloading...");
+            await InvokeAsync(async () =>
+            {
+                await LoadMembers();
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async void HandleTeamMemberRemoved(int projectId, string userId)
+    {
+        // Only reload if this is our project
+        if (projectId == ProjectId)
+        {
+            Console.WriteLine($"[TeamManagement] Member {userId} removed from project {projectId}, reloading...");
+            await InvokeAsync(async () =>
+            {
+                await LoadMembers();
+                StateHasChanged();
+            });
         }
     }
 
@@ -447,6 +480,8 @@
         if (_hubService != null)
         {
             _hubService.OnUserStatusChanged -= HandleUserStatusChanged;
+            _hubService.OnTeamMemberAdded -= HandleTeamMemberAdded;
+            _hubService.OnTeamMemberRemoved -= HandleTeamMemberRemoved;
         }
     }
 

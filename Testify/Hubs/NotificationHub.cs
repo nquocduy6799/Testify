@@ -74,6 +74,45 @@ namespace Testify.Hubs
             return Task.FromResult(OnlineUsers.ContainsKey(userId));
         }
 
+        // Broadcast team member added event
+        public async Task BroadcastTeamMemberAdded(int projectId, string userId, string userName)
+        {
+            await Clients.All.SendAsync("TeamMemberAdded", projectId, userId, userName);
+            Console.WriteLine($"[NotificationHub] Broadcast: TeamMemberAdded - Project {projectId}, User {userName}");
+        }
+
+        // Broadcast team member removed event
+        public async Task BroadcastTeamMemberRemoved(int projectId, string userId)
+        {
+            await Clients.All.SendAsync("TeamMemberRemoved", projectId, userId);
+            Console.WriteLine($"[NotificationHub] Broadcast: TeamMemberRemoved - Project {projectId}, User {userId}");
+        }
+
+        // ============================================
+        // MILESTONE EVENTS
+        // ============================================
+        
+        // Broadcast milestone created
+        public async Task BroadcastMilestoneCreated(int projectId, object milestone)
+        {
+            await Clients.All.SendAsync("MilestoneCreated", projectId, milestone);
+            Console.WriteLine($"[NotificationHub] Broadcast: MilestoneCreated - Project {projectId}");
+        }
+
+        // Broadcast milestone updated
+        public async Task BroadcastMilestoneUpdated(int projectId, object milestone)
+        {
+            await Clients.All.SendAsync("MilestoneUpdated", projectId, milestone);
+            Console.WriteLine($"[NotificationHub] Broadcast: MilestoneUpdated - Project {projectId}");
+        }
+
+        // Broadcast milestone deleted
+        public async Task BroadcastMilestoneDeleted(int projectId, int milestoneId)
+        {
+            await Clients.All.SendAsync("MilestoneDeleted", projectId, milestoneId);
+            Console.WriteLine($"[NotificationHub] Broadcast: MilestoneDeleted - Project {projectId}, Milestone {milestoneId}");
+        }
+
         // Client can call this to test connection
         public async Task Ping()
         {

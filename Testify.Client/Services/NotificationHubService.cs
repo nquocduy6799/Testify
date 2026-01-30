@@ -13,6 +13,11 @@ namespace Testify.Client.Services
         public event Action<NotificationResponse>? OnNotificationReceived;
         public event Action? OnReconnected;
         public event Action<string, bool>? OnUserStatusChanged;
+        public event Action<int, string, string>? OnTeamMemberAdded; // (projectId, userId, userName)
+        public event Action<int, string>? OnTeamMemberRemoved; // (projectId, userId)
+        public event Action<int>? OnMilestoneCreated; // (projectId)
+        public event Action<int>? OnMilestoneUpdated; // (projectId)
+        public event Action<int, int>? OnMilestoneDeleted; // (projectId, milestoneId)
 
         public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
         public IReadOnlySet<string> OnlineUsers => _onlineUsers;
@@ -55,6 +60,41 @@ namespace Testify.Client.Services
                         _onlineUsers.Remove(userId);
                     
                     OnUserStatusChanged?.Invoke(userId, isOnline);
+                });
+
+                // Listen for team member added
+                _hubConnection.On<int, string, string>("TeamMemberAdded", (projectId, userId, userName) =>
+                {
+                    Console.WriteLine($"[SignalR] TeamMemberAdded - Project {projectId}, User {userName}");
+                    OnTeamMemberAdded?.Invoke(projectId, userId, userName);
+                });
+
+                // Listen for team member removed
+                _hubConnection.On<int, string>("TeamMemberRemoved", (projectId, userId) =>
+                {
+                    Console.WriteLine($"[SignalR] TeamMemberRemoved - Project {projectId}, User {userId}");
+                    OnTeamMemberRemoved?.Invoke(projectId, userId);
+                });
+
+                // Listen for milestone created
+                _hubConnection.On<int, object>("MilestoneCreated", (projectId, milestone) =>
+                {
+                    Console.WriteLine($"[SignalR] MilestoneCreated - Project {projectId}");
+                    OnMilestoneCreated?.Invoke(projectId);
+                });
+
+                // Listen for milestone updated
+                _hubConnection.On<int, object>("MilestoneUpdated", (projectId, milestone) =>
+                {
+                    Console.WriteLine($"[SignalR] MilestoneUpdated - Project {projectId}");
+                    OnMilestoneUpdated?.Invoke(projectId);
+                });
+
+                // Listen for milestone deleted
+                _hubConnection.On<int, int>("MilestoneDeleted", (projectId, milestoneId) =>
+                {
+                    Console.WriteLine($"[SignalR] MilestoneDeleted - Project {projectId}, Milestone {milestoneId}");
+                    OnMilestoneDeleted?.Invoke(projectId, milestoneId);
                 });
 
                 // Reconnect event
