@@ -14,11 +14,12 @@ namespace Testify.Shared.DTOs.KanbanTasks
         [Required(ErrorMessage = "Title is required.")]
         [StringLength(255, MinimumLength = 3, ErrorMessage = "Title must be between 3 and 255 characters.")]
         public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
 
         public KanbanTaskStatus Status { get; set; }
 
         [Range(1, 5, ErrorMessage = "Priority must be between 1 and 5.")]
-        public int Priority { get; set; }
+        public TaskPriority Priority { get; set; }
 
         public string? AssigneeId { get; set; }
 

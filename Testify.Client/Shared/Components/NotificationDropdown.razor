@@ -1,5 +1,5 @@
-@using Testify.Client.Interfaces
-@using Testify.Client.Services
+﻿@using Testify.Client.Interfaces
+@using Testify.Client.Shared.Services
 @using Testify.Shared.DTOs.Notifications
 @using Testify.Shared.Enums
 @using Microsoft.AspNetCore.Components.Authorization
@@ -83,7 +83,7 @@
 <div class="relative" tabindex="-1" @onkeydown="HandleKeyDown">
     @* Notification Bell Button *@
     <button @onclick="ToggleDropdown" 
-            class="group relative rounded-xl border-none bg-transparent p-2.5 text-slate-500 transition-all duration-300 hover:scale-110 hover:bg-white hover:shadow-lg hover:text-[#E85D3F] cursor-pointer @(_isOpen ? "bg-white shadow-md text-[#E85D3F] scale-105" : "")">
+            class="group relative cursor-pointer rounded-xl border-none bg-transparent p-2.5 text-slate-500 transition-all duration-300 hover:scale-110 hover:bg-white hover:text-[#E85D3F] hover:shadow-lg @(_isOpen ? "bg-white shadow-md text-[#E85D3F] scale-105" : "")">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
              class="transition-transform duration-300 @(UnreadCount > 0 ? "animate-[wiggle_0.5s_ease-in-out]" : "")">
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
@@ -91,11 +91,11 @@
         </svg>
         @if (UnreadCount > 0)
         {
-            <span class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 text-[10px] font-bold text-white shadow-lg shadow-red-500/50 animate-[pulse_2s_ease-in-out_infinite]">
+            <span class="absolute -top-1 -right-1 flex h-5 w-5 animate-[pulse_2s_ease-in-out_infinite] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 font-bold text-[10px] text-white shadow-lg shadow-red-500/50">
                 @(UnreadCount > 9 ? "9+" : UnreadCount.ToString())
             </span>
             @* Ping effect *@
-            <span class="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 opacity-75 animate-ping"></span>
+            <span class="absolute -top-1 -right-1 h-5 w-5 animate-ping rounded-full bg-red-500 opacity-75"></span>
         }
     </button>
 
@@ -108,14 +108,14 @@
     @* Dropdown Panel *@
     @if (_isOpen)
     {
-        <div class="absolute right-0 z-50 mt-3 w-80 overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl ring-1 ring-black/5 animate-[slideDown_0.3s_ease-out,fadeIn_0.3s_ease-out] origin-top-right"
+        <div class="absolute right-0 z-50 mt-3 w-80 origin-top-right animate-[slideDown_0.3s_ease-out,fadeIn_0.3s_ease-out] overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl ring-1 ring-black/5"
              @onclick:stopPropagation="true">
             @* Header *@
             <div class="flex items-center justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100/50 px-5 py-4 backdrop-blur-sm">
-                <h3 class="text-sm font-bold text-slate-800 animate-[fadeIn_0.5s_ease-out]">Notifications</h3>
+                <h3 class="animate-[fadeIn_0.5s_ease-out] text-sm font-bold text-slate-800">Notifications</h3>
                 @if (UnreadCount > 0)
                 {
-                    <span class="rounded-full bg-gradient-to-r from-[#E85D3F] to-[#d54e32] px-2.5 py-1 text-[10px] font-bold text-white shadow-lg shadow-[#E85D3F]/30 animate-[bounceIn_0.5s_ease-out]">
+                    <span class="animate-[bounceIn_0.5s_ease-out] rounded-full bg-gradient-to-r from-[#E85D3F] to-[#d54e32] px-2.5 py-1 font-bold text-[10px] text-white shadow-[#E85D3F]/30 shadow-lg">
                         @UnreadCount new
                     </span>
                 }
@@ -130,19 +130,19 @@
                             <div class="h-8 w-8 animate-spin rounded-full border-3 border-slate-200 border-t-[#E85D3F]"></div>
                             <div class="absolute inset-0 h-8 w-8 animate-ping rounded-full border-2 border-[#E85D3F] opacity-20"></div>
                         </div>
-                        <p class="text-xs text-slate-400 animate-pulse">Loading notifications...</p>
+                        <p class="animate-pulse text-xs text-slate-400">Loading notifications...</p>
                     </div>
                 }
                 else if (!_notifications.Any())
                 {
-                    <div class="p-8 text-center animate-[fadeIn_0.6s_ease-out]">
+                    <div class="animate-[fadeIn_0.6s_ease-out] p-8 text-center">
                         <div class="relative inline-block">
                             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" 
-                                 class="mx-auto mb-3 text-slate-300 animate-[bounce_3s_ease-in-out_infinite]">
+                                 class="mx-auto mb-3 animate-[bounce_3s_ease-in-out_infinite] text-slate-300">
                                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
                                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
                             </svg>
-                            <div class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-slate-200 animate-ping"></div>
+                            <div class="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-slate-200"></div>
                         </div>
                         <p class="text-sm font-medium text-slate-500">No notifications yet</p>
                         <p class="mt-1 text-xs text-slate-400">We'll notify you when something happens</p>
@@ -190,7 +190,7 @@
                             }
                             else if (notification.Type == NotificationType.ProjectInvitation)
                             {
-                                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold @GetStatusClass(notification.InvitationStatus) animate-[fadeIn_0.5s_ease-out]">
+                                <span class="inline-flex animate-[fadeIn_0.5s_ease-out] items-center gap-1 rounded-full px-2.5 py-1 font-bold @GetStatusClass(notification.InvitationStatus) text-[10px]">
                                     @if (notification.InvitationStatus == InvitationStatus.Accepted)
                                     {
                                         <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

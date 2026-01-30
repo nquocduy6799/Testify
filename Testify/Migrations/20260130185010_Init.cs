@@ -495,9 +495,12 @@ namespace Testify.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MilestoneId = table.Column<int>(type: "int", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     Priority = table.Column<int>(type: "int", nullable: false),
                     AssigneeId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    DevelopedById = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    TestedById = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     Type = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -513,6 +516,16 @@ namespace Testify.Migrations
                     table.ForeignKey(
                         name: "FK_KanbanTasks_AspNetUsers_AssigneeId",
                         column: x => x.AssigneeId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_KanbanTasks_AspNetUsers_DevelopedById",
+                        column: x => x.DevelopedById,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_KanbanTasks_AspNetUsers_TestedById",
+                        column: x => x.TestedById,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -1114,9 +1127,19 @@ namespace Testify.Migrations
                 column: "AssigneeId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_KanbanTasks_DevelopedById",
+                table: "KanbanTasks",
+                column: "DevelopedById");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_KanbanTasks_MilestoneId",
                 table: "KanbanTasks",
                 column: "MilestoneId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_KanbanTasks_TestedById",
+                table: "KanbanTasks",
+                column: "TestedById");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Milestones_ProjectId",

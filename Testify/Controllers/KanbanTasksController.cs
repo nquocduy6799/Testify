@@ -8,7 +8,7 @@ namespace Testify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class KanbanTasksController : ControllerBase
     {
         private readonly IKanbanTaskRepository _kanbanTaskRepository;
@@ -23,6 +23,14 @@ namespace Testify.Controllers
         public async Task<ActionResult<IEnumerable<KanbanTaskResponse>>> GetTasksByMilestone(int milestoneId)
         {
             var tasks = await _kanbanTaskRepository.GetTasksByMilestoneIdAsync(milestoneId);
+            return Ok(tasks);
+        }
+
+        // GET: api/KanbanTasks/project/5
+        [HttpGet("project/{projectId}")]
+        public async Task<ActionResult<IEnumerable<KanbanTaskResponse>>> GetTasksByProject(int projectId)
+        {
+            var tasks = await _kanbanTaskRepository.GetTasksByProjectIdAsync(projectId);
             return Ok(tasks);
         }
 
@@ -54,6 +62,7 @@ namespace Testify.Controllers
 
             return NoContent();
         }
+
 
         // POST: api/KanbanTasks
         [HttpPost]

@@ -3,6 +3,8 @@ using Testify.Data;
 using Testify.Entities;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
+using Testify.Shared.DTOs.Milestones;
+using static Testify.Shared.Enums.MilestoneEnum;
 
 namespace Testify.Repositories
 {
@@ -42,6 +44,7 @@ namespace Testify.Repositories
             {
                 MilestoneId = request.MilestoneId,
                 Title = request.Title,
+                Description = request.Description,
                 Status = request.Status,
                 Priority = request.Priority,
                 AssigneeId = request.AssigneeId,
@@ -74,6 +77,7 @@ namespace Testify.Repositories
 
             task.MilestoneId = request.MilestoneId;
             task.Title = request.Title;
+            task.Description = request.Description;
             task.Status = request.Status;
             task.Priority = request.Priority;
             task.AssigneeId = request.AssigneeId;
@@ -118,6 +122,7 @@ namespace Testify.Repositories
                 Id = task.Id,
                 MilestoneId = task.MilestoneId,
                 Title = task.Title,
+                Description = task.Description,
                 Status = task.Status,
                 Priority = task.Priority,
                 AssigneeId = task.AssigneeId,
@@ -129,6 +134,16 @@ namespace Testify.Repositories
                 UpdatedAt = task.UpdatedAt,
                 TestPlanCount = task.TestPlans?.Count ?? 0
             };
+        }
+
+        public async Task<IEnumerable<KanbanTaskResponse>> GetTasksByProjectIdAsync(int projectId)
+        {
+            return await _context.KanbanTasks
+                .Where(t => t.Milestone.ProjectId == projectId && !t.IsDeleted && t.Milestone.Status == MilestoneStatus.Active)
+                .Include(t => t.Assignee)
+                .Include(t => t.TestPlans)
+                .Select(t => MapToResponse(t))
+                .ToListAsync();
         }
     }
 }

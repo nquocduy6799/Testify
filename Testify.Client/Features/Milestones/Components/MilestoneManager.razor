@@ -1,8 +1,8 @@
-@using Testify.Shared.DTOs.Milestones
+﻿@using Testify.Shared.DTOs.Milestones
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
-@using Testify.Client.Services
+@using Testify.Client.Shared.Services
 @using static Testify.Shared.Enums.MilestoneEnum
 @inject IMilestoneService MilestoneService
 @inject IServiceProvider ServiceProvider
@@ -36,8 +36,8 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="mb-1 text-[9px] font-black uppercase leading-none tracking-widest text-slate-400">Active</p>
-                    <p class="text-lg font-black leading-none text-slate-800">@(milestones?.Count(m => m.Status == MilestoneStatus.Active) ?? 0)</p>
+                    <p class="mb-1 leading-none font-black tracking-widest text-[9px] text-slate-400 uppercase">Active</p>
+                    <p class="text-lg leading-none font-black text-slate-800">@(milestones?.Count(m => m.Status == MilestoneStatus.Active) ?? 0)</p>
                 </div>
             </div>
 
@@ -53,8 +53,8 @@
     </div>
 
     @* --- FILTER BAR --- *@
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-[32px] border border-white bg-white/50 p-2 shadow-sm backdrop-blur-md">
-        <div class="flex w-full overflow-x-auto rounded-2xl bg-slate-100/50 p-1 no-scrollbar sm:w-auto">
+    <div class="flex flex-col items-center justify-between gap-4 rounded-[32px] border border-white bg-white/50 p-2 shadow-sm backdrop-blur-md sm:flex-row">
+        <div class="no-scrollbar flex w-full overflow-x-auto rounded-2xl bg-slate-100/50 p-1 sm:w-auto">
             <button @onclick="() => activeFilter = MilestoneStatus.All"
                     class="@(activeFilter == MilestoneStatus.All ? "bg-white text-slate-900 shadow-sm" : "text-slate-400 hover:text-slate-600") whitespace-nowrap rounded-xl px-6 py-2 text-[11px] font-black uppercase tracking-widest transition-all">
                 All

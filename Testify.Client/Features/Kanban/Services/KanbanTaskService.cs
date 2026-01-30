@@ -84,5 +84,18 @@ namespace Testify.Client.Features.Kanban.Services
                 return false;
             }
         }
+
+        public async Task<List<KanbanTaskResponse>> GetTasksByProjectIdAsync(int projectId)
+        {
+            try
+            {
+                var tasks = await _httpClient.GetFromJsonAsync<List<KanbanTaskResponse>>($"{ApiEndpoint}/project/{projectId}");
+                return tasks ?? new List<KanbanTaskResponse>();
+            }
+            catch (HttpRequestException)
+            {
+                return new List<KanbanTaskResponse>();
+            }
+        }
     }
 }

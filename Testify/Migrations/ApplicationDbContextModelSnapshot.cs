@@ -602,6 +602,13 @@ namespace Testify.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DevelopedById")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -613,6 +620,9 @@ namespace Testify.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<string>("TestedById")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -631,7 +641,11 @@ namespace Testify.Migrations
 
                     b.HasIndex("AssigneeId");
 
+                    b.HasIndex("DevelopedById");
+
                     b.HasIndex("MilestoneId");
+
+                    b.HasIndex("TestedById");
 
                     b.ToTable("KanbanTasks");
                 });
@@ -1640,15 +1654,27 @@ namespace Testify.Migrations
                         .WithMany()
                         .HasForeignKey("AssigneeId");
 
+                    b.HasOne("Testify.Data.ApplicationUser", "DevelopedBy")
+                        .WithMany()
+                        .HasForeignKey("DevelopedById");
+
                     b.HasOne("Testify.Entities.Milestone", "Milestone")
                         .WithMany("KanbanTasks")
                         .HasForeignKey("MilestoneId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Testify.Data.ApplicationUser", "TestedBy")
+                        .WithMany()
+                        .HasForeignKey("TestedById");
+
                     b.Navigation("Assignee");
 
+                    b.Navigation("DevelopedBy");
+
                     b.Navigation("Milestone");
+
+                    b.Navigation("TestedBy");
                 });
 
             modelBuilder.Entity("Testify.Entities.Milestone", b =>
