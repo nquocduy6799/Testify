@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
 using Testify.Shared.DTOs.Notifications;
 
-namespace Testify.Client.Services
+namespace Testify.Client.Shared.Services
 {
     public class NotificationHubService : IAsyncDisposable
     {

@@ -5,7 +5,7 @@ using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
 using Testify.Client.Interfaces;
-using Testify.Client.Services;
+using Testify.Client.Shared.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 

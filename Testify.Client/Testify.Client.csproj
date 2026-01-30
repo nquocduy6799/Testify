@@ -31,7 +31,6 @@
     <Folder Include="Features\TestTemplates\Services\" />
     <Folder Include="Features\TestTemplates\Pages\" />
     <Folder Include="Services\" />
-    <Folder Include="Shared\Services\" />
   </ItemGroup>
 
 </Project>
