@@ -15,9 +15,10 @@ namespace Testify.Shared.Enums
     {
         ToDo = 0,
         InProgress = 1,
-        Testing = 2,
-        Done = 3,
-        Cancelled = 4
+        ReadyForTest = 2, 
+        Testing = 3,      
+        Done = 4,
+        Cancelled = 5
     }
 
     public enum TaskType

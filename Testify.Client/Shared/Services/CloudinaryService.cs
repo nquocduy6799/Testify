@@ -6,40 +6,44 @@ using Testify.Client.Interfaces;
 
 namespace Testify.Client.Shared.Services
 {
-    public class CloudinaryService : ICloudStorageService
+    public class CloudinaryService : ICloudinaryService
     {
         private readonly Cloudinary _cloudinary;
 
-        public CloudinaryService(IConfiguration config)
+        public CloudinaryService(IConfiguration configuration)
         {
-            var settings = config.GetSection("CloudinarySettings");
-            Account account = new Account(
-                settings["CloudName"],
-                settings["ApiKey"],
-                settings["ApiSecret"]
+            var account = new Account(
+                configuration["Cloudinary:CloudName"],
+                configuration["Cloudinary:ApiKey"],
+                configuration["Cloudinary:ApiSecret"]
             );
             _cloudinary = new Cloudinary(account);
         }
 
-        public async Task<(string Url, string PublicId)> UploadImageAsync(IBrowserFile file)
+        public async Task<(string Url, string PublicId)> UploadFileAsync(Stream fileStream, string fileName)
         {
-            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
-
-            var uploadParams = new ImageUploadParams
+            var uploadParams = new RawUploadParams
             {
-                File = new FileDescription(file.Name, stream),
-                Transformation = new Transformation().Crop("limit").Width(800).Height(800),
-                Folder = "testify"
+                File = new FileDescription(fileName, fileStream),
+                Folder = "testify/attachments",
+                UseFilename = true,
+                UniqueFilename = true
             };
 
             var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+            if (uploadResult.Error != null)
+            {
+                throw new Exception($"Upload failed: {uploadResult.Error.Message}");
+            }
+
             return (uploadResult.SecureUrl.ToString(), uploadResult.PublicId);
         }
 
-        public async Task<bool> DeleteImageAsync(string publicId)
+        public async Task<bool> DeleteFileAsync(string publicId)
         {
-            var deletionParams = new DeletionParams(publicId);
-            var result = await _cloudinary.DestroyAsync(deletionParams);
+            var deleteParams = new DeletionParams(publicId) { ResourceType = ResourceType.Raw };
+            var result = await _cloudinary.DestroyAsync(deleteParams);
             return result.Result == "ok";
         }
     }

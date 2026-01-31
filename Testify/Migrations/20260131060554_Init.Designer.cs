@@ -12,7 +12,7 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260130185010_Init")]
+    [Migration("20260131060554_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -897,6 +897,110 @@ namespace Testify.Migrations
                     b.ToTable("ProjectTeamMembers");
                 });
 
+            modelBuilder.Entity("Testify.Entities.TaskActivity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("KanbanTaskId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KanbanTaskId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TaskActivities");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TaskAttachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("KanbanTaskId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PublicId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KanbanTaskId");
+
+                    b.ToTable("TaskAttachments");
+                });
+
             modelBuilder.Entity("Testify.Entities.TaskLinkedRunStep", b =>
                 {
                     b.Property<int>("Id")
@@ -1752,6 +1856,36 @@ namespace Testify.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Testify.Entities.TaskActivity", b =>
+                {
+                    b.HasOne("Testify.Entities.KanbanTask", "KanbanTask")
+                        .WithMany()
+                        .HasForeignKey("KanbanTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Testify.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("KanbanTask");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TaskAttachment", b =>
+                {
+                    b.HasOne("Testify.Entities.KanbanTask", "KanbanTask")
+                        .WithMany("Attachments")
+                        .HasForeignKey("KanbanTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("KanbanTask");
+                });
+
             modelBuilder.Entity("Testify.Entities.TaskLinkedRunStep", b =>
                 {
                     b.HasOne("Testify.Entities.TestRunStep", "RunStep")
@@ -1964,6 +2098,8 @@ namespace Testify.Migrations
 
             modelBuilder.Entity("Testify.Entities.KanbanTask", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("LinkedRunSteps");
 
                     b.Navigation("TestPlans");

@@ -1,19 +1,17 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
-namespace Testify.Entities
+namespace Testify.Shared.DTOs.TaskAttachments
 {
-    public class TaskAttachment : AuditEntity
+    public class TaskAttachmentResponse
     {
         public int Id { get; set; }
         public int KanbanTaskId { get; set; }
         public string FileName { get; set; } = string.Empty;
-        public string? PublicId { get; set; }
         public string FileUrl { get; set; } = string.Empty;
+        public string PublicId { get; set; } = string.Empty;
         public long FileSize { get; set; }
         public string ContentType { get; set; } = string.Empty;
-
-        // Navigation
-        public virtual KanbanTask KanbanTask { get; set; } = null!;
     }
 }

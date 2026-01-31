@@ -38,7 +38,7 @@ namespace Testify.Repositories
             return task != null ? MapToResponse(task) : null;
         }
 
-        public async Task<KanbanTaskResponse> CreateTaskAsync(CreateKanbanTaskRequest request, string userId, string userName)
+        public async Task<KanbanTaskResponse> CreateTaskAsync(CreateKanbanTaskRequest request, string userName)
         {
             var task = new KanbanTask
             {

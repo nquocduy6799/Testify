@@ -25,6 +25,9 @@ builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
 builder.Services.AddScoped<IMilestoneService, MilestoneService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
+
 
 // Register SignalR for real-time notifications
 builder.Services.AddScoped<NotificationHubService>();

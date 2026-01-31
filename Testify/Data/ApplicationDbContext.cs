@@ -44,9 +44,9 @@ namespace Testify.Data
         public DbSet<ChatMessageRead> ChatMessageReads { get; set; }
         public DbSet<ChatPinnedMessage> ChatPinnedMessages { get; set; }
         public DbSet<ChatNotification> ChatNotifications { get; set; }
-
-        // Notifications
         public DbSet<Notification> Notifications { get; set; }
+        public DbSet<TaskActivity> TaskActivities { get; set; }
+        public DbSet<TaskAttachment> TaskAttachments { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)

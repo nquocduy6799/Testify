@@ -1,163 +1,200 @@
-﻿﻿@using Testify.Shared.DTOs.KanbanTasks
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using Testify.Shared.DTOs.KanbanTasks
+@using Testify.Shared.DTOs.Projects
 @using Testify.Shared.Enums
+@using Testify.Client.Interfaces
 
-<div class="fixed inset-0 z-[60] flex items-center justify-center p-6">
-    <div class="animate-in fade-in absolute inset-0 bg-slate-900/40 backdrop-blur-sm duration-300"
+<div class="fixed inset-0 z-[200] flex items-center justify-center p-6">
+    @* --- The Backdrop Layer --- *@
+    <div class="absolute inset-0 animate-[fadeIn_0.3s_ease-out] bg-slate-900/60 backdrop-blur-md"
          @onclick="OnClose"></div>
 
-    <div class="animate-in zoom-in-95 fade-in relative flex w-full max-w-md flex-col overflow-hidden rounded-[40px] bg-white shadow-2xl duration-300"
-         @onclick:stopPropagation="true">
+    @* --- The Modal Content --- *@
+    <div class="animate-in zoom-in-95 fade-in relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[48px] bg-white shadow-2xl duration-300">
 
+        @* Header *@
         <div class="flex items-center justify-between border-b border-slate-50 bg-slate-50/50 p-8">
-            <div>
-                <h2 class="text-xl font-black text-slate-800">Quick Task</h2>
-                <p class="mt-0.5 font-bold tracking-widest text-[10px] text-slate-400 uppercase">
-                    Adding to @InitialStatus
-                </p>
+            <div class="flex items-center gap-4">
+                <div class="@(formData.Type == TaskType.Bug ? "bg-red-500 shadow-red-100" : "bg-[#1C1D2A] shadow-slate-100") flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg">
+                    @if (formData.Type == TaskType.Bug)
+                    {
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" /><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    }
+                    else
+                    {
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /></svg>
+                    }
+                </div>
+                <div>
+                    <h2 class="text-2xl font-black text-slate-800">Architect Entity</h2>
+                    <p class="mt-0.5 font-bold tracking-widest text-[10px] text-slate-400 uppercase">Provisioning to workflow: @GetStatusName(InitialStatus)</p>
+                </div>
             </div>
-            <button @onclick="OnClose" class="rounded-full p-2 text-slate-400 shadow-sm transition-all hover:bg-white hover:text-slate-600">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 6 6 18" />
-                    <path d="m6 6 12 12" />
-                </svg>
+            <button @onclick="OnClose" class="rounded-2xl p-3 text-slate-400 shadow-sm transition-all hover:bg-white">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>
 
-        <EditForm Model="@model" OnValidSubmit="HandleSubmit" class="space-y-6 p-8">
+        <EditForm Model="formData" OnValidSubmit="HandleSubmit" class="no-scrollbar flex-1 overflow-y-auto">
             <DataAnnotationsValidator />
 
-            <div class="space-y-1.5">
-                <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
-                    <svg class="h-3 w-3 text-[#E85D3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="4" x2="20" y1="9" y2="9" />
-                        <line x1="4" x2="20" y1="15" y2="15" />
-                        <line x1="10" x2="8" y1="3" y2="21" />
-                        <line x1="16" x2="14" y1="3" y2="21" />
-                    </svg>
-                    Task Title
-                </label>
-                <InputText @bind-Value="model.Title"
-                           placeholder="What needs to be done?"
-                           class="w-full rounded-2xl border-2 border-transparent bg-slate-50 px-5 py-4 text-sm font-bold text-slate-800 transition-all outline-none focus:border-[#7E96E1] focus:bg-white" />
-                <ValidationMessage For="@(() => model.Title)" class="mt-1 text-xs font-bold text-red-500" />
-            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-12">
 
-            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-8 border-r border-slate-50 p-10 lg:col-span-7">
 
-                <div class="relative space-y-1.5">
-                    <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
-                        <svg class="h-3 w-3 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect width="18" height="18" x="3" y="3" rx="2" />
-                            <path d="M12 8v8" />
-                            <path d="M8 12h8" />
-                        </svg>
-                        Type
-                    </label>
-                    <div class="relative">
-                        <InputSelect @bind-Value="model.Type"
-                                     class="w-full cursor-pointer appearance-none rounded-2xl border-2 border-transparent bg-slate-50 px-5 py-4 text-sm font-bold text-slate-800 transition-all outline-none focus:border-[#7E96E1] focus:bg-white">
-                            <option value="@TaskType.Feature">Feature</option>
-                            <option value="@TaskType.Bug">Bug</option>
-                        </InputSelect>
-                        <svg class="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m6 9 6 6 6-6" />
-                        </svg>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                            Entity Category
+                        </label>
+                        <div class="flex rounded-2xl border border-slate-100/50 bg-slate-50 p-1.5">
+                            <button type="button" @onclick="@(() => formData.Type = TaskType.Feature)" class="@GetTypeButtonClass(TaskType.Feature)">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>
+                                Feature Request
+                            </button>
+                            <button type="button" @onclick="@(() => formData.Type = TaskType.Bug)" class="@GetTypeButtonClass(TaskType.Bug)">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" /></svg>
+                                Bug Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                            <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16" /></svg>
+                            Identification / Title
+                        </label>
+                        <InputText @bind-Value="formData.Title"
+                                   placeholder="@(formData.Type == TaskType.Bug ? "e.g. Critical Failure in Auth Module" : "e.g. Implementation of Gemini Search")"
+                                   class="w-full rounded-[24px] border-2 border-transparent bg-slate-50 px-6 py-5 text-lg font-bold text-slate-800 shadow-inner transition-all outline-none focus:border-[#7E96E1] focus:bg-white" />
+                        <ValidationMessage For="@(() => formData.Title)" class="text-xs text-red-500" />
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                            <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            Technical Specification
+                        </label>
+                        <InputTextArea @bind-Value="formData.Description" rows="8"
+                                       placeholder="@(formData.Type == TaskType.Bug ? "Traceability Requirements:\n1. Reproduction Steps\n2. Input Data Sets\n3. Expected Outcome\n4. Observed Anomaly" : "Provide deep architectural details and requirement logic...")"
+                                       class="w-full resize-none rounded-[32px] border-2 border-transparent bg-slate-50 px-6 py-6 text-sm leading-relaxed font-medium text-slate-600 shadow-inner transition-all outline-none focus:border-[#7E96E1] focus:bg-white" />
+
+                        @if (formData.Type == TaskType.Bug)
+                        {
+                            <div class="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2">
+                                <div class="h-2 w-2 animate-pulse rounded-full bg-red-500"></div>
+                                <p class="font-black tracking-widest text-[9px] text-red-600 uppercase">
+                                    Quality Gate: Full reproduction matrix required for triage.
+                                </p>
+                            </div>
+                        }
                     </div>
                 </div>
 
-                <div class="relative space-y-1.5">
-                    <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
-                        <svg class="h-3 w-3 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                        </svg>
-                        Priority
-                    </label>
-                    <div class="relative">
-                        <InputSelect @bind-Value="model.Priority"
-                                     class="w-full cursor-pointer appearance-none rounded-2xl border-2 border-transparent bg-slate-50 px-5 py-4 text-sm font-bold text-slate-800 transition-all outline-none focus:border-[#7E96E1] focus:bg-white">
-                            <option value="1">Low</option>
-                            <option value="2">Medium</option>
-                            <option value="3">High</option>
-                            <option value="4">Critical</option>
-                        </InputSelect>
-                        <svg class="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m6 9 6 6 6-6" />
-                        </svg>
+                <div class="space-y-8 bg-slate-50/30 p-10 lg:col-span-5">
+
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                Assignee Matrix
+                            </label>
+                            <div class="group relative">
+                                <InputSelect @bind-Value="formData.AssigneeId" disabled="@(!CanAssignToOthers)"
+                                             class="w-full cursor-pointer appearance-none rounded-2xl border border-slate-100 bg-white px-6 py-4 text-sm font-bold text-slate-800 shadow-sm transition-all outline-none group-hover:border-[#7E96E1]">
+                                    @if (CanAssignToOthers)
+                                    {
+                                        @foreach (var member in TeamMembers)
+                                        {
+                                            <option value="@member.UserId">@member.FullName</option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option value="@CurrentUserId">@CurrentUserName (Self Only)</option>
+                                    }
+                                </InputSelect>
+                                <svg class="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-300 transition-colors group-hover:text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                <svg class="h-3.5 w-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Severity / Priority
+                            </label>
+                            <div class="group relative">
+                                <InputSelect @bind-Value="formData.Priority"
+                                             class="w-full cursor-pointer appearance-none rounded-2xl border border-slate-100 bg-white px-6 py-4 text-sm font-bold text-slate-800 shadow-sm transition-all outline-none group-hover:border-[#7E96E1]">
+                                    <option value="@TaskPriority.Low">Low Priority</option>
+                                    <option value="@TaskPriority.Medium">Medium Priority</option>
+                                    <option value="@TaskPriority.High">High Severity</option>
+                                </InputSelect>
+                                <svg class="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-300 transition-colors group-hover:text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                            </div>
+                        </div>
                     </div>
-                    <ValidationMessage For="@(() => model.Priority)" class="mt-1 text-xs font-bold text-red-500" />
-                </div>
 
+                    <div class="space-y-4">
+                        <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                            Asset Integration
+                        </label>
+                        <div @onclick="OpenFileDialog" class="@GetDropZoneClass()">
+                            <InputFile @ref="fileInput" OnChange="HandleFileSelect" multiple class="hidden" />
+                            <div class="@(dragActive ? "bg-blue-500 text-white shadow-lg" : "bg-slate-50 text-slate-400") flex h-14 w-14 items-center justify-center rounded-2xl transition-all">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-xs font-black tracking-tight text-slate-800 uppercase">Drop files or click</p>
+                                <p class="mt-1 font-bold text-[9px] text-slate-400 uppercase">Image, Logs, or Specs</p>
+                            </div>
+                        </div>
+
+                        <div class="no-scrollbar max-h-[200px] space-y-2 overflow-y-auto">
+                            @foreach (var file in selectedFiles)
+                            {
+                                <div class="group/item animate-in fade-in slide-in-from-top-1 flex items-center justify-between rounded-[22px] border border-slate-100 bg-white p-4 shadow-sm">
+                                    <div class="flex min-w-0 items-center gap-4">
+                                        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 group-hover/item:bg-slate-100">
+                                            @GetFileIcon(file.ContentType)
+                                        </div>
+                                        <div class="truncate">
+                                            <p class="truncate text-xs font-bold text-slate-800">@file.Name</p>
+                                            <p class="font-black text-[9px] text-slate-400 uppercase">@FormatFileSize(file.Size)</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" @onclick="@(() => RemoveFile(file))" class="rounded-xl p-2.5 text-slate-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover/item:opacity-100">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 rounded-[32px] border border-indigo-100 bg-indigo-50 p-6">
+                        <div class="flex items-center gap-2">
+                            <div class="h-2 w-2 animate-pulse rounded-full bg-indigo-500"></div>
+                            <span class="font-black tracking-widest text-[10px] text-indigo-600 uppercase">Pipeline Target</span>
+                        </div>
+                        <p class="text-sm font-bold text-slate-800">@GetStatusName(InitialStatus)</p>
+                        <p class="leading-relaxed font-medium text-[10px] text-indigo-400">Entity will be injected into this lane immediately upon initialization.</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="pt-4">
-                <button type="submit"
-                        class="w-full rounded-2xl bg-[#1C1D2A] py-4 text-sm font-black text-white shadow-lg shadow-slate-100 transition-all hover:bg-slate-800 hover:shadow-xl active:scale-95">
-                    Create Task
-                </button>
-            </div>
-        </EditForm>
-    </div>
-</div>
-
-@code {
-    [Parameter] public KanbanTaskStatus InitialStatus { get; set; }
-    [Parameter] public int MilestoneId { get; set; }
-    [Parameter] public EventCallback<CreateKanbanTaskRequest> OnSave { get; set; }
-    [Parameter] public EventCallback OnClose { get; set; }
-
-    private CreateKanbanTaskRequest model = new();
-
-    protected override void OnInitialized()
-    {
-        model.Status = InitialStatus;
-        model.MilestoneId = MilestoneId;
-        // Default priority
-        model.Priority = TaskPriority.Medium;
-    }
-
-    private async Task HandleSubmit()
-    {
-        await OnSave.InvokeAsync(model);
-    }
-}
-
-@* @using Testify.Shared.DTOs.KanbanTasks
-@using Testify.Shared.Enums
-
-<div class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black" @onclick="OnClose">
-    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" @onclick:stopPropagation="true">
-        <h3 class="mb-4 text-xl font-bold">Create New Task</h3>
-
-        <EditForm Model="@model" OnValidSubmit="HandleSubmit">
-            <DataAnnotationsValidator />
-
-            <div class="space-y-4">
-                <div>
-                    <label class="mb-2 block text-sm font-bold text-slate-700">Title</label>
-                    <InputText @bind-Value="model.Title" class="w-full rounded-lg border px-3 py-2" />
-                    <ValidationMessage For="@(() => model.Title)" />
+            <div class="flex items-center justify-between border-t border-slate-50 bg-white p-8 px-10">
+                <div class="flex items-center gap-3 text-slate-400">
+                    <svg class="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <p class="font-bold tracking-widest text-[10px] uppercase">Neural Link Active. Syncing with project root.</p>
                 </div>
-
-                <div>
-                    <label class="mb-2 block text-sm font-bold text-slate-700">Priority</label>
-                    <InputNumber @bind-Value="model.Priority" class="w-full rounded-lg border px-3 py-2" min="1" max="5" />
-                    <ValidationMessage For="@(() => model.Priority)" />
-                </div>
-
-                <div>
-                    <label class="mb-2 block text-sm font-bold text-slate-700">Type</label>
-                    <InputSelect @bind-Value="model.Type" class="w-full rounded-lg border px-3 py-2">
-                        <option value="@TaskType.Feature">Feature</option>
-                        <option value="@TaskType.Bug">Bug</option>
-                    </InputSelect>
-                </div>
-
-                <div class="flex justify-end gap-2">
-                    <button type="button" @onclick="OnClose" class="rounded-lg px-4 py-2 text-slate-600 hover:bg-slate-100">
+                <div class="flex gap-4">
+                    <button type="button" @onclick="OnClose" class="rounded-2xl border border-slate-200 bg-white px-8 py-4 text-xs font-black tracking-widest text-slate-400 uppercase transition-all hover:border-slate-300 hover:text-slate-800">
                         Cancel
                     </button>
-                    <button type="submit" class="rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
-                        Create Task
+                    <button type="submit" disabled="@isSubmitting"
+                            class="@(formData.Type == TaskType.Bug ? "bg-red-500 hover:bg-red-600 shadow-red-100" : "bg-[#1C1D2A] hover:bg-slate-800 shadow-slate-100") flex items-center gap-3 rounded-2xl px-12 py-4 text-xs font-black tracking-widest text-white uppercase transition-all active:scale-95 disabled:opacity-50">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                        @(isSubmitting ? "Syncing..." : $"Initialize {formData.Type}")
                     </button>
                 </div>
             </div>
@@ -168,19 +205,120 @@
 @code {
     [Parameter] public KanbanTaskStatus InitialStatus { get; set; }
     [Parameter] public int MilestoneId { get; set; }
-    [Parameter] public EventCallback<CreateKanbanTaskRequest> OnSave { get; set; }
+    [Parameter] public EventCallback<(CreateKanbanTaskRequest Request, List<IBrowserFile> Files)> OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private CreateKanbanTaskRequest model = new();
+    // Injected services - Add these to get user info and project members
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+    [Parameter] public string CurrentUserName { get; set; } = string.Empty;
+    [Parameter] public bool CanAssignToOthers { get; set; } = false;
+    [Parameter] public List<TeamMemberResponse> TeamMembers { get; set; } = new();
+
+    private CreateKanbanTaskRequest formData = new();
+    private List<IBrowserFile> selectedFiles = new();
+    private bool dragActive = false;
+    private bool isSubmitting = false;
+    private InputFile? fileInput;
 
     protected override void OnInitialized()
     {
-        model.Status = InitialStatus;
-        model.MilestoneId = MilestoneId;
+        formData.MilestoneId = MilestoneId;
+        formData.Status = KanbanTaskStatus.ToDo; 
     }
 
     private async Task HandleSubmit()
     {
-        await OnSave.InvokeAsync(model);
+        try
+        {
+            isSubmitting = true;
+            await OnSave.InvokeAsync((formData, selectedFiles));
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
-} *@
+
+    private void OpenFileDialog()
+    {
+        // Trigger file input click via JavaScript interop if needed
+    }
+
+    private async Task HandleFileSelect(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles(10)) // Max 10 files
+        {
+            if (file.Size <= 10 * 1024 * 1024) // 10MB limit
+            {
+                selectedFiles.Add(file);
+            }
+        }
+    }
+
+    private void RemoveFile(IBrowserFile file)
+    {
+        selectedFiles.Remove(file);
+    }
+
+    private void HandleDragEnter() => dragActive = true;
+    private void HandleDragLeave() => dragActive = false;
+    private void HandleDragOver() => dragActive = true;
+
+    private async Task HandleDrop(DragEventArgs e)
+    {
+        dragActive = false;
+        // Note: File drop handling in Blazor WASM is limited
+        // Consider using JavaScript interop for full drag-drop support
+    }
+
+    private string GetDropZoneClass()
+    {
+        var baseClass = "relative border-2 border-dashed rounded-[24px] p-6 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer";
+        return dragActive
+            ? $"{baseClass} bg-blue-50 border-blue-400"
+            : $"{baseClass} bg-slate-50 border-slate-200 hover:bg-white hover:border-[#7E96E1]";
+    }
+
+    private string GetTypeButtonClass(TaskType type)
+    {
+        var baseClass = "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all";
+        var activeClass = type == TaskType.Feature
+            ? "bg-[#1C1D2A] text-white shadow-lg"
+            : "bg-red-500 text-white shadow-lg";
+        var inactiveClass = "text-slate-400 hover:text-slate-600";
+
+        return formData.Type == type ? $"{baseClass} {activeClass}" : $"{baseClass} {inactiveClass}";
+    }
+
+    private string GetStatusName(KanbanTaskStatus status) => status switch
+    {
+        KanbanTaskStatus.ToDo => "To Do",
+        KanbanTaskStatus.InProgress => "In Progress",
+        KanbanTaskStatus.ReadyForTest => "Ready for Test",
+        KanbanTaskStatus.Testing => "Testing",
+        _ => status.ToString()
+    };
+
+    private RenderFragment GetFileIcon(string contentType)
+    {
+        return contentType switch
+        {
+            var ct when ct.StartsWith("image/") => @<svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>,
+            "application/pdf" => @<svg class="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></svg>,
+            _ => @<svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            };
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

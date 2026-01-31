@@ -68,15 +68,9 @@ namespace Testify.Controllers
         [HttpPost]
         public async Task<ActionResult<KanbanTaskResponse>> PostTask(CreateKanbanTaskRequest request)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userName = User.Identity?.Name ?? "System";
 
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            var task = await _kanbanTaskRepository.CreateTaskAsync(request, userId, userName);
+            var task = await _kanbanTaskRepository.CreateTaskAsync(request, userName);
 
             return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
         }

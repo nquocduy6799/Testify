@@ -30,7 +30,6 @@
     <Folder Include="Features\TestTemplates\Components\" />
     <Folder Include="Features\TestTemplates\Services\" />
     <Folder Include="Features\TestTemplates\Pages\" />
-    <Folder Include="Services\" />
   </ItemGroup>
 
 </Project>

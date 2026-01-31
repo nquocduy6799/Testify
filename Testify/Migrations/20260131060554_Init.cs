@@ -747,6 +747,70 @@ namespace Testify.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TaskActivities",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TaskId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Action = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OldValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NewValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    KanbanTaskId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TaskActivities", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TaskActivities_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TaskActivities_KanbanTasks_KanbanTaskId",
+                        column: x => x.KanbanTaskId,
+                        principalTable: "KanbanTasks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TaskAttachments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    KanbanTaskId = table.Column<int>(type: "int", nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PublicId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FileSize = table.Column<long>(type: "bigint", nullable: false),
+                    ContentType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TaskAttachments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TaskAttachments_KanbanTasks_KanbanTaskId",
+                        column: x => x.KanbanTaskId,
+                        principalTable: "KanbanTasks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TestPlans",
                 columns: table => new
                 {
@@ -1182,6 +1246,21 @@ namespace Testify.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TaskActivities_KanbanTaskId",
+                table: "TaskActivities",
+                column: "KanbanTaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TaskActivities_UserId",
+                table: "TaskActivities",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TaskAttachments_KanbanTaskId",
+                table: "TaskAttachments",
+                column: "KanbanTaskId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TaskLinkedRunSteps_RunStepId",
                 table: "TaskLinkedRunSteps",
                 column: "RunStepId");
@@ -1331,6 +1410,12 @@ namespace Testify.Migrations
 
             migrationBuilder.DropTable(
                 name: "ProjectTeamMembers");
+
+            migrationBuilder.DropTable(
+                name: "TaskActivities");
+
+            migrationBuilder.DropTable(
+                name: "TaskAttachments");
 
             migrationBuilder.DropTable(
                 name: "TaskLinkedRunSteps");

@@ -9,7 +9,7 @@ namespace Testify.Interfaces
         Task<IEnumerable<KanbanTaskResponse>> GetTasksByMilestoneIdAsync(int milestoneId);
         Task<IEnumerable<KanbanTaskResponse>> GetTasksByProjectIdAsync(int projectId);
         Task<KanbanTaskResponse?> GetTaskByTaskIdAsync(int id);
-        Task<KanbanTaskResponse> CreateTaskAsync(CreateKanbanTaskRequest request, string userId, string userName);
+        Task<KanbanTaskResponse> CreateTaskAsync(CreateKanbanTaskRequest request, string userName);
         Task<bool> UpdateTaskAsync(int id, UpdateKanbanTaskRequest request, string userName);
         Task<bool> DeleteTaskAsync(int id, string userName);
     }

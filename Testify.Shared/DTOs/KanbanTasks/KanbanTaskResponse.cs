@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Testify.Shared.DTOs.TaskAttachments;
 using Testify.Shared.Enums;
 
 namespace Testify.Shared.DTOs.KanbanTasks
@@ -17,7 +18,7 @@ namespace Testify.Shared.DTOs.KanbanTasks
         public string? AssigneeId { get; set; }
         // Flattened property: Useful for displaying the user's name without fetching the full object
         public string? AssigneeName { get; set; }
-        public string? AssigneeAvatarUrl { get; set; } 
+        public string? AssigneeAvatarUrl { get; set; }
 
         public TaskType Type { get; set; }
 
@@ -27,5 +28,6 @@ namespace Testify.Shared.DTOs.KanbanTasks
         public DateTime? UpdatedAt { get; set; }
 
         public int TestPlanCount { get; set; }
+        public List<TaskAttachmentResponse> Attachments { get; set; } = new();
     }
 }

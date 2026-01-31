@@ -28,6 +28,7 @@ namespace Testify.Entities
         public virtual ApplicationUser? TestedBy { get; set; }
         public virtual ICollection<TestPlan> TestPlans { get; set; } = new List<TestPlan>();
         public virtual ICollection<TaskLinkedRunStep> LinkedRunSteps { get; set; } = new List<TaskLinkedRunStep>();
+        public virtual ICollection<TaskAttachment> Attachments { get; set; } = new List<TaskAttachment>();
     }
 }
 
