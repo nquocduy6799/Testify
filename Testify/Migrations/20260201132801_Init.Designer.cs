@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Testify.Data;
 
@@ -11,9 +12,11 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260201132801_Init")]
+    partial class Init
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1058,7 +1061,7 @@ namespace Testify.Migrations
 
                     b.HasIndex("ParentId");
 
-                    b.ToTable("TemplateFolders");
+                    b.ToTable("TemplateFolder");
                 });
 
             modelBuilder.Entity("Testify.Entities.TestCase", b =>

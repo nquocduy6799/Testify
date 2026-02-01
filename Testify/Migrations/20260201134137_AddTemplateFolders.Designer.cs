@@ -12,8 +12,8 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260131060554_Init")]
-    partial class Init
+    [Migration("20260201134137_AddTemplateFolders")]
+    partial class AddTemplateFolders
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -797,6 +797,9 @@ namespace Testify.Migrations
                     b.Property<string>("Client")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Color")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1028,6 +1031,37 @@ namespace Testify.Migrations
                     b.HasIndex("TaskId");
 
                     b.ToTable("TaskLinkedRunSteps");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TemplateFolder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("TemplateFolders");
                 });
 
             modelBuilder.Entity("Testify.Entities.TestCase", b =>
@@ -1459,10 +1493,7 @@ namespace Testify.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CreatedByUserId")
+                    b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -1474,6 +1505,9 @@ namespace Testify.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("FolderId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -1488,9 +1522,15 @@ namespace Testify.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedById");
+                    b.HasIndex("FolderId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("TestSuiteTemplates");
                 });
@@ -1905,6 +1945,23 @@ namespace Testify.Migrations
                     b.Navigation("Task");
                 });
 
+            modelBuilder.Entity("Testify.Entities.TemplateFolder", b =>
+                {
+                    b.HasOne("Testify.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Testify.Entities.TemplateFolder", "Parent")
+                        .WithMany("SubFolders")
+                        .HasForeignKey("ParentId");
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Testify.Entities.TestCase", b =>
                 {
                     b.HasOne("Testify.Entities.TestSuite", "Suite")
@@ -2067,11 +2124,19 @@ namespace Testify.Migrations
 
             modelBuilder.Entity("Testify.Entities.TestSuiteTemplate", b =>
                 {
-                    b.HasOne("Testify.Data.ApplicationUser", "CreatedBy")
+                    b.HasOne("Testify.Entities.TemplateFolder", "Folder")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("FolderId");
 
-                    b.Navigation("CreatedBy");
+                    b.HasOne("Testify.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Folder");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Testify.Entities.ChatMessage", b =>
@@ -2130,6 +2195,11 @@ namespace Testify.Migrations
                     b.Navigation("SubFolders");
 
                     b.Navigation("TestSuites");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TemplateFolder", b =>
+                {
+                    b.Navigation("SubFolders");
                 });
 
             modelBuilder.Entity("Testify.Entities.TestCase", b =>
