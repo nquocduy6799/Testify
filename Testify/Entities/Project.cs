@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Testify.Data;
@@ -10,6 +10,7 @@ namespace Testify.Entities
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public string? Color { get; set; }
         public string? Client { get; set; }
         public int Progress { get; set; } = 0;
         public DateTime? Deadline { get; set; }
