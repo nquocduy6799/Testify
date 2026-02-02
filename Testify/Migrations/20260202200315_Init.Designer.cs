@@ -12,8 +12,8 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260201134137_AddTemplateFolders")]
-    partial class AddTemplateFolders
+    [Migration("20260202200315_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1041,10 +1041,6 @@ namespace Testify.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
@@ -1055,11 +1051,15 @@ namespace Testify.Migrations
                     b.Property<int?>("ParentId")
                         .HasColumnType("int");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedBy");
-
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("TemplateFolders");
                 });
@@ -1947,15 +1947,15 @@ namespace Testify.Migrations
 
             modelBuilder.Entity("Testify.Entities.TemplateFolder", b =>
                 {
-                    b.HasOne("Testify.Data.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Testify.Entities.TemplateFolder", "Parent")
                         .WithMany("SubFolders")
                         .HasForeignKey("ParentId");
+
+                    b.HasOne("Testify.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Parent");
 

@@ -205,7 +205,7 @@ namespace Testify.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TemplateFolder",
+                name: "TemplateFolders",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -213,21 +213,21 @@ namespace Testify.Migrations
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ParentId = table.Column<int>(type: "int", nullable: true),
-                    CreatedBy = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TemplateFolder", x => x.Id);
+                    table.PrimaryKey("PK_TemplateFolders", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TemplateFolder_AspNetUsers_CreatedBy",
-                        column: x => x.CreatedBy,
+                        name: "FK_TemplateFolders_AspNetUsers_UserId",
+                        column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_TemplateFolder_TemplateFolder_ParentId",
+                        name: "FK_TemplateFolders_TemplateFolders_ParentId",
                         column: x => x.ParentId,
-                        principalTable: "TemplateFolder",
+                        principalTable: "TemplateFolders",
                         principalColumn: "Id");
                 });
 
@@ -423,9 +423,9 @@ namespace Testify.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_TestSuiteTemplates_TemplateFolder_FolderId",
+                        name: "FK_TestSuiteTemplates_TemplateFolders_FolderId",
                         column: x => x.FolderId,
-                        principalTable: "TemplateFolder",
+                        principalTable: "TemplateFolders",
                         principalColumn: "Id");
                 });
 
@@ -1306,14 +1306,14 @@ namespace Testify.Migrations
                 column: "TaskId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TemplateFolder_CreatedBy",
-                table: "TemplateFolder",
-                column: "CreatedBy");
+                name: "IX_TemplateFolders_ParentId",
+                table: "TemplateFolders",
+                column: "ParentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TemplateFolder_ParentId",
-                table: "TemplateFolder",
-                column: "ParentId");
+                name: "IX_TemplateFolders_UserId",
+                table: "TemplateFolders",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TestCases_SuiteId",
@@ -1525,7 +1525,7 @@ namespace Testify.Migrations
                 name: "Projects");
 
             migrationBuilder.DropTable(
-                name: "TemplateFolder");
+                name: "TemplateFolders");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
