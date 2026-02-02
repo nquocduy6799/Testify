@@ -12,6 +12,7 @@ using Testify.Data;
 using Testify.Interfaces;
 using Testify.Repositories;
 using Testify.Hubs;
+using Testify.Client.Features.TestTemplates.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,9 +65,13 @@ builder.Services.AddScoped(sp =>
 });
 
 // Register repositories
+builder.Services.AddScoped<ICurrentUserRepository, CurrentUserRepository>();
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
+builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
+
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -74,6 +79,9 @@ builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
 builder.Services.AddScoped<IMilestoneService, MilestoneService>();
 builder.Services.AddScoped<INotificationService, ServerNotificationRepository>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
+builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();

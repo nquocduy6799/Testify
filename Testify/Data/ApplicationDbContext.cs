@@ -18,6 +18,7 @@ namespace Testify.Data
         public DbSet<KanbanTask> KanbanTasks { get; set; }
 
         // Templates
+        public DbSet<TemplateFolder> TemplateFolders { get; set; }
         public DbSet<TestSuiteTemplate> TestSuiteTemplates { get; set; }
         public DbSet<TestCaseTemplate> TestCaseTemplates { get; set; }
         public DbSet<TestStepTemplate> TestStepTemplates { get; set; }
