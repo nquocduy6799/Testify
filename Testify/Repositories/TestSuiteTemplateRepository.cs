@@ -2,6 +2,7 @@
 using Testify.Data;
 using Testify.Entities;
 using Testify.Interfaces;
+using Testify.Shared.DTOs.TestCases;
 using Testify.Shared.DTOs.TestTemplates;
 
 namespace Testify.Repositories
