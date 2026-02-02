@@ -65,11 +65,13 @@ builder.Services.AddScoped(sp =>
 });
 
 // Register repositories
+builder.Services.AddScoped<ICurrentUserRepository, CurrentUserRepository>();
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
 builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
+
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();

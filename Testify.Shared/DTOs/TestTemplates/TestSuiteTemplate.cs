@@ -34,6 +34,9 @@ namespace Testify.Shared.DTOs.TestTemplates
 
         public int? FolderId { get; set; }
 
+        [StringLength(200)]
+        public string? NewFolderName { get; set; } 
+
         public List<CreateTestCaseTemplateRequest> TestCaseTemplates { get; set; } = new();
     }
 

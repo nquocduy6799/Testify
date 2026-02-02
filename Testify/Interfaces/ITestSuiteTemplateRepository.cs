@@ -8,7 +8,7 @@ namespace Testify.Interfaces
     {
         Task<IEnumerable<TestSuiteTemplateResponse>> GetAllTestSuiteTemplatesAsync();
         Task<TestSuiteTemplateResponse?> GetTestSuiteTemplateByIdAsync(int id);
-        Task<TestSuiteTemplateResponse> CreateTestSuiteTemplateAsync(CreateTestSuiteTemplateRequest request, string userName);
+        Task<TestSuiteTemplateResponse> CreateTestSuiteTemplateAsync(CreateTestSuiteTemplateRequest request, string userName, string userId);
         Task<bool> UpdateTestSuiteTemplateAsync(int id, UpdateTestSuiteTemplateRequest request, string userName);
         Task<bool> DeleteTestSuiteTemplateAsync(int id, string userName);
     }

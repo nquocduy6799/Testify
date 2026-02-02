@@ -10,10 +10,12 @@ namespace Testify.Controllers
     public class TestSuiteTemplatesController : ControllerBase
     {
         private readonly ITestSuiteTemplateRepository _testSuiteTemplateRepository;
+        private readonly ICurrentUserRepository _currentUserRepository;
 
-        public TestSuiteTemplatesController(ITestSuiteTemplateRepository testSuiteTemplateRepository)
+        public TestSuiteTemplatesController(ITestSuiteTemplateRepository testSuiteTemplateRepository, ICurrentUserRepository currentUserRepository)
         {
             _testSuiteTemplateRepository = testSuiteTemplateRepository;
+            _currentUserRepository = currentUserRepository;
         }
 
         // GET: api/TestSuiteTemplates
@@ -42,8 +44,9 @@ namespace Testify.Controllers
         [HttpPost]
         public async Task<ActionResult<TestSuiteTemplateResponse>> PostTestSuiteTemplate(CreateTestSuiteTemplateRequest request)
         {
-            var userName = User.Identity?.Name ?? "System";
-            var template = await _testSuiteTemplateRepository.CreateTestSuiteTemplateAsync(request, userName);
+            var userId = _currentUserRepository.UserId ?? "System";
+            var userName = _currentUserRepository.UserName ?? "System";
+            var template = await _testSuiteTemplateRepository.CreateTestSuiteTemplateAsync(request, userName, userId);
 
             return CreatedAtAction(nameof(GetTestSuiteTemplate), new { id = template.Id }, template);
         }
@@ -52,7 +55,8 @@ namespace Testify.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTestSuiteTemplate(int id, UpdateTestSuiteTemplateRequest request)
         {
-            var userName = User.Identity?.Name ?? "System";
+            var userId = _currentUserRepository.UserId ?? "System";
+            var userName = _currentUserRepository.UserName ?? "System";
             var updated = await _testSuiteTemplateRepository.UpdateTestSuiteTemplateAsync(id, request, userName);
 
             if (!updated)

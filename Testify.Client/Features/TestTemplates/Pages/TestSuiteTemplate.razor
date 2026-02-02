@@ -1,11 +1,15 @@
 ﻿@page "/test-templates/suite-library"
+@using Microsoft.AspNetCore.Authorization
 @using Testify.Client.Features.TestTemplates.Components
 @using Testify.Client.Interfaces
 @using Testify.Shared.DTOs.TemplateFolders
 @using Testify.Shared.DTOs.TestTemplates
 @inject ITestSuiteTemplateService TestSuiteTemplateService
 @inject ITemplateFolderService TemplateFolderService
+@inject NavigationManager Navigation
 @rendermode InteractiveWebAssembly
+@attribute [Authorize]
+
 
 <PageTitle>Suite Library</PageTitle>
 
@@ -110,9 +114,9 @@
                             </svg>
                         }
                         <h4 class="text-xs font-black tracking-widest text-slate-800 uppercase">
-                            @_selectedFolderId.HasValue
-                                ? $"Folder: {_folders[_selectedFolderId.Value]}"
-                                : "Uncategorized Templates"
+                            @(_selectedFolderId.HasValue
+                                                    ? _folders[_selectedFolderId.Value]
+                                                    : "Uncategorized Templates")
                         </h4>
                     </div>
                     <span class="rounded-full bg-slate-100 px-3 py-1 font-black text-[10px] text-slate-400 uppercase">
@@ -185,8 +189,10 @@
                 <div class="flex-1 space-y-3">
                     <button @onclick="() => SelectFolder(null)"
                             @ondragover="(e) => OnDragOver(e, null)"
+                            @ondragover:preventDefault
                             @ondragleave="OnDragLeave"
                             @ondrop="(e) => OnDrop(e, null)"
+                            @ondrop:preventDefault
                             class="@GetFolderButtonClass(null)">
                         <div class="flex items-center gap-4">
                             <svg class="h-5 w-5 @( _selectedFolderId is null ? "text-[#7E96E1]" : "text-slate-300")" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -206,8 +212,10 @@
                         {
                             <div @onclick="() => SelectFolder(folder.Key)"
                                  @ondragover="(e) => OnDragOver(e, folder.Key)"
+                                 @ondragover:preventDefault
                                  @ondragleave="OnDragLeave"
                                  @ondrop="(e) => OnDrop(e, folder.Key)"
+                                 @ondrop:preventDefault
                                  class="@GetFolderContainerClass(folder.Key)">
                                 <div class="flex items-center gap-4">
                                     <svg class="@GetFolderIconClass(folder.Key)" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -292,7 +300,7 @@
 
 @code {
     private readonly List<TestSuiteTemplateResponse> _suites = new();
-    private readonly Dictionary<int, string> _folders = new();
+    private readonly Dictionary<int, string> _folders = new(); 
 
     private string _searchQuery = string.Empty;
     private bool _isSuiteFormOpen;
@@ -311,23 +319,33 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadSuitesAsync();
+		await LoadDataAsync();
     }
 
-    private async Task LoadSuitesAsync()
+    private async Task LoadDataAsync()
     {
         _isLoading = true;
         _errorMessage = null;
 
         try
         {
+            var foldersTask = TemplateFolderService.GetTemplateFoldersAsync();
+            var suitesTask = TestSuiteTemplateService.GetTestSuiteTemplatesAsync();
+
+            await Task.WhenAll(foldersTask, suitesTask);
+
+            _folders.Clear();
+            foreach (var folder in await foldersTask)
+            {
+                _folders[folder.Id] = folder.Name;
+            }
+
             _suites.Clear();
-            _suites.AddRange(await TestSuiteTemplateService.GetTestSuiteTemplatesAsync());
-            BuildFolderIndex();
+            _suites.AddRange(await suitesTask);
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Unable to load suite templates. {ex.Message}";
+            _errorMessage = $"Unable to load data. {ex.Message}";
         }
         finally
         {
@@ -362,52 +380,11 @@
 
     private void ClearSearch() => _searchQuery = string.Empty;
 
-    private string GetSuiteCardClass(TestSuiteTemplateResponse suite) =>
-        $"p-6 bg-white rounded-[32px] border transition-all cursor-grab active:cursor-grabbing group shadow-sm hover:shadow-xl {(suite.Id == _draggedSuiteId ? "opacity-40 border-dashed border-[#7E96E1] scale-95" : "border-slate-50")}";
-
-    private string GetFolderButtonClass(int? folderId)
-    {
-        var isSelected = _selectedFolderId == folderId;
-        var isDragOver = _dragOverFolderId == folderId;
-        var baseClass = isSelected
-            ? "bg-[#1C1D2A] text-white border-transparent shadow-xl"
-            : "bg-white border-slate-50 shadow-sm hover:border-[#7E96E1]/30 text-slate-600";
-
-        var dragClass = isDragOver ? "border-dashed border-2 border-[#7E96E1] bg-blue-50/10 scale-[1.02]" : string.Empty;
-        return $"w-full flex items-center justify-between px-6 py-5 rounded-[32px] border transition-all {baseClass} {dragClass}";
-    }
-
-    private string GetFolderContainerClass(int folderId)
-    {
-        var isSelected = _selectedFolderId == folderId;
-        var isDragOver = _dragOverFolderId == folderId;
-
-        var baseClass = isSelected
-            ? "bg-[#1C1D2A] text-white border-transparent shadow-xl scale-[1.02]"
-            : "bg-white border-slate-50 shadow-sm hover:border-[#7E96E1]/30 text-slate-600";
-
-        var dragClass = isDragOver ? "border-dashed border-2 border-[#7E96E1] bg-blue-50/10 scale-[1.02]" : string.Empty;
-        return $"group cursor-pointer flex items-center justify-between px-6 py-5 rounded-[32px] border transition-all relative {baseClass} {dragClass}";
-    }
-
-    private string GetFolderIconClass(int folderId) =>
-        $"w-5 h-5 transition-all {( _selectedFolderId == folderId ? "text-[#7E96E1]" : "text-[#7E96E1] group-hover:scale-110")}";
-
-    private string GetFolderCountClass(bool selected) =>
-        selected
-            ? "text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/10 text-white"
-            : "text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-400";
-
-    private string GetFolderDeleteClass(int folderId) =>
-        _selectedFolderId == folderId
-            ? "p-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20 text-slate-400"
-            : "p-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 text-red-400";
-
     private void SelectFolder(int? folderId) => _selectedFolderId = folderId;
 
     private void SelectSuite(TestSuiteTemplateResponse suite)
     {
-        // Placeholder for future details view or navigation.
+        Navigation.NavigateTo($"/testsuites/{suite.Id}");
     }
 
     private void OnDragStart(DragEventArgs args, int suiteId)
@@ -417,7 +394,6 @@
 
     private void OnDragOver(DragEventArgs args, int? folderId)
     {
-        // args.PreventDefault();
         _dragOverFolderId = folderId;
     }
 
@@ -428,8 +404,6 @@
 
     private async Task OnDrop(DragEventArgs args, int? folderId)
     {
-        // args.PreventDefault();
-
         if (_draggedSuiteId is null)
         {
             _dragOverFolderId = null;
@@ -502,6 +476,7 @@
             {
                 Name = _newFolderName.Trim()
             };
+
             var created = await TemplateFolderService.CreateTemplateFolderAsync(request);
             _folders[created.Id] = created.Name;
             _newFolderName = string.Empty;
@@ -542,38 +517,53 @@
         _isSuiteFormOpen = false;
     }
 
-    private async Task HandleSaveTestSuite((string Name, string? Description, int? FolderId, string? NewFolderName) form)
+    private async Task HandleSaveTestSuite(CreateTestSuiteTemplateRequest request)
     {
-        var folderId = form.FolderId;
+        var folderId = request.FolderId;
 
-        if (!string.IsNullOrWhiteSpace(form.NewFolderName))
+        // Handle new folder creation if specified
+        if (!string.IsNullOrWhiteSpace(request.NewFolderName))
         {
-            var existingFolder = _folders.FirstOrDefault(item => string.Equals(item.Value, form.NewFolderName, StringComparison.OrdinalIgnoreCase));
-            folderId = existingFolder.Key != 0 ? existingFolder.Key : null;
+            // Check if folder already exists locally
+            var existingFolder = _folders.FirstOrDefault(item =>
+                string.Equals(item.Value, request.NewFolderName, StringComparison.OrdinalIgnoreCase));
 
-            if (!folderId.HasValue)
+            if (existingFolder.Key != 0)
             {
-                var newId = _folders.Count == 0 ? 1 : _folders.Keys.Max() + 1;
-                _folders[newId] = form.NewFolderName.Trim();
-                folderId = newId;
+                // Use existing folder
+                folderId = existingFolder.Key;
+            }
+            else
+            {
+                // Create new folder via API
+                try
+                {
+                    var folderRequest = new CreateTemplateFolderRequest
+                    {
+                        Name = request.NewFolderName.Trim()
+                    };
+                    var createdFolder = await TemplateFolderService.CreateTemplateFolderAsync(folderRequest);
+                    _folders[createdFolder.Id] = createdFolder.Name;
+                    folderId = createdFolder.Id;
+                }
+                catch (Exception ex)
+                {
+                    _errorMessage = $"Unable to create folder. {ex.Message}";
+                    return;
+                }
             }
         }
 
         try
         {
-            var request = new CreateTestSuiteTemplateRequest
-            {
-                Name = form.Name.Trim(),
-                Description = string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim(),
-                FolderId = folderId
-            };
+            request.FolderId = folderId;
 
             var created = await TestSuiteTemplateService.CreateTestSuiteTemplateAsync(request);
             _suites.Add(created);
 
-            if (folderId.HasValue && !_folders.ContainsKey(folderId.Value))
+            if (created.FolderId.HasValue && !_folders.ContainsKey(created.FolderId.Value))
             {
-                _folders[folderId.Value] = $"Folder {folderId.Value}";
+                _folders[created.FolderId.Value] = $"Folder {created.FolderId.Value}";
             }
 
             _isSuiteFormOpen = false;
@@ -583,278 +573,47 @@
             _errorMessage = $"Unable to create suite template. {ex.Message}";
         }
     }
+
+
+
+    private string GetSuiteCardClass(TestSuiteTemplateResponse suite) =>
+    $"p-6 bg-white rounded-[32px] border transition-all cursor-grab active:cursor-grabbing group shadow-sm hover:shadow-xl {(suite.Id == _draggedSuiteId ? "opacity-40 border-dashed border-[#7E96E1] scale-95" : "border-slate-50")}";
+
+    private string GetFolderButtonClass(int? folderId)
+    {
+        var isSelected = _selectedFolderId == folderId;
+        var isDragOver = _dragOverFolderId == folderId;
+        var baseClass = isSelected
+            ? "bg-[#1C1D2A] text-white border-transparent shadow-xl"
+            : "bg-white border-slate-50 shadow-sm hover:border-[#7E96E1]/30 text-slate-600";
+
+        var dragClass = isDragOver ? "border-dashed border-2 border-[#7E96E1] bg-blue-50/10 scale-[1.02]" : string.Empty;
+        return $"w-full flex items-center justify-between px-6 py-5 rounded-[32px] border transition-all {baseClass} {dragClass}";
+    }
+
+    private string GetFolderContainerClass(int folderId)
+    {
+        var isSelected = _selectedFolderId == folderId;
+        var isDragOver = _dragOverFolderId == folderId;
+
+        var baseClass = isSelected
+            ? "bg-[#1C1D2A] text-white border-transparent shadow-xl scale-[1.02]"
+            : "bg-white border-slate-50 shadow-sm hover:border-[#7E96E1]/30 text-slate-600";
+
+        var dragClass = isDragOver ? "border-dashed border-2 border-[#7E96E1] bg-blue-50/10 scale-[1.02]" : string.Empty;
+        return $"group cursor-pointer flex items-center justify-between px-6 py-5 rounded-[32px] border transition-all relative {baseClass} {dragClass}";
+    }
+
+    private string GetFolderIconClass(int folderId) =>
+        $"w-5 h-5 transition-all {(_selectedFolderId == folderId ? "text-[#7E96E1]" : "text-[#7E96E1] group-hover:scale-110")}";
+
+    private string GetFolderCountClass(bool selected) =>
+        selected
+            ? "text-[10px] font-bold px-2.5 py-1 rounded-full bg-white/10 text-white"
+            : "text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-400";
+
+    private string GetFolderDeleteClass(int folderId) =>
+        _selectedFolderId == folderId
+            ? "p-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20 text-slate-400"
+            : "p-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-50 text-red-400";
 }
-
-
-
-@* 
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Suite Library</h2>
-          <p className="text-slate-400 mt-2 font-medium">Global test repository. These templates are shared across the system ecosystem.</p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-[#7E96E1] transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search templates..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 pr-4 py-4 w-64 bg-white border border-slate-100 rounded-[32px] shadow-sm text-xs font-bold outline-none focus:ring-2 focus:ring-[#7E96E1]/20 transition-all"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full transition-all"
-              >
-                <X className="w-3 h-3 text-slate-400" />
-              </button>
-            )}
-          </div>
-          <button 
-            onClick={() => setIsCreatingFolder(true)}
-            className="bg-white text-slate-800 px-6 py-4 rounded-[32px] border border-slate-100 flex items-center gap-3 font-black shadow-sm hover:shadow-md transition-all"
-          >
-            <FolderPlus className="w-5 h-5 text-[#7E96E1]" />
-            <span className="text-xs uppercase tracking-widest">New Folder</span>
-          </button>
-          <button 
-            onClick={() => setIsSuiteFormOpen(true)}
-            className="bg-[#1C1D2A] text-white px-8 py-4 rounded-[32px] flex items-center gap-3 font-black shadow-lg hover:bg-slate-800 hover:shadow-xl active:scale-95 transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="text-xs uppercase tracking-widest">New Suite Template</span>
-          </button>
-        </div>
-      </div>
-
-      {isCreatingFolder && (
-        <div className="bg-white p-8 rounded-[40px] border-2 border-dashed border-[#7E96E1] animate-in zoom-in-95 duration-200">
-           <form onSubmit={handleCreateFolder} className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center flex-shrink-0">
-                 <Folder className="w-6 h-6 text-[#7E96E1]" />
-              </div>
-              <input 
-                autoFocus
-                type="text" 
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="Name your folder (e.g. Mobile Assets)"
-                className="flex-1 bg-transparent border-none outline-none font-black text-xl text-slate-800 placeholder:text-slate-300"
-              />
-              <button type="submit" className="bg-[#1C1D2A] text-white px-6 py-3 rounded-2xl font-black text-sm">Create</button>
-              <button type="button" onClick={() => setIsCreatingFolder(false)} className="p-3 text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-           </form>
-        </div>
-      )}
-
-      <div className="grid grid-cols-12 gap-8 animate-in fade-in duration-500 min-h-[600px]">
-        <div className="col-span-12 lg:col-span-8 flex flex-col space-y-4">
-            <div className="flex items-center justify-between px-6 py-2">
-              <div className="flex items-center gap-3">
-                  {selectedFolder ? <Folder className="w-5 h-5 text-[#7E96E1]" /> : <Archive className="w-5 h-5 text-slate-400" />}
-                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">
-                    {selectedFolder ? `Folder: ${selectedFolder}` : 'Uncategorized Templates'}
-                  </h4>
-              </div>
-              <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-3 py-1 rounded-full uppercase">
-                  {filteredSuites.length} Suites
-              </span>
-            </div>
-            
-            <div className="flex-1 bg-white/40 rounded-[48px] border border-slate-100 shadow-inner overflow-hidden p-6 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredSuites.map(suite => (
-                  <SuiteGridCard 
-                    key={suite.id} 
-                    suite={suite} 
-                    onSelect={onSelectSuite} 
-                    onDragStart={(e) => onDragStart(e, suite.id)}
-                    isDragging={draggedSuiteId === suite.id}
-                  />
-                ))}
-              </div>
-              
-              {filteredSuites.length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-50 py-20">
-                  <Beaker className="w-16 h-16 text-slate-200 mb-6" />
-                  <p className="text-sm font-black text-slate-300 uppercase tracking-widest">
-                    {searchQuery ? 'No matching templates found' : 'This view is currently empty'}
-                  </p>
-                </div>
-              )}
-            </div>
-        </div>
-
-        <div className="col-span-12 lg:col-span-4 flex flex-col space-y-6">
-            <div className="flex items-center justify-between px-6 py-2">
-              <div className="flex items-center gap-3">
-                <Filter className="w-5 h-5 text-[#7E96E1]" />
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Template Navigator</h4>
-              </div>
-            </div>
-            
-            <div className="space-y-3 flex-1">
-              <button 
-                onClick={() => setSelectedFolder(null)}
-                onDragOver={(e) => onDragOver(e, 'uncategorized')}
-                onDragLeave={onDragLeave}
-                onDrop={(e) => onDrop(e, null)}
-                className={`w-full flex items-center justify-between px-6 py-5 rounded-[32px] border transition-all ${
-                  selectedFolder === null 
-                    ? 'bg-[#1C1D2A] text-white border-transparent shadow-xl' 
-                    : 'bg-white border-slate-50 shadow-sm hover:border-[#7E96E1]/30 text-slate-600'
-                } ${dragOverTarget === 'uncategorized' ? 'border-dashed border-2 border-[#7E96E1] bg-blue-50/10 scale-[1.02]' : ''}`}
-              >
-                <div className="flex items-center gap-4">
-                   <Archive className={`w-5 h-5 ${selectedFolder === null ? 'text-[#7E96E1]' : 'text-slate-300'}`} />
-                   <span className="text-sm font-black uppercase tracking-tight">Uncategorized</span>
-                </div>
-                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                   selectedFolder === null ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'
-                }`}>
-                  {suites.filter(s => !s.folder || s.folder.trim() === '').length}
-                </span>
-              </button>
-
-              <div className="h-px bg-slate-100 mx-6 my-2"></div>
-
-              <div className="space-y-3 min-h-[300px]">
-                {paginatedFolders.map(folder => (
-                  <div 
-                    key={folder}
-                    onClick={() => setSelectedFolder(folder)}
-                    onDragOver={(e) => onDragOver(e, folder)}
-                    onDragLeave={onDragLeave}
-                    onDrop={(e) => onDrop(e, folder)}
-                    className={`group cursor-pointer flex items-center justify-between px-6 py-5 rounded-[32px] border transition-all relative ${
-                      selectedFolder === folder 
-                        ? 'bg-[#1C1D2A] text-white border-transparent shadow-xl scale-[1.02]' 
-                        : 'bg-white border-slate-50 shadow-sm hover:border-[#7E96E1]/30 text-slate-600'
-                    } ${dragOverTarget === folder ? 'border-dashed border-2 border-[#7E96E1] bg-blue-50/10 scale-[1.02]' : ''}`}
-                  >
-                    <div className="flex items-center gap-4">
-                       <Folder className={`w-5 h-5 transition-all ${
-                         selectedFolder === folder ? 'text-[#7E96E1]' : 'text-[#7E96E1] group-hover:scale-110'
-                       }`} />
-                       <span className="text-sm font-black uppercase tracking-tight truncate max-w-[140px]">{folder}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                         selectedFolder === folder ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'
-                      }`}>
-                        {suites.filter(s => s.folder === folder).length}
-                      </span>
-                      <button 
-                        onClick={(e) => deleteFolder(e, folder)}
-                        className={`p-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all ${
-                          selectedFolder === folder ? 'hover:bg-red-500/20 text-slate-400' : 'hover:bg-red-50 text-red-400'
-                        }`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {allFolders.length === 0 && (
-                    <div className="py-12 flex flex-col items-center justify-center bg-white/40 rounded-[48px] border-2 border-dashed border-slate-100 text-center">
-                       <FolderPlus className="w-10 h-10 text-slate-200 mb-4" />
-                       <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No Library Folders</p>
-                    </div>
-                )}
-              </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-6">
-                  <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className="p-2 bg-white border border-slate-100 rounded-xl disabled:opacity-30"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="text-[10px] font-black text-slate-400">PAGE {currentPage} / {totalPages}</span>
-                  <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className="p-2 bg-white border border-slate-100 rounded-xl disabled:opacity-30"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-        </div>
-      </div>
-
-      {isSuiteFormOpen && (
-        <TestSuiteForm 
-          onSave={handleSaveTestSuite} 
-          onClose={() => setIsSuiteFormOpen(false)}
-          availableFolders={allFolders}
-          initialFolder={selectedFolder || undefined}
-          type="Library"
-        />
-      )}
-
-      <div className="bg-slate-900 rounded-[48px] p-10 text-white flex flex-col md:flex-row items-center gap-10 relative overflow-hidden">
-         <div className="relative z-10 flex-1">
-            <h4 className="text-2xl font-black mb-2 tracking-tight">Global Entity Repository</h4>
-            <p className="text-slate-400 font-medium max-w-lg leading-relaxed">
-              These suite templates do not belong to a specific project until imported. Changes made here affect the global master blueprints.
-            </p>
-         </div>
-         <div className="flex-shrink-0 relative w-32 h-32 flex items-center justify-center">
-            <Layers className="w-16 h-16 text-[#7E96E1]" />
-            <div className="absolute inset-0 bg-[#7E96E1]/20 rounded-full blur-2xl animate-pulse"></div>
-         </div>
-      </div>
-    </div>
-  );
-};
-
-interface SuiteGridCardProps {
-  suite: TestSuite;
-  onSelect: (id: string) => void;
-  onDragStart: (e: React.DragEvent) => void;
-  isDragging: boolean;
-}
-
-const SuiteGridCard: React.FC<SuiteGridCardProps> = ({ suite, onSelect, onDragStart, isDragging }) => {
-  return (
-    <div 
-      draggable
-      onDragStart={onDragStart}
-      onClick={() => onSelect(suite.id)}
-      className={`p-6 bg-white rounded-[32px] border transition-all cursor-grab active:cursor-grabbing group shadow-sm hover:shadow-xl ${
-        isDragging ? 'opacity-40 border-dashed border-[#7E96E1] scale-95' : 'border-slate-50'
-      }`}
-    >
-       <div className="flex items-center justify-between mb-4">
-          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-[#7E96E1] group-hover:text-white transition-all">
-             <Beaker className="w-6 h-6" />
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-xl border border-slate-100">
-             <FileText className="w-3.5 h-3.5 text-slate-400" />
-             <span className="text-[10px] font-black text-slate-600">{suite.testCases.length}</span>
-          </div>
-       </div>
-       
-       <h4 className="text-sm font-black text-slate-800 group-hover:text-[#7E96E1] transition-colors truncate">{suite.name}</h4>
-       <p className="text-[10px] text-slate-400 font-medium line-clamp-2 mt-2 h-8">{suite.description || 'Standard regression suite asset.'}</p>
-       
-       <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-50">
-          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{suite.id}</span>
-          <div className="flex items-center gap-1 text-[9px] font-black text-[#7E96E1] uppercase opacity-0 group-hover:opacity-100 transition-opacity">
-            Open Template <ChevronRight className="w-3 h-3" />
-          </div>
-       </div>
-    </div>
-  );
-};
-
- *@

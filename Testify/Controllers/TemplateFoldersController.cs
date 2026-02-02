@@ -12,17 +12,20 @@ namespace Testify.Controllers
     public class TemplateFoldersController : ControllerBase
     {
         private readonly ITemplateFolderRepository _templateFolderRepository;
+        private readonly ICurrentUserRepository _currentUserRepository;
 
-        public TemplateFoldersController(ITemplateFolderRepository templateFolderRepository)
+        public TemplateFoldersController(ITemplateFolderRepository templateFolderRepository, ICurrentUserRepository currentUserRepository)
         {
             _templateFolderRepository = templateFolderRepository;
+            _currentUserRepository = currentUserRepository;
         }
 
         // GET: api/TemplateFolders
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TemplateFolderResponse>>> GetTemplateFolders()
         {
-            var folders = await _templateFolderRepository.GetAllTemplateFoldersAsync();
+            var userId = _currentUserRepository.UserId ?? "System";
+            var folders = await _templateFolderRepository.GetAllTemplateFoldersByUserIdAsync(userId);
             return Ok(folders);
         }
 
@@ -44,8 +47,8 @@ namespace Testify.Controllers
         [HttpPost]
         public async Task<ActionResult<TemplateFolderResponse>> PostTemplateFolder(CreateTemplateFolderRequest request)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System";
-            var userName = User.Identity?.Name ?? "System";
+            var userId = _currentUserRepository.UserId ?? "System";
+            var userName = _currentUserRepository.UserName ?? "System";
 
             var folder = await _templateFolderRepository.CreateTemplateFolderAsync(request, userName, userId);
 
@@ -56,9 +59,9 @@ namespace Testify.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTemplateFolder(int id, UpdateTemplateFolderRequest request)
         {
-            var userName = User.Identity?.Name ?? "System";
+            var userId = _currentUserRepository.UserId ?? "System";
+            var userName = _currentUserRepository.UserName ?? "System";
             var updated = await _templateFolderRepository.UpdateTemplateFolderAsync(id, request, userName);
-
             if (!updated)
             {
                 return NotFound();

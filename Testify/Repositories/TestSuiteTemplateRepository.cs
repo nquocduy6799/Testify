@@ -36,14 +36,14 @@ namespace Testify.Repositories
             return template != null ? MapToResponse(template) : null;
         }
 
-        public async Task<TestSuiteTemplateResponse> CreateTestSuiteTemplateAsync(CreateTestSuiteTemplateRequest request, string userName)
+        public async Task<TestSuiteTemplateResponse> CreateTestSuiteTemplateAsync(CreateTestSuiteTemplateRequest request, string userName, string userId)
         {
             var template = new TestSuiteTemplate
             {
                 Name = request.Name,
                 Description = request.Description,
                 FolderId = request.FolderId,
-                UserId = userName,
+                UserId = userId,
                 TestCaseTemplates = request.TestCaseTemplates
                     .Select(MapToEntity)
                     .ToList()

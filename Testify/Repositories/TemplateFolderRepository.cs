@@ -36,14 +36,13 @@ namespace Testify.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<TemplateFolderResponse>> GetAllTemplateFoldersAsync()
+        public async Task<IEnumerable<TemplateFolderResponse>> GetAllTemplateFoldersByUserIdAsync(string userId)
         {
             var folders = await _context.TemplateFolders
+                .Where(tf => tf.UserId == userId)
                 .Include(tf => tf.SubFolders)
-                .Where(tf => tf.ParentId == null) // Only get root folders
                 .ToListAsync();
-
-            return folders.Select(tf => MapToResponse(tf)).ToList();
+            return folders.Select(MapToResponse).ToList();
         }
 
         public async Task<TemplateFolderResponse> CreateTemplateFolderAsync(CreateTemplateFolderRequest request, string userName, string userId)
