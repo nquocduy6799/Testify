@@ -10,9 +10,7 @@ namespace Testify.Entities
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
         public int? ParentId { get; set; }
-
-        [ForeignKey(nameof(User))]
-        public string CreatedBy { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
 
         // Navigation properties
         public virtual ApplicationUser User { get; set; } = null!;

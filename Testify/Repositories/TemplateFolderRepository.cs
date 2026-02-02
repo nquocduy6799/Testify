@@ -25,14 +25,12 @@ namespace Testify.Repositories
                     Name = tf.Name,
                     Description = tf.Description,
                     ParentId = tf.ParentId,
-                    CreatedBy = tf.CreatedBy,
                     SubFolders = tf.SubFolders.Select(sf => new TemplateFolderResponse
                     {
                         Id = sf.Id,
                         Name = sf.Name,
                         Description = sf.Description,
                         ParentId = sf.ParentId,
-                        CreatedBy = sf.CreatedBy
                     }).ToList()
                 })
                 .FirstOrDefaultAsync();
@@ -48,14 +46,14 @@ namespace Testify.Repositories
             return folders.Select(tf => MapToResponse(tf)).ToList();
         }
 
-        public async Task<TemplateFolderResponse> CreateTemplateFolderAsync(CreateTemplateFolderRequest request, string userName)
+        public async Task<TemplateFolderResponse> CreateTemplateFolderAsync(CreateTemplateFolderRequest request, string userName, string userId)
         {
             var folder = new TemplateFolder
             {
                 Name = request.Name,
                 Description = request.Description,
                 ParentId = request.ParentId,
-                CreatedBy = userName
+                UserId = userId,
             };
 
             _context.TemplateFolders.Add(folder);
@@ -120,14 +118,12 @@ namespace Testify.Repositories
                 Name = folder.Name,
                 Description = folder.Description,
                 ParentId = folder.ParentId,
-                CreatedBy = folder.CreatedBy,
                 SubFolders = folder.SubFolders?.Select(sf => new TemplateFolderResponse
                 {
                     Id = sf.Id,
                     Name = sf.Name,
                     Description = sf.Description,
                     ParentId = sf.ParentId,
-                    CreatedBy = sf.CreatedBy
                 }).ToList() ?? new List<TemplateFolderResponse>()
             };
         }

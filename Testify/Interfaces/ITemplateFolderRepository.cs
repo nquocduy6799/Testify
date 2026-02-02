@@ -8,7 +8,7 @@ namespace Testify.Interfaces
     {
         Task<TemplateFolderResponse?> GetTemplateFolderByIdAsync(int id);
         Task<IEnumerable<TemplateFolderResponse>> GetAllTemplateFoldersAsync();
-        Task<TemplateFolderResponse> CreateTemplateFolderAsync(CreateTemplateFolderRequest request, string userName);
+        Task<TemplateFolderResponse> CreateTemplateFolderAsync(CreateTemplateFolderRequest request, string userName, string userId);
         Task<bool> UpdateTemplateFolderAsync(int id, UpdateTemplateFolderRequest request, string userName);
         Task<bool> DeleteTemplateFolderAsync(int id, string userName);
     }

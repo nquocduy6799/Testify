@@ -44,9 +44,10 @@ namespace Testify.Controllers
         [HttpPost]
         public async Task<ActionResult<TemplateFolderResponse>> PostTemplateFolder(CreateTemplateFolderRequest request)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System";
             var userName = User.Identity?.Name ?? "System";
 
-            var folder = await _templateFolderRepository.CreateTemplateFolderAsync(request, userName);
+            var folder = await _templateFolderRepository.CreateTemplateFolderAsync(request, userName, userId);
 
             return CreatedAtAction(nameof(GetTemplateFolder), new { id = folder.Id }, folder);
         }
