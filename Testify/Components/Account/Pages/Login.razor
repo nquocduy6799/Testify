@@ -1,4 +1,4 @@
-﻿@page "/Account/Login"
+@page "/Account/Login"
 @layout AuthLayout
 
 @using System.ComponentModel.DataAnnotations
@@ -260,7 +260,8 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+            // Redirect to dashboard if no return URL, otherwise go to return URL
+            RedirectManager.RedirectTo(string.IsNullOrEmpty(ReturnUrl) ? "/dashboard" : ReturnUrl);
         }
         else if (result.RequiresTwoFactor)
         {
@@ -427,7 +428,8 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+            // Redirect to dashboard if no return URL, otherwise go to return URL
+            RedirectManager.RedirectTo(string.IsNullOrEmpty(ReturnUrl) ? "/dashboard" : ReturnUrl);
         }
         else if (result.RequiresTwoFactor)
         {

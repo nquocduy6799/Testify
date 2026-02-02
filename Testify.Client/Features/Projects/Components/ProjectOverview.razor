@@ -1,0 +1,195 @@
+@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs.Projects
+@using Testify.Shared.DTOs.Milestones
+@using static Testify.Shared.Enums.MilestoneEnum
+@inject IProjectService ProjectService
+@inject IMilestoneService MilestoneService
+
+@if (isLoading)
+{
+    <div class="flex items-center justify-center py-20">
+        <div class="h-10 w-10 animate-spin rounded-full border-b-2 border-[#E85D3F]"></div>
+    </div>
+}
+else if (project != null)
+{
+    <div class="space-y-8 pb-12">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            @* Hero Card - Dark với Progress Circle *@
+            <div class="lg:col-span-2 bg-[#1C1D2A] rounded-[48px] p-10 text-white relative overflow-hidden flex flex-col md:flex-row items-center gap-10">
+                <div class="relative z-10 flex-1">
+                    <span class="bg-[#E85D3F] px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Live Status</span>
+                    <h2 class="text-5xl font-black mt-4 mb-2">@project.Name</h2>
+                    <p class="text-slate-400 font-medium">
+                        @(string.IsNullOrEmpty(project.Description) ? "Project overview and status monitoring" : project.Description)
+                    </p>
+                    
+                    <div class="flex gap-4 mt-8">
+                        <button class="bg-white text-[#1C1D2A] px-8 py-4 rounded-2xl font-black text-sm hover:scale-105 transition-transform flex items-center gap-2">
+                            Project Specs 
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                @* Progress Circle *@
+                <div class="relative w-48 h-48 flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="96" cy="96" r="88" stroke="currentColor" stroke-width="12" fill="transparent" class="text-slate-800" />
+                        <circle cx="96" cy="96" r="88" stroke="currentColor" stroke-width="12" fill="transparent" 
+                            stroke-dasharray="552" stroke-dashoffset="@(552 * (1 - project.Progress/100.0))" 
+                            stroke-linecap="round" style="color: @(project.Color ?? "#E85D3F")" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-4xl font-black">@project.Progress%</span>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase">Complete</span>
+                    </div>
+                </div>
+                
+                <div class="absolute -top-24 -right-24 w-64 h-64 rounded-full blur-[120px] opacity-20" style="background-color: @(project.Color ?? "#E85D3F")"></div>
+            </div>
+
+            @* Critical Path Alerts Card *@
+            <div class="bg-white rounded-[48px] p-8 border border-slate-100 flex flex-col shadow-sm">
+                <div class="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+                        <path d="M12 9v4"/>
+                        <path d="M12 17h.01"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-black text-slate-800">Critical Path Alerts</h3>
+                <p class="text-slate-400 text-sm mt-2 mb-6">Ongoing monitoring of project risks and timeline shifts.</p>
+                
+                <div class="mt-auto space-y-3">
+                    @if (upcomingMilestones.Any())
+                    {
+                        @foreach (var milestone in upcomingMilestones.Take(3))
+                        {
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-colors cursor-pointer group">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+                                    <span class="text-xs font-bold text-slate-700">@milestone.Name</span>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300 group-hover:text-slate-500">
+                                    <path d="m9 18 6-6-6-6"/>
+                                </svg>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-6">
+                            <p class="text-sm text-slate-400">No critical alerts at this time</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* Stats Grid - 4 Cards *@
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            @foreach (var stat in GetStats())
+            {
+                <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 @stat.BgColor rounded-2xl flex items-center justify-center mb-4">
+                        @((MarkupString)stat.Icon)
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">@stat.Label</p>
+                        <h4 class="text-2xl font-black text-slate-800 mt-1">@stat.Value</h4>
+                        <p class="text-[10px] text-slate-400 font-medium mt-1">@stat.Subtitle</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+
+    private ProjectResponse? project;
+    private List<MilestoneResponse> upcomingMilestones = new();
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            project = await ProjectService.GetProjectByIdAsync(ProjectId);
+            
+            var allMilestones = await MilestoneService.GetMilestonesByProjectAsync(ProjectId);
+            upcomingMilestones = allMilestones
+                .Where(m => m.Status == MilestoneStatus.Active || m.Status == MilestoneStatus.Planned)
+                .OrderBy(m => m.EndDate)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading overview: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private List<StatItem> GetStats()
+    {
+        if (project == null) return new List<StatItem>();
+
+        return new List<StatItem>
+        {
+            new StatItem
+            {
+                Label = "Project Client",
+                Value = string.IsNullOrEmpty(project.Client) ? "Internal" : project.Client,
+                Subtitle = "Main Stakeholder",
+                Icon = "<svg class=\"w-6 h-6 text-purple-500\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 10V3L4 14h7v7l9-11h-7z\"/></svg>",
+                BgColor = "bg-purple-50"
+            },
+            new StatItem
+            {
+                Label = "Team Size",
+                Value = $"{project.MembersCount} Members",
+                Subtitle = "Active contributors",
+                Icon = "<svg class=\"w-6 h-6 text-blue-500\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><polyline points=\"12 6 12 12 16 14\"/></svg>",
+                BgColor = "bg-blue-50"
+            },
+            new StatItem
+            {
+                Label = "Milestones",
+                Value = upcomingMilestones.Count.ToString(),
+                Subtitle = "Total cycles defined",
+                Icon = "<svg class=\"w-6 h-6 text-red-500\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 12h-4l-3 9L9 3l-3 9H2\"/></svg>",
+                BgColor = "bg-red-50"
+            },
+            new StatItem
+            {
+                Label = "System Health",
+                Value = "---",
+                Subtitle = "QA Pass Rate",
+                Icon = "<svg class=\"w-6 h-6 text-emerald-500\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22 12h-4l-3 9L9 3l-3 9H2\"/></svg>",
+                BgColor = "bg-emerald-50"
+            }
+        };
+    }
+
+    private class StatItem
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public string Subtitle { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string BgColor { get; set; } = string.Empty;
+    }
+}

@@ -58,3 +58,13 @@ html, body {
     .nav-item-custom.active .active-indicator {
         display: block !important;
     }
+
+/* Hide scrollbar for sub-navigation */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}

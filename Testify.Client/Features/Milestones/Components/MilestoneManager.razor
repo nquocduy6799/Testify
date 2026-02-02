@@ -1,4 +1,4 @@
-﻿@using Testify.Shared.DTOs.Milestones
+@using Testify.Shared.DTOs.Milestones
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Interfaces
@@ -149,6 +149,13 @@
             
             if (_hubService != null)
             {
+                // Start the hub connection if not already connected
+                if (!_hubService.IsConnected)
+                {
+                    Console.WriteLine("[MilestoneManager] Starting SignalR connection...");
+                    await _hubService.StartAsync();
+                }
+                
                 _hubService.OnMilestoneCreated += HandleMilestoneCreated;
                 _hubService.OnMilestoneUpdated += HandleMilestoneUpdated;
                 _hubService.OnMilestoneDeleted += HandleMilestoneDeleted;

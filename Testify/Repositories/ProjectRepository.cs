@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Testify.Data;
 using Testify.Entities;
 using Testify.Interfaces;
@@ -36,6 +36,7 @@ namespace Testify.Repositories
                     Id = p.Id,
                     Name = p.Name,
                     Description = p.Description,
+                    Color = p.Color,
                     Client = p.Client,
                     Progress = p.Progress,
                     Deadline = p.Deadline,
@@ -55,6 +56,7 @@ namespace Testify.Repositories
             {
                 Name = request.Name,
                 Description = request.Description,
+                Color = request.Color,
                 Client = request.Client,
                 Deadline = request.Deadline
             };
@@ -87,6 +89,7 @@ namespace Testify.Repositories
 
             project.Name = request.Name;
             project.Description = request.Description;
+            project.Color = request.Color;
             project.Client = request.Client;
             project.Progress = request.Progress;
             project.Deadline = request.Deadline;
@@ -131,6 +134,7 @@ namespace Testify.Repositories
                 Id = project.Id,
                 Name = project.Name,
                 Description = project.Description,
+                Color = project.Color,
                 Client = project.Client,
                 Progress = project.Progress,
                 Deadline = project.Deadline,

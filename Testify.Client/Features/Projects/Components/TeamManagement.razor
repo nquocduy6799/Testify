@@ -1,4 +1,4 @@
-﻿@using Testify.Client.Interfaces
+@using Testify.Client.Interfaces
 @using Testify.Client.Features.Invitations.Components
 @using Testify.Client.Shared.Services
 @using Testify.Shared.DTOs.Projects
@@ -133,67 +133,6 @@
         </div>
     }
 
-    @* Section B: Pending Invitations - Giữ nguyên layout cũ vì Code 2 không cung cấp mẫu cho phần này, nhưng làm sạch icon *@
-    <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-        <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-sm font-bold text-slate-800">Pending Invitations</h3>
-            @if (_pendingInvitations.Any())
-            {
-                <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">
-                    @_pendingInvitations.Count pending
-                </span>
-            }
-        </div>
-
-        @if (_isLoadingInvitations)
-        {
-            <div class="flex items-center justify-center py-8">
-                <div class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-[#E85D3F]"></div>
-            </div>
-        }
-        else if (!_pendingInvitations.Any())
-        {
-            <div class="py-8 text-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-slate-300">
-                    <rect width="20" height="16" x="2" y="4" rx="2"/>
-                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                </svg>
-                <p class="text-sm text-slate-400">No pending invitations</p>
-            </div>
-        }
-        else
-        {
-            <div class="space-y-3">
-                @foreach (var invitation in _pendingInvitations)
-                {
-                    <div class="flex items-center justify-between rounded-2xl bg-slate-50/50 p-4 transition-colors hover:bg-slate-100/50">
-                        <div class="flex items-center gap-4">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-100 to-amber-200 text-amber-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <rect width="20" height="16" x="2" y="4" rx="2"/>
-                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold text-slate-800">@invitation.Email</p>
-                                <p class="text-xs text-slate-500">Sent @FormatDate(invitation.SentAt) by @invitation.SenderName</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
-                                Pending
-                            </span>
-                            <button @onclick="() => RevokeInvitation(invitation)"
-                                    disabled="@_isProcessing"
-                                    class="rounded-xl bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-red-100 hover:text-red-600 disabled:opacity-50 cursor-pointer">
-                                Revoke
-                            </button>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-    </div>
 
     @* Confirmation Dialog *@
     @if (_memberToRemove != null)
@@ -258,6 +197,13 @@
             
             if (_hubService != null)
             {
+                // Start the hub connection if not already connected
+                if (!_hubService.IsConnected)
+                {
+                    Console.WriteLine("[TeamManagement] Starting SignalR connection...");
+                    await _hubService.StartAsync();
+                }
+                
                 // Subscribe to status changes
                 _hubService.OnUserStatusChanged += HandleUserStatusChanged;
                 
@@ -266,6 +212,10 @@
                 _hubService.OnTeamMemberRemoved += HandleTeamMemberRemoved;
                 
                 Console.WriteLine("[TeamManagement] Subscribed to real-time events");
+                
+                // Force a re-render after connection to update status dots
+                await Task.Delay(500); // Wait for initial online users to load
+                await InvokeAsync(StateHasChanged);
             }
         }
     }
