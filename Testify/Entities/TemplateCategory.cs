@@ -15,3 +15,4 @@
         public virtual ICollection<TestSuiteTemplate> TestSuiteTemplates { get; set; }= new List<TestSuiteTemplate>();
     }
 }
+
