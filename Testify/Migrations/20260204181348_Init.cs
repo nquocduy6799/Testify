@@ -80,6 +80,33 @@ namespace Testify.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TemplateCategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TemplateCategories", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TemplateTags",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TagName = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TemplateTags", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -402,7 +429,13 @@ namespace Testify.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     FolderId = table.Column<int>(type: "int", nullable: true),
+                    CategoryId = table.Column<int>(type: "int", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsPublic = table.Column<bool>(type: "bit", nullable: false),
+                    ViewCount = table.Column<int>(type: "int", nullable: false),
+                    CloneCount = table.Column<int>(type: "int", nullable: false),
+                    TotalStarred = table.Column<int>(type: "int", nullable: false),
+                    ShareCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -422,6 +455,11 @@ namespace Testify.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TestSuiteTemplates_TemplateCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "TemplateCategories",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_TestSuiteTemplates_TemplateFolders_FolderId",
                         column: x => x.FolderId,
@@ -551,6 +589,33 @@ namespace Testify.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TemplateReviews",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TemplateId = table.Column<int>(type: "int", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    IsStarred = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TemplateReviews", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TemplateReviews_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_TemplateReviews_TestSuiteTemplates_TemplateId",
+                        column: x => x.TemplateId,
+                        principalTable: "TestSuiteTemplates",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "TestCaseTemplates",
                 columns: table => new
                 {
@@ -558,7 +623,16 @@ namespace Testify.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     SuiteTemplateId = table.Column<int>(type: "int", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Priority = table.Column<int>(type: "int", nullable: false)
+                    Preconditions = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Postconditions = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Priority = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -609,6 +683,32 @@ namespace Testify.Migrations
                         column: x => x.SourceTemplateId,
                         principalTable: "TestSuiteTemplates",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TestSuiteTemplateTags",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TemplateId = table.Column<int>(type: "int", nullable: false),
+                    TagId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TestSuiteTemplateTags", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TestSuiteTemplateTags_TemplateTags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "TemplateTags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TestSuiteTemplateTags_TestSuiteTemplates_TemplateId",
+                        column: x => x.TemplateId,
+                        principalTable: "TestSuiteTemplates",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1316,6 +1416,16 @@ namespace Testify.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TemplateReviews_TemplateId",
+                table: "TemplateReviews",
+                column: "TemplateId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TemplateReviews_UserId",
+                table: "TemplateReviews",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TestCases_SuiteId",
                 table: "TestCases",
                 column: "SuiteId");
@@ -1406,6 +1516,11 @@ namespace Testify.Migrations
                 column: "SourceTemplateId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_TestSuiteTemplates_CategoryId",
+                table: "TestSuiteTemplates",
+                column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TestSuiteTemplates_FolderId",
                 table: "TestSuiteTemplates",
                 column: "FolderId");
@@ -1414,6 +1529,16 @@ namespace Testify.Migrations
                 name: "IX_TestSuiteTemplates_UserId",
                 table: "TestSuiteTemplates",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TestSuiteTemplateTags_TagId",
+                table: "TestSuiteTemplateTags",
+                column: "TagId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TestSuiteTemplateTags_TemplateId",
+                table: "TestSuiteTemplateTags",
+                column: "TemplateId");
         }
 
         /// <inheritdoc />
@@ -1471,6 +1596,9 @@ namespace Testify.Migrations
                 name: "TaskLinkedRunSteps");
 
             migrationBuilder.DropTable(
+                name: "TemplateReviews");
+
+            migrationBuilder.DropTable(
                 name: "TestPlanSuites");
 
             migrationBuilder.DropTable(
@@ -1478,6 +1606,9 @@ namespace Testify.Migrations
 
             migrationBuilder.DropTable(
                 name: "TestStepTemplates");
+
+            migrationBuilder.DropTable(
+                name: "TestSuiteTemplateTags");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
@@ -1490,6 +1621,9 @@ namespace Testify.Migrations
 
             migrationBuilder.DropTable(
                 name: "TestCaseTemplates");
+
+            migrationBuilder.DropTable(
+                name: "TemplateTags");
 
             migrationBuilder.DropTable(
                 name: "ChatRooms");
@@ -1523,6 +1657,9 @@ namespace Testify.Migrations
 
             migrationBuilder.DropTable(
                 name: "Projects");
+
+            migrationBuilder.DropTable(
+                name: "TemplateCategories");
 
             migrationBuilder.DropTable(
                 name: "TemplateFolders");

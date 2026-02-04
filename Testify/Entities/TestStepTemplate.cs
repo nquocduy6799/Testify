@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Testify.Entities;
 
 namespace Testify.Entities
 {
@@ -17,3 +18,4 @@ namespace Testify.Entities
         public virtual TestCaseTemplate TestCaseTemplate { get; set; } = null!;
     }
 }
+

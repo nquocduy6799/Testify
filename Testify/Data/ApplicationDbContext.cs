@@ -18,6 +18,7 @@ namespace Testify.Data
         public DbSet<KanbanTask> KanbanTasks { get; set; }
 
         // Templates
+        public DbSet<TemplateCategory> TemplateCategories { get; set; }
         public DbSet<TemplateFolder> TemplateFolders { get; set; }
         public DbSet<TestSuiteTemplate> TestSuiteTemplates { get; set; }
         public DbSet<TestCaseTemplate> TestCaseTemplates { get; set; }
@@ -48,6 +49,11 @@ namespace Testify.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<TaskActivity> TaskActivities { get; set; }
         public DbSet<TaskAttachment> TaskAttachments { get; set; }
+
+        // Template Tags & Reviews
+        public DbSet<TemplateTag> TemplateTags { get; set; }
+        public DbSet<TestSuiteTemplateTag> TestSuiteTemplateTags { get; set; }
+        public DbSet<TemplateReview> TemplateReviews { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -122,6 +128,20 @@ namespace Testify.Data
                 .HasOne(n => n.Project)
                 .WithMany()
                 .HasForeignKey(n => n.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Template Reviews - prevent cascade delete conflicts
+            builder.Entity<TemplateReview>()
+                .HasOne(tr => tr.User)
+                .WithMany()
+                .HasForeignKey(tr => tr.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Template Folder - prevent cascade delete conflicts  
+            builder.Entity<TestSuiteTemplate>()
+                .HasOne(tst => tst.Folder)
+                .WithMany()
+                .HasForeignKey(tst => tst.FolderId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }
