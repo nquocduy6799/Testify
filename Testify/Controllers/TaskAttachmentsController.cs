@@ -8,6 +8,8 @@ namespace Testify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
+
     public class TaskAttachmentsController : ControllerBase
     {
         private readonly ICloudinaryService _cloudinaryService;

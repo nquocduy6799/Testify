@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
 using Testify.Client.Features.Milestones.Services;
@@ -13,6 +14,7 @@ using Testify.Interfaces;
 using Testify.Repositories;
 using Testify.Hubs;
 using Testify.Client.Features.TestTemplates.Services;
+using Testify.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,6 +88,11 @@ builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>(
 // Add controllers for API endpoints
 builder.Services.AddControllers();
 
+// Add Swagger/OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerConfiguration();
+
+
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR();
 
@@ -112,6 +119,14 @@ if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
     app.UseMigrationsEndPoint();
+    
+    // Enable Swagger UI in development
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Testify API v1");
+        options.RoutePrefix = "swagger"; // Access at /swagger
+    });
 }
 else
 {
