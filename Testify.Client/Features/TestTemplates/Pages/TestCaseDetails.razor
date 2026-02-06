@@ -1,0 +1,278 @@
+@page "/test-cases/{Id:int}"
+@using Testify.Shared.DTOs.TestCases
+@using Testify.Shared.DTOs.KanbanTasks
+@using Testify.Client.Features.TestTemplates.Components
+@using Testify.Shared.Enums
+@using Testify.Client.Interfaces
+@inject ITestCaseTemplateService TestCaseTemplateService
+@inject NavigationManager Navigation
+
+<div class="animate-in fade-in slide-in-from-right-4 duration-500 pb-20">
+    @if (_isLoading)
+    {
+        <div class="flex items-center justify-center min-h-[400px]">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+        </div>
+    }
+    else if (_testCase == null)
+    {
+        <div class="text-center p-8 text-slate-500">Test Case not found.</div>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-4">
+                <button @onclick="GoBack" class="p-3 bg-white hover:bg-slate-50 rounded-2xl border border-slate-100 shadow-sm transition-all text-slate-400 hover:text-slate-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                </button>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[10px] font-black text-[#7E96E1] uppercase tracking-widest">TC-@_testCase.Id</span>
+                        <div class="w-1 h-1 bg-slate-200 rounded-full"></div>
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Master Definition</span>
+                    </div>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight">@_testCase.Title</h2>
+                </div>
+            </div>
+            <button class="px-6 py-3 bg-[#1C1D2A] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg cursor-not-allowed opacity-50" title="Not implemented">
+                Refactor Blueprint
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+            <div class="xl:col-span-8 space-y-8">
+                <!-- Summary Metadata -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Preconditions</p>
+                        @if (!string.IsNullOrWhiteSpace(_testCase.Preconditions))
+                        {
+                            <div class="text-sm font-medium text-slate-600 leading-relaxed italic prose prose-sm max-w-none">
+                                <MarkdownRenderer Content="@_testCase.Preconditions" />
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-sm font-medium text-slate-600 leading-relaxed italic">None specified.</p>
+                        }
+                    </div>
+                    <div class="bg-emerald-50/20 p-8 rounded-[40px] border border-emerald-100 shadow-sm">
+                        <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4">Final Success Criteria</p>
+                        @if (!string.IsNullOrWhiteSpace(_testCase.Postconditions))
+                        {
+                             <div class="text-sm font-black text-emerald-800 leading-relaxed prose prose-sm max-w-none">
+                                <MarkdownRenderer Content="@_testCase.Postconditions" />
+                            </div>
+                        }
+                        else 
+                        {
+                             <p class="text-sm font-black text-emerald-800 leading-relaxed">No specific post-conditions.</p>
+                        }
+                    </div>
+                </div>
+
+                <!-- Structured Steps Repository -->
+                <div class="bg-white rounded-[48px] border border-slate-100 shadow-sm overflow-hidden">
+                    <div class="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout text-[#7E96E1]"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></svg>
+                            </div>
+                            <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest">Step Logic Pipeline</h3>
+                        </div>
+                    </div>
+                    <div class="p-10 space-y-6">
+                        @foreach (var step in _testCase.TestStepTemplates.OrderBy(s => s.StepNumber))
+                        {
+                            <div class="flex gap-6 group">
+                                <div class="flex-shrink-0 w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-sm font-black text-slate-400 group-hover:bg-[#7E96E1] group-hover:text-white transition-all">
+                                    @step.StepNumber
+                                </div>
+                                <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-slate-50">
+                                    <div class="md:col-span-1">
+                                        <p class="text-[9px] font-black text-slate-400 uppercase mb-2">Instruction</p>
+                                        <div class="text-sm font-bold text-slate-800 leading-relaxed prose prose-sm max-w-none">
+                                            <MarkdownRenderer Content="@step.Action" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] font-black text-[#E85D3F] uppercase mb-2">Data / Payload</p>
+                                        <code class="text-xs bg-slate-50 p-2 rounded-lg block font-mono text-[#E85D3F] break-all">@(string.IsNullOrEmpty(step.TestData) ? "N/A" : step.TestData)</code>
+                                    </div>
+                                    <div>
+                                        <p class="text-[9px] font-black text-emerald-500 uppercase mb-2">Verification</p>
+                                        <div class="text-sm font-medium text-emerald-700 italic prose prose-sm max-w-none">
+                                            <MarkdownRenderer Content="@step.ExpectedResult" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        @if (!_testCase.TestStepTemplates.Any())
+                        {
+                            <div class="text-center py-8 text-slate-400 text-sm italic">No steps defined.</div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Traceability Grid -->
+                <!-- Note: Currently mocking empty state properly as functionality is not yet fully linked in DTOs -->
+                <div class="space-y-6">
+                    <div class="flex items-center gap-3 px-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-link w-5 h-5 text-slate-400"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        <h3 class="font-black text-slate-400 uppercase text-xs tracking-widest">Integrated Tasks</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div class="col-span-full py-12 text-center bg-slate-50 rounded-[32px] border border-dashed border-slate-200">
+                             <p class="text-[10px] font-black text-slate-300 uppercase italic">No active task mapping detected (Feature Link Pending).</p>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="xl:col-span-4 space-y-8">
+                <!-- Validation Confidence Card -->
+                <!-- Validation Confidence Card -->
+                <div class="bg-[#1C1D2A] rounded-[40px] p-8 text-white shadow-xl relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-8">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full @_qualityColor"></div>
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Blueprint Quality</span>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check w-6 h-6 text-[#7E96E1]"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+                        </div>
+                        <p class="text-4xl font-black mb-1 @_scoreColor">@_qualityScore%</p>
+                        <p class="text-xs text-slate-400 font-medium">Completeness index based on steps and definitions.</p>
+                    </div>
+                    <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-[#7E96E1]/10 rounded-full blur-[60px]"></div>
+                </div>
+
+                <!-- Global Snapshot -->
+                <div class="bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm space-y-6">
+                    <div class="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history w-5 h-5 text-[#7E96E1]"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v9h9"/></svg>
+                        <h3 class="font-black text-slate-800 uppercase text-xs tracking-widest">Global Snapshot</h3>
+                    </div>
+                    <div class="space-y-4 pt-2">
+                        <div class="flex justify-between items-center text-[10px] font-black uppercase">
+                            <span class="text-slate-400">Priority Level</span>
+                            <span class="@GetPriorityClass(_testCase.Priority)">@_testCase.Priority</span>
+                        </div>
+                        <!-- Status is not in TestCaseTemplateResponse yet, generally part of TestPlan or separate status tracking. Assuming default for template. -->
+                        <div class="flex justify-between items-center text-[10px] font-black uppercase">
+                            <span class="text-slate-400">Template Status</span>
+                            <span class="text-slate-800">Active</span>
+                        </div>
+                    </div>
+                    <button class="w-full py-4 bg-slate-50 hover:bg-[#1C1D2A] hover:text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2">
+                        Launch Execution Hub <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right w-3.5 h-3.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TestCaseTemplateResponse? _testCase;
+    private bool _isLoading = true;
+    private int _qualityScore;
+    private string _qualityColor = "bg-emerald-500";
+    private string _scoreColor = "text-emerald-400";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTestCase();
+    }
+
+    private async Task LoadTestCase()
+    {
+        _isLoading = true;
+        try
+        {
+            _testCase = await TestCaseTemplateService.GetTestCaseTemplateByIdAsync(Id);
+            CalculateQualityScore();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading test case: {ex.Message}");
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void CalculateQualityScore()
+    {
+        if (_testCase == null) return;
+
+        int score = 0;
+        int totalWeight = 100;
+
+        // Validation Rules
+        // 1. Title exists (Always true effectively, gives baseline) - 10pts
+        if (!string.IsNullOrWhiteSpace(_testCase.Title)) score += 10;
+        
+        // 2. Preconditions defined - 10pts
+        if (!string.IsNullOrWhiteSpace(_testCase.Preconditions)) score += 10;
+
+        // 3. Postconditions defined - 10pts
+        if (!string.IsNullOrWhiteSpace(_testCase.Postconditions)) score += 10;
+
+        // 4. Steps exist - 20pts
+        if (_testCase.TestStepTemplates.Any()) score += 20;
+
+        // 5. Detailed Steps (Action + Expected Result) - 50pts
+        if (_testCase.TestStepTemplates.Any())
+        {
+            int stepCount = _testCase.TestStepTemplates.Count;
+            int validSteps = _testCase.TestStepTemplates.Count(s => 
+                !string.IsNullOrWhiteSpace(s.Action) && 
+                !string.IsNullOrWhiteSpace(s.ExpectedResult));
+            
+            double stepScore = ((double)validSteps / stepCount) * 50;
+            score += (int)stepScore;
+        }
+
+        _qualityScore = score;
+        
+        // Determine Colors
+        if (_qualityScore >= 80)
+        {
+            _qualityColor = "bg-emerald-500";
+            _scoreColor = "text-emerald-400";
+        }
+        else if (_qualityScore >= 50)
+        {
+             _qualityColor = "bg-amber-500";
+             _scoreColor = "text-amber-400";
+        }
+        else
+        {
+             _qualityColor = "bg-red-500";
+             _scoreColor = "text-red-400";
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo($"/test-suites/{_testCase?.SuiteTemplateId}");
+    }
+
+    private string GetPriorityClass(TestCasePriority priority)
+    {
+        return priority switch
+        {
+            TestCasePriority.High => "px-3 py-1 rounded-lg bg-red-50 text-red-500",
+            TestCasePriority.Medium => "px-3 py-1 rounded-lg bg-yellow-50 text-yellow-600",
+            TestCasePriority.Low => "px-3 py-1 rounded-lg bg-blue-50 text-blue-500",
+            _ => "text-slate-500"
+        };
+    }
+}

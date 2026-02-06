@@ -5,6 +5,7 @@
 @using Testify.Shared.DTOs.TestCases
 @using Testify.Shared.DTOs.TestTemplates
 @inject ITestSuiteTemplateService TestSuiteTemplateService
+@inject ITestCaseTemplateService TestCaseTemplateService
 @inject NavigationManager Navigation
 @rendermode InteractiveWebAssembly
 @attribute [Authorize]
@@ -423,47 +424,9 @@ else if (_suite is not null)
 
         try
         {
-            // Build update request with existing test cases + new one
-            var request = new UpdateTestSuiteTemplateRequest
-            {
-                Name = _suite.Name,
-                Description = _suite.Description,
-                FolderId = _suite.FolderId,
-                TestCaseTemplates = _suite.TestCaseTemplates
-                    .Select(tc => new UpdateTestCaseTemplateRequest
-                    {
-                        Title = tc.Title,
-                        Preconditions = tc.Preconditions,
-                        Postconditions = tc.Postconditions,
-                        Priority = tc.Priority,
-                        TestStepTemplates = tc.TestStepTemplates.Select(s => new UpdateTestStepTemplateRequest
-                        {
-                            StepNumber = s.StepNumber,
-                            Action = s.Action,
-                            TestData = s.TestData,
-                            ExpectedResult = s.ExpectedResult
-                        }).ToList()
-                    })
-                    .Append(new UpdateTestCaseTemplateRequest
-                    {
-                        Title = testCaseRequest.Title,
-                        Preconditions = testCaseRequest.Preconditions,
-                        Postconditions = testCaseRequest.Postconditions,
-                        Priority = testCaseRequest.Priority,
-                        TestStepTemplates = testCaseRequest.TestStepTemplates.Select(s => new UpdateTestStepTemplateRequest
-                        {
-                            StepNumber = s.StepNumber,
-                            Action = s.Action,
-                            TestData = s.TestData,
-                            ExpectedResult = s.ExpectedResult
-                        }).ToList()
-                    })
-                    .ToList()
-            };
-
-            await TestSuiteTemplateService.UpdateTestSuiteTemplateAsync(TestSuiteId, request);
+            await TestCaseTemplateService.CreateTestCaseTemplateAsync(TestSuiteId, testCaseRequest);
             
-            // Reload suite to get updated data
+            // Reload suite to get updated data (and new stats)
             await LoadSuiteAsync();
             _isTestCaseFormOpen = false;
         }
@@ -489,46 +452,8 @@ else if (_suite is not null)
 
         try
         {
-            // Build update request with existing test cases + new one from markdown import
-            var request = new UpdateTestSuiteTemplateRequest
-            {
-                Name = _suite.Name,
-                Description = _suite.Description,
-                FolderId = _suite.FolderId,
-                TestCaseTemplates = _suite.TestCaseTemplates
-                    .Select(tc => new UpdateTestCaseTemplateRequest
-                    {
-                        Title = tc.Title,
-                        Preconditions = tc.Preconditions,
-                        Postconditions = tc.Postconditions,
-                        Priority = tc.Priority,
-                        TestStepTemplates = tc.TestStepTemplates.Select(s => new UpdateTestStepTemplateRequest
-                        {
-                            StepNumber = s.StepNumber,
-                            Action = s.Action,
-                            TestData = s.TestData,
-                            ExpectedResult = s.ExpectedResult
-                        }).ToList()
-                    })
-                    .Append(new UpdateTestCaseTemplateRequest
-                    {
-                        Title = testCaseRequest.Title,
-                        Preconditions = testCaseRequest.Preconditions,
-                        Postconditions = testCaseRequest.Postconditions,
-                        Priority = testCaseRequest.Priority,
-                        TestStepTemplates = testCaseRequest.TestStepTemplates.Select(s => new UpdateTestStepTemplateRequest
-                        {
-                            StepNumber = s.StepNumber,
-                            Action = s.Action,
-                            TestData = s.TestData ?? string.Empty,
-                            ExpectedResult = s.ExpectedResult
-                        }).ToList()
-                    })
-                    .ToList()
-            };
+            await TestCaseTemplateService.CreateTestCaseTemplateAsync(TestSuiteId, testCaseRequest);
 
-            await TestSuiteTemplateService.UpdateTestSuiteTemplateAsync(TestSuiteId, request);
-            
             // Reload suite to get updated data
             await LoadSuiteAsync();
             _isMarkdownImportOpen = false;
@@ -541,7 +466,7 @@ else if (_suite is not null)
 
     private void OnViewTestCase(int testCaseId)
     {
-        // TODO: Implement view test case functionality
+        Navigation.NavigateTo($"/test-cases/{testCaseId}");
     }
 
     private class SuiteStats

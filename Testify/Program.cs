@@ -71,6 +71,7 @@ builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
 builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
+builder.Services.AddScoped<ITestCaseTemplateRepository, TestCaseTemplateRepository>();
 
 
 // Register services for server-side
@@ -81,6 +82,7 @@ builder.Services.AddScoped<INotificationService, ServerNotificationRepository>()
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
 
 
 // Add controllers for API endpoints

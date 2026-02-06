@@ -30,6 +30,7 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
 
 
 // Register SignalR for real-time notifications
