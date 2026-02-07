@@ -19,7 +19,6 @@ namespace Testify.Entities
         public string? AssigneeId { get; set; }
         public string? DevelopedById { get; set; }
         public string? TestedById { get; set; }
-
         public TaskType Type { get; set; } = TaskType.Feature;
 
         // Navigation properties

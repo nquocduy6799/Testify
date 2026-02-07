@@ -6,7 +6,6 @@ using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
 using Testify.Client.Features.TestTemplates.Services;
 using Testify.Client.Interfaces;
-using Testify.Client.Services;
 using Testify.Client.Shared.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -31,10 +30,10 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
-builder.Services.AddScoped<UserContextService>();
 
 
 // Register SignalR for real-time notifications
 builder.Services.AddScoped<NotificationHubService>();
+builder.Services.AddScoped<ConfirmDialogService>();
 
 await builder.Build().RunAsync();

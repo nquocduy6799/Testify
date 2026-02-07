@@ -208,5 +208,31 @@ namespace Testify.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<ProjectUserContext?> GetProjectUserContextAsync(int projectId, string userId)
+        {
+            // Get the current user's information
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return null;
+
+            // Get the user's role in the project
+            var teamMember = await _context.ProjectTeamMembers
+                .Where(tm => tm.ProjectId == projectId && tm.UserId == userId)
+                .FirstOrDefaultAsync();
+
+            // Get all project members
+            var projectMembers = await GetProjectMembersAsync(projectId);
+
+            return new ProjectUserContext
+            {
+                UserId = user.Id,
+                UserName = user.UserName ?? "",
+                Email = user.Email,
+                ProjectRole = teamMember?.Role,
+                IsPM = teamMember?.Role == ProjectRole.PM,
+                TeamMembers = projectMembers.ToList()
+            };
+        }
     }
 }

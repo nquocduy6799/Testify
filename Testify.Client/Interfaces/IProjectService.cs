@@ -11,6 +11,7 @@ namespace Testify.Client.Interfaces
         Task<ProjectResponse> UpdateProjectAsync(int id, UpdateProjectRequest request);
         Task<bool> DeleteProjectAsync(int id);
         Task<ProjectRole?> GetMyRoleInProjectAsync(int projectId);
+        Task<ProjectUserContext?> GetProjectUserContextAsync(int projectId);
         Task<List<TeamMemberResponse>> GetMembersAsync(int projectId);
         Task<bool> RemoveMemberAsync(int projectId, int memberId);
     }

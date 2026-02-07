@@ -1,4 +1,5 @@
 ﻿using Testify.Shared.DTOs.KanbanTasks;
+using Testify.Shared.DTOs.Milestones;
 
 namespace Testify.Client.Interfaces
 {

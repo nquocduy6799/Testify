@@ -5,19 +5,19 @@
 @using Testify.Client.Features.Kanban.Components
 @using Testify.Client.Layouts
 @using Testify.Client.Interfaces
-@using Testify.Client.Models
-@using Testify.Client.Services
 @using Testify.Client.Shared.Services
 @using Testify.Shared.DTOs.KanbanTasks
+@using Testify.Shared.DTOs.Milestones
 @using Testify.Shared.DTOs.Projects
 @using Testify.Shared.Enums
 @using System.Security.Claims
 
 @inject NavigationManager Navigation
 @inject IKanbanTaskService KanbanTaskService
+@inject IMilestoneService MilestoneService
 @inject ITaskAttachmentService TaskAttachmentService
 @inject IProjectService ProjectService
-@inject UserContextService UserContextService
+@inject ConfirmDialogService ConfirmDialogService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 @attribute [Authorize]
@@ -25,124 +25,144 @@
 
 @if (isLoading)
 {
-    <div class="flex h-96 items-center justify-center">
-        <div class="text-lg text-slate-600">Loading tasks...</div>
-    </div>
+	<div class="flex h-96 items-center justify-center">
+		<div class="text-lg text-slate-600">Loading tasks...</div>
+	</div>
 }
 else if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
-        @errorMessage
-    </div>
+	<div class="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+		@errorMessage
+	</div>
 }
 else
 {
-    <div class="grid h-full min-h-[600px] grid-cols-1 items-start gap-6 pb-12 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        @foreach (var column in columns)
-        {
-            <div class="flex flex-col gap-4 rounded-[40px] border-2 p-2 transition-all duration-300 @(dropTargetStatus == column ? "bg-white/40 border-dashed border-[#7E96E1] scale-[1.02]" : "border-transparent")"
-                 @ondragover="@(() => OnDragOver(column))"
-                 @ondragover:preventDefault="true"
-                 @ondrop="@(() => OnDrop(column))"
-                 @ondrop:preventDefault="true"
-                 @ondragleave="OnDragLeave">
+	<div class="grid h-full min-h-[600px] grid-cols-1 items-start gap-6 pb-12 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+		@foreach (var column in columns)
+		{
+			<div class="flex flex-col gap-4 rounded-[40px] border-2 p-2 transition-all duration-300 @(dropTargetStatus == column ? "bg-white/40 border-dashed border-[#7E96E1] scale-[1.02]" : "border-transparent")"
+				 @ondragover="@(() => OnDragOver(column))"
+				 @ondragover:preventDefault="true"
+				 @ondrop="@(() => OnDrop(column))"
+				 @ondrop:preventDefault="true"
+				 @ondragleave="OnDragLeave">
 
-                @* Column Header *@
-                <div class="flex items-center justify-between px-2">
-                    <div class="flex items-center gap-3">
-                        <h3 class="font-black tracking-[0.15em] whitespace-nowrap text-slate-800 text-[10px] uppercase">@GetColumnName(column)</h3>
-                        <span class="flex h-6 w-6 items-center justify-center rounded-lg border border-slate-200 bg-white font-black text-slate-400 text-[10px]">
-                            @GetTaskCount(column)
-                        </span>
-                    </div>
+				@* Column Header *@
+				<div class="flex items-center justify-between px-2">
+					<div class="flex items-center gap-3">
+						<h3 class="font-black tracking-[0.15em] whitespace-nowrap text-slate-800 text-[10px] uppercase">@GetColumnName(column)</h3>
+						<span class="flex h-6 w-6 items-center justify-center rounded-lg border border-slate-200 bg-white font-black text-slate-400 text-[10px]">
+							@GetTaskCount(column)
+						</span>
+					</div>
 
-                    @* Add Button only for To Do column *@
-                    @if (column == KanbanTaskStatus.ToDo)
-                    {
-                        <button @onclick="@(() => HandleOpenForm(column))"
-                                class="p-1.5 hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-[#E85D3F]">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-                            </svg>
-                        </button>
-                    }
-                </div>
+					@* Add Button only for To Do column *@
+					@if (column == KanbanTaskStatus.ToDo)
+					{
+						<button @onclick="@(() => HandleOpenForm(column))"
+								class="p-1.5 hover:bg-white rounded-lg transition-colors text-slate-400 hover:text-[#E85D3F]">
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+							</svg>
+						</button>
+					}
+				</div>
 
-                @* Tasks List *@
-                <div class="flex flex-col gap-4">
-                    @foreach (var task in tasks.Where(t => t.Status == column))
-                    {
-                        var isOverdue = IsOverdue(task.DueDate);
+				@* Tasks List *@
+				<div class="flex flex-col gap-4">
+					@foreach (var task in tasks.Where(t => t.Status == column))
+					{
+						var isOverdue = IsOverdue(task.DueDate);
 
-                        <div draggable="true"
-                             @ondragstart="@(() => OnDragStart(task.Id))"
-                             @ondragend="OnDragEnd"
-                             @onclick="@(() => ViewTaskDetails(task))"
-                             class="bg-white p-6 rounded-[32px] border shadow-sm hover:shadow-xl transition-all group cursor-pointer active:scale-[0.98] select-none relative @(task.Type == TaskType.Bug ? "border-red-100 hover:border-red-200" : "border-slate-50 hover:border-slate-100")">
+						<div draggable="true"
+							 @ondragstart="@(() => OnDragStart(task.Id))"
+							 @ondragend="OnDragEnd"
+							 @onclick="@(() => { ViewTaskDetails(task); CloseMenu(); })"
+							 class="bg-white p-6 rounded-[32px] border shadow-sm hover:shadow-xl transition-all group cursor-pointer active:scale-[0.98] select-none relative @(task.Type == TaskType.Bug ? "border-red-100 hover:border-red-200" : "border-slate-50 hover:border-slate-100")">
 
-                            @* Card Header *@
-                            <div class="mb-4 flex items-start justify-between">
-                                <div class="h-1 w-10 rounded-full @GetPriorityColor(task.Priority)"></div>
-                                <div class="flex items-center gap-2">
-                                    @if (task.Type == TaskType.Bug)
-                                    {
-                                        <div class="rounded-lg bg-red-50 p-1.5">
-                                            @* Bug Icon *@
-                                            <svg class="h-3.5 w-3.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 10 2 2m4 0 2-2m-9 4h10m-10 4h10" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22a9 9 0 0 0 9-9c0-3.87-2.35-7.15-5.69-8.48L15 4h-6l-.31.52C5.35 5.85 3 9.13 3 13a9 9 0 0 0 9 9z" />
-                                            </svg>
-                                        </div>
-                                    }
-                                    <button class="p-1 text-slate-300 transition-colors hover:text-slate-600" @onclick:stopPropagation="true">
-                                        @* More Vertical Icon *@
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="1" />
-                                            <circle cx="12" cy="5" r="1" />
-                                            <circle cx="12" cy="19" r="1" />
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
+							@* Card Header *@
+							<div class="mb-4 flex items-start justify-between">
+								<div class="h-1 w-10 rounded-full @GetPriorityColor(task.Priority)"></div>
+								<div class="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+									@if (task.Type == TaskType.Bug)
+									{
+										<div class="mr-1 rounded-lg bg-red-50 p-2">
+											@* Bug Icon *@
+											<svg class="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 10 2 2m4 0 2-2m-9 4h10m-10 4h10" />
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22a9 9 0 0 0 9-9c0-3.87-2.35-7.15-5.69-8.48L15 4h-6l-.31.52C5.35 5.85 3 9.13 3 13a9 9 0 0 0 9 9z" />
+											</svg>
+										</div>
+									}
+									<button @onclick="@(() => ViewTaskDetails(task))"
+											@onclick:stopPropagation="true"
+											class="rounded-lg bg-slate-50 p-2 text-slate-300 transition-all hover:bg-blue-50 hover:text-blue-500"
+											title="View Details">
+										@* Eye Icon *@
+										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+										</svg>
+									</button>
+									<button @onclick="@(() => HandleEditTask(task))"
+											@onclick:stopPropagation="true"
+											class="rounded-lg bg-slate-50 p-2 text-slate-300 transition-all hover:bg-purple-50 hover:text-purple-500"
+											title="Quick Edit">
+										@* Edit Icon *@
+										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+										</svg>
+									</button>
+									<button @onclick="@(() => HandleDeleteTask(task.Id))"
+											@onclick:stopPropagation="true"
+											class="rounded-lg bg-slate-50 p-2 text-slate-300 transition-all hover:bg-red-50 hover:text-red-500"
+											title="Decommission">
+										@* Trash Icon *@
+										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+										</svg>
+									</button>
+								</div>
+							</div>
 
-                            @* Title *@
-                            <h4 class="text-sm leading-snug font-bold transition-colors @(task.Type == TaskType.Bug ? "text-red-900 group-hover:text-red-600" : "text-slate-800 group-hover:text-[#E85D3F]")">
-                                @task.Title
-                            </h4>
+							@* Title *@
+							<h4 class="text-sm leading-snug font-bold transition-colors @(task.Type == TaskType.Bug ? "text-red-900 group-hover:text-red-600" : "text-slate-800 group-hover:text-[#E85D3F]")">
+								@task.Title
+							</h4>
 
-                            @* Due Date Row *@
-                            @if (task.DueDate.HasValue)
-                            {
-                                <div class="mt-3 flex items-center gap-1.5 font-black tracking-tight text-[9px] uppercase @(isOverdue ? "text-red-500" : "text-slate-400")">
-                                    <svg class="h-3 w-3 @(isOverdue ? "text-red-500 animate-pulse" : "text-slate-300")" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                                        <line x1="16" x2="16" y1="2" y2="6" />
-                                        <line x1="8" x2="8" y1="2" y2="6" />
-                                        <line x1="3" x2="21" y1="10" y2="10" />
-                                    </svg>
-                                    <span>@task.DueDate.Value.ToString("MMM dd")</span>
-                                    @if (isOverdue)
-                                    {
-                                        <span class="ml-1 rounded-md bg-red-50 px-1.5">Overdue</span>
-                                    }
-                                </div>
-                            }
+							@* Due Date Row *@
+							@if (task.DueDate.HasValue)
+							{
+								<div class="mt-3 flex items-center gap-1.5 font-black tracking-tight text-[9px] uppercase @(isOverdue ? "text-red-500" : "text-slate-400")">
+									<svg class="h-3 w-3 @(isOverdue ? "text-red-500 animate-pulse" : "text-slate-300")" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+										<line x1="16" x2="16" y1="2" y2="6" />
+										<line x1="8" x2="8" y1="2" y2="6" />
+										<line x1="3" x2="21" y1="10" y2="10" />
+									</svg>
+									<span>@task.DueDate.Value.ToString("MMM dd")</span>
+									@if (isOverdue)
+									{
+										<span class="ml-1 rounded-md bg-red-50 px-1.5">Overdue</span>
+									}
+								</div>
+							}
 
-                            @* Linked Items Chips *@
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                @if (task.TaskPlanId.HasValue)
-                                {
-                                    <div class="flex items-center gap-1.5 rounded-xl border border-indigo-100/50 bg-indigo-50 px-3 py-1">
-                                        <svg class="h-3 w-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 14 2 2 4-4" />
-                                        </svg>
-                                        <span class="font-black tracking-tight text-[9px] text-indigo-600 uppercase">Plan Linked</span>
-                                    </div>
-                                }
-                                @* else if (task.TestCaseIds != null && task.TestCaseIds.Any())
+							@* Linked Items Chips *@
+							<div class="mt-4 flex flex-wrap gap-2">
+								@if (task.TaskPlanId.HasValue)
+								{
+									<div class="flex items-center gap-1.5 rounded-xl border border-indigo-100/50 bg-indigo-50 px-3 py-1">
+										<svg class="h-3 w-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+											<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 14 2 2 4-4" />
+										</svg>
+										<span class="font-black tracking-tight text-[9px] text-indigo-600 uppercase">Plan Linked</span>
+									</div>
+								}
+								@* else if (task.TestCaseIds != null && task.TestCaseIds.Any())
                                 {
                                     <div class="flex items-center gap-1.5 rounded-xl border border-emerald-100/50 bg-emerald-50 px-3 py-1">
                                         <svg class="h-3 w-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,21 +172,21 @@ else
                                         <span class="font-black tracking-tight text-[9px] text-emerald-600 uppercase">@task.TestCaseIds.Count Cases Linked</span>
                                     </div>
                                 } *@
-                                else if (task.Type != TaskType.Bug)
-                                {
-                                    <div class="flex items-center gap-1.5 rounded-xl border border-slate-100/50 bg-slate-50 px-3 py-1">
-                                        <svg class="h-3 w-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 3h15" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 14h12" />
-                                        </svg>
-                                        <span class="font-black tracking-tight text-[9px] text-slate-400 uppercase">No Coverage</span>
-                                    </div>
-                                }
-                            </div>
+								else if (task.Type != TaskType.Bug)
+								{
+									<div class="flex items-center gap-1.5 rounded-xl border border-slate-100/50 bg-slate-50 px-3 py-1">
+										<svg class="h-3 w-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 3h15" />
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3" />
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 14h12" />
+										</svg>
+										<span class="font-black tracking-tight text-[9px] text-slate-400 uppercase">No Coverage</span>
+									</div>
+								}
+							</div>
 
-                            @* Traceability Chip *@
-                            @* @if (!string.IsNullOrEmpty(task.ReferenceId))
+							@* Traceability Chip *@
+							@* @if (!string.IsNullOrEmpty(task.ReferenceId))
                             {
                                 <div class="mt-3 flex items-center gap-2 font-black tracking-widest text-[9px] text-red-400 uppercase">
                                     <div class="rounded-lg bg-red-50 p-1.5">
@@ -180,276 +200,333 @@ else
                                 </div>
                             } *@
 
-                            @* Card Footer *@
-                            <div class="mt-6 flex items-center justify-between border-t border-slate-50 pt-4">
-                                <div class="relative">
-                                    <button @onclick="@(() => EnableReassign(task.Id))" @onclick:stopPropagation="true"
-                                            class="flex items-center gap-2 hover:bg-slate-50 p-1.5 -ml-1.5 rounded-xl transition-all group/assignee">
-                                        <div class="flex h-6 w-6 items-center justify-center rounded-full border border-white shadow-sm transition-transform group-hover/assignee:scale-110 @(task.Type == TaskType.Bug ? "bg-red-50 text-red-400" : "bg-slate-100 text-slate-400")">
-                                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                                <circle cx="12" cy="7" r="4" />
-                                            </svg>
-                                        </div>
-                                        <span class="font-bold text-[10px] text-slate-400 transition-colors group-hover/assignee:text-slate-800">
-                                            @(task.AssigneeName ?? "Unassigned")
-                                        </span>
-                                    </button>
-                                </div>
+							@* Card Footer *@
+							<div class="mt-6 flex items-center justify-between border-t border-slate-50 pt-4">
+								<div class="relative">
+									<button @onclick="@(() => EnableReassign(task.Id))" @onclick:stopPropagation="true"
+											class="flex items-center gap-2 hover:bg-slate-50 p-1.5 -ml-1.5 rounded-xl transition-all group/assignee">
+										<div class="flex h-6 w-6 items-center justify-center rounded-full border border-white shadow-sm transition-transform group-hover/assignee:scale-110 @(task.Type == TaskType.Bug ? "bg-red-50 text-red-400" : "bg-slate-100 text-slate-400")">
+											<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+												<circle cx="12" cy="7" r="4" />
+											</svg>
+										</div>
+										<span class="font-bold text-[10px] text-slate-400 transition-colors group-hover/assignee:text-slate-800">
+											@(task.AssigneeName ?? "Unassigned")
+										</span>
+									</button>
+								</div>
 
-                                <div class="flex items-center gap-1 font-black tracking-widest text-[9px] uppercase @GetPriorityTextColor(task.Priority)">
-                                    @if (task.Priority == TaskPriority.High)
-                                    {
-                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <line x1="12" x2="12" y1="8" y2="12" />
-                                            <line x1="12" x2="12.01" y1="16" y2="16" />
-                                        </svg>
-                                    }
-                                    else
-                                    {
-                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-                                        </svg>
-                                    }
-                                    @task.Priority
-                                </div>
-                            </div>
-                        </div>
-                    }
+								<div class="flex items-center gap-1 font-black tracking-widest text-[9px] uppercase @GetPriorityTextColor(task.Priority)">
+									@if (task.Priority == TaskPriority.High)
+									{
+										<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<circle cx="12" cy="12" r="10" />
+											<line x1="12" x2="12" y1="8" y2="12" />
+											<line x1="12" x2="12.01" y1="16" y2="16" />
+										</svg>
+									}
+									else
+									{
+										<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+										</svg>
+									}
+									@task.Priority
+								</div>
+							</div>
+						</div>
+					}
 
-                    @* Bottom Add Task Button - Only for To Do *@
-                    @if (column == KanbanTaskStatus.ToDo)
-                    {
-                        <button @onclick="@(() => HandleOpenForm(column))"
-                                class="py-4 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-300 text-sm font-bold hover:border-[#7E96E1] hover:text-[#7E96E1] transition-all flex items-center justify-center gap-2 group">
-                            <svg class="h-4 w-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-                            </svg>
-                            Add Task
-                        </button>
-                    }
-                </div>
-            </div>
-        }
-    </div>
+					@* Bottom Add Task Button - Only for To Do *@
+					@if (column == KanbanTaskStatus.ToDo)
+					{
+						<button @onclick="@(() => HandleOpenForm(column))"
+								class="py-4 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-300 text-sm font-bold hover:border-[#7E96E1] hover:text-[#7E96E1] transition-all flex items-center justify-center gap-2 group">
+							<svg class="h-4 w-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+							</svg>
+							Add Task
+						</button>
+					}
+				</div>
+			</div>
+		}
+	</div>
 }
 
 
 @if (isFormOpen && selectedStatus != null && currentUser != null)
 {
-    <QuickTaskForm InitialStatus="selectedStatus.Value"
-                   MilestoneId="ProjectId"
-                   CurrentUserId="@currentUser.UserId"
-                   CurrentUserName="@currentUser.UserName"
-                   CanAssignToOthers="@currentUser.IsPM" 
-                   TeamMembers="@teamMembers"
-                   OnSave="@HandleAddTask"
-                   OnClose="@(() => isFormOpen = false)" />
+	<QuickTaskForm InitialStatus="selectedStatus.Value"
+				   MilestoneId="@activeMilestone.Id"
+				   CurrentUserId="@currentUser.UserId"
+				   CurrentUserName="@currentUser.UserName"
+				   CanAssignToOthers="@currentUser.IsPM"
+				   TeamMembers="@teamMembers"
+				   OnSave="@HandleAddTask"
+				   OnClose="@(() => isFormOpen = false)" />
 }
 
 @if (viewingTask != null)
 {
-    <TaskDetailModal Task="viewingTask" OnClose="@(() => viewingTask = null)" />
+	<TaskDetailModal Task="viewingTask" OnClose="@(() => viewingTask = null)" />
 }
 
 @code {
-    [Parameter]
-    public int ProjectId { get; set; }
+	[Parameter]
+	public int ProjectId { get; set; }
 
-    // State
-    private List<KanbanTaskResponse> tasks = new();
-    private ProjectUserContext? currentUser;
-    private List<TeamMemberResponse> teamMembers = new();
-    private bool isLoading = true;
-    private string? errorMessage;
+	// State
+	private List<KanbanTaskResponse> tasks = new();
+	private ProjectUserContext? currentUser;
+	private List<TeamMemberResponse> teamMembers = new();
+	private MilestoneResponse activeMilestone = new();
+	private bool isLoading = true;
+	private string? errorMessage;
 
-    // UI State
-    private bool isFormOpen = false;
-    private KanbanTaskStatus? selectedStatus;
-    private KanbanTaskResponse? viewingTask; 
-    private int? reassignTaskId; 
+	// UI State
+	private bool isFormOpen = false;
+	private KanbanTaskStatus? selectedStatus;
+	private KanbanTaskResponse? viewingTask;
+	private int? reassignTaskId;
+	private int? menuOpenTaskId;
 
-    // Drag & Drop state
-    private int? draggedTaskId;
-    private KanbanTaskStatus? dropTargetStatus;
+	// Drag & Drop state
+	private int? draggedTaskId;
+	private KanbanTaskStatus? dropTargetStatus;
 
-    // Constants
-    private readonly KanbanTaskStatus[] columns = new[]
-    {
-        KanbanTaskStatus.ToDo,
-        KanbanTaskStatus.InProgress,
-        KanbanTaskStatus.ReadyForTest,
-        KanbanTaskStatus.Testing,
-        KanbanTaskStatus.Done 
-    };
+	// Constants
+	private readonly KanbanTaskStatus[] columns = new[]
+	{
+		KanbanTaskStatus.ToDo,
+		KanbanTaskStatus.InProgress,
+		KanbanTaskStatus.ReadyForTest,
+		KanbanTaskStatus.Testing,
+		KanbanTaskStatus.Done
+	};
 
-    protected override async Task OnParametersSetAsync()
-    {
-        await LoadUserInfoAsync();
-        await LoadTeamMembersAsync();
-        await LoadTasks();
-    }
+	protected override async Task OnParametersSetAsync()
+	{
+		await LoadUserInfoAsync();
+		await LoadTeamMembersAsync();
+		await LoadActiveMilestoneAsync();
+		await LoadTasks();
+	}
 
-    private async Task LoadUserInfoAsync()
-    {
-		currentUser = await UserContextService.GetProjectUserContextAsync(ProjectId);
-    }
+	private async Task LoadUserInfoAsync()
+	{
+		currentUser = await ProjectService.GetProjectUserContextAsync(ProjectId);
+	}
 
-    private async Task LoadTeamMembersAsync()
-    {
-        try
-        {
-            teamMembers = await ProjectService.GetMembersAsync(ProjectId);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to load team members: {ex.Message}");
-        }
-    }
+	private async Task LoadActiveMilestoneAsync()
+	{
+		try
+		{
+			activeMilestone = await MilestoneService.GetActiveMilestoneByProjectIdAsync(ProjectId);
+			var activeMilestoneId = activeMilestone?.Id ?? 0;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Failed to load active milestone: {ex.Message}");
+		}
+	}
 
-    private async Task LoadTasks()
-    {
-        try
-        {
-            isLoading = true;
-            errorMessage = null;
-            tasks = await KanbanTaskService.GetTasksByProjectIdAsync(ProjectId);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to load tasks: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
+	private async Task LoadTeamMembersAsync()
+	{
+		try
+		{
+			teamMembers = await ProjectService.GetMembersAsync(ProjectId);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Failed to load team members: {ex.Message}");
+		}
+	}
 
-    private void OnDragStart(int taskId) => draggedTaskId = taskId;
-    private void OnDragEnd()
-    {
-        draggedTaskId = null;
-        dropTargetStatus = null;
-    }
-    private void OnDragOver(KanbanTaskStatus status) => dropTargetStatus = status;
-    private void OnDragLeave() => dropTargetStatus = null;
+	private async Task LoadTasks()
+	{
+		try
+		{
+			isLoading = true;
+			errorMessage = null;
+			tasks = await KanbanTaskService.GetTasksByProjectIdAsync(ProjectId);
+		}
+		catch (Exception ex)
+		{
+			errorMessage = $"Failed to load tasks: {ex.Message}";
+		}
+		finally
+		{
+			isLoading = false;
+		}
+	}
 
-    private async Task OnDrop(KanbanTaskStatus newStatus)
-    {
-        if (draggedTaskId == null) return;
+	private void OnDragStart(int taskId) => draggedTaskId = taskId;
+	private void OnDragEnd()
+	{
+		draggedTaskId = null;
+		dropTargetStatus = null;
+	}
+	private void OnDragOver(KanbanTaskStatus status) => dropTargetStatus = status;
+	private void OnDragLeave() => dropTargetStatus = null;
 
-        var task = tasks.FirstOrDefault(t => t.Id == draggedTaskId);
-        if (task == null || task.Status == newStatus) return;
+	private async Task OnDrop(KanbanTaskStatus newStatus)
+	{
+		if (draggedTaskId == null) return;
 
-        try
-        {
-            var updateRequest = new UpdateKanbanTaskRequest
-            {
-                MilestoneId = task.MilestoneId,
-                Title = task.Title,
-                Status = newStatus,
-                Priority = task.Priority,
-                AssigneeId = task.AssigneeId,
-                Type = task.Type
-            };
+		var task = tasks.FirstOrDefault(t => t.Id == draggedTaskId);
+		if (task == null || task.Status == newStatus) return;
 
-            await KanbanTaskService.UpdateTaskAsync(task.Id, updateRequest);
-            task.Status = newStatus;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to update: {ex.Message}";
-        }
-        finally
-        {
-            OnDragEnd();
-        }
-    }
+		try
+		{
+			var updateRequest = new UpdateKanbanTaskRequest
+			{
+				MilestoneId = task.MilestoneId,
+				Title = task.Title,
+				Status = newStatus,
+				Priority = task.Priority,
+				AssigneeId = task.AssigneeId,
+				Type = task.Type
+			};
 
-    private void HandleOpenForm(KanbanTaskStatus status)
-    {
-        selectedStatus = status;
-        isFormOpen = true;
-    }
+			await KanbanTaskService.UpdateTaskAsync(task.Id, updateRequest);
+			task.Status = newStatus;
+		}
+		catch (Exception ex)
+		{
+			errorMessage = $"Failed to update: {ex.Message}";
+		}
+		finally
+		{
+			OnDragEnd();
+		}
+	}
 
-    private async Task HandleAddTask((CreateKanbanTaskRequest Request, List<IBrowserFile> Files) data)
-    {
-        try
-        {
-            var newTask = await KanbanTaskService.CreateTaskAsync(data.Request);
-            if (data.Files.Count > 0)
-            {
-                try
-                {
-                    await TaskAttachmentService.UploadAttachmentsAsync(newTask.Id, data.Files);
-                }
-                catch (Exception ex)
-                {
-                    errorMessage = $"Task created but attachment upload failed: {ex.Message}";
-                }
-            }
-            tasks.Add(newTask);
-            isFormOpen = false;
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Failed to create task: {ex.Message}";
-        }
-    }
+	private void HandleOpenForm(KanbanTaskStatus status)
+	{
+		selectedStatus = status;
+		isFormOpen = true;
+	}
 
+	private async Task HandleAddTask((CreateKanbanTaskRequest Request, List<IBrowserFile> Files) data)
+	{
+		try
+		{
+			var newTask = await KanbanTaskService.CreateTaskAsync(data.Request);
+			if (data.Files.Count > 0)
+			{
+				try
+				{
+					await TaskAttachmentService.UploadAttachmentsAsync(newTask.Id, data.Files);
+				}
+				catch (Exception ex)
+				{
+					errorMessage = $"Task created but attachment upload failed: {ex.Message}";
+				}
+			}
+			tasks.Add(newTask);
+			isFormOpen = false;
+		}
+		catch (Exception ex)
+		{
+			errorMessage = $"Failed to create task: {ex.Message}";
+		}
+	}
 
-    private void ViewTaskDetails(KanbanTaskResponse task)
-    {
-        viewingTask = task;
-    }
+	private void ViewTaskDetails(KanbanTaskResponse task)
+	{
+		viewingTask = task;
+		menuOpenTaskId = null; // Close menu when viewing details
+	}
 
-    private void EnableReassign(int taskId)
-    {
-        reassignTaskId = taskId;
-        // Logic to show assignee selector would go here
-    }
+	private void ToggleTaskMenu(int taskId)
+	{
+		menuOpenTaskId = menuOpenTaskId == taskId ? null : taskId;
+	}
 
-    private bool IsOverdue(DateTime? date)
-    {
-        if (!date.HasValue) return false;
-        return date.Value.Date < DateTime.Now.Date;
-    }
+	private void CloseMenu()
+	{
+		menuOpenTaskId = null;
+	}
 
-    private string GetPriorityColor(TaskPriority priority)
-    {
-        return priority switch
-        {
-            TaskPriority.Low => "bg-slate-300",
-            TaskPriority.Medium => "bg-[#7E96E1]",
-            TaskPriority.High => "bg-[#E85D3F]",
-            _ => "bg-slate-300"
-        };
-    }
+	private void HandleEditTask(KanbanTaskResponse task)
+	{
+		// TODO: Implement edit task functionality
+		// You can open a modal or navigate to edit page
+		Console.WriteLine($"Edit task: {task.Id} - {task.Title}");
+		menuOpenTaskId = null;
+	}
 
-    private string GetPriorityTextColor(TaskPriority priority)
-    {
-        return priority switch
-        {
-            TaskPriority.Low => "text-slate-400",
-            TaskPriority.Medium => "text-[#7E96E1]",
-            TaskPriority.High => "text-[#E85D3F]",
-            _ => "text-slate-400"
-        };
-    }
+	private async Task HandleDeleteTask(int taskId)
+	{
+		Console.WriteLine("Delete button clicked");
+		menuOpenTaskId = null;
 
-    private string GetColumnName(KanbanTaskStatus status)
-    {
-        return status switch
-        {
-            KanbanTaskStatus.ToDo => "To Do",
-            KanbanTaskStatus.InProgress => "In Progress",
-            KanbanTaskStatus.ReadyForTest => "Ready for Test",
-            KanbanTaskStatus.Testing => "Testing",
-            KanbanTaskStatus.Done => "Done",
-            _ => status.ToString()
-        };
-    }
+		var task = tasks.FirstOrDefault(t => t.Id == taskId);
+		if (task == null) return;
 
-    private int GetTaskCount(KanbanTaskStatus status) => tasks.Count(t => t.Status == status);
+		ConfirmDialogService.ShowDelete(task.Title, async () =>
+		{
+			try
+			{
+				await KanbanTaskService.DeleteTaskAsync(taskId);
+				tasks.RemoveAll(t => t.Id == taskId);
+				errorMessage = null;
+			}
+			catch (Exception ex)
+			{
+				errorMessage = $"Failed to delete task: {ex.Message}";
+			}
+		});
+	}
+
+	private void EnableReassign(int taskId)
+	{
+		reassignTaskId = taskId;
+		// Logic to show assignee selector would go here
+	}
+
+	private bool IsOverdue(DateTime? date)
+	{
+		if (!date.HasValue) return false;
+		return date.Value.Date < DateTime.Now.Date;
+	}
+
+	private string GetPriorityColor(TaskPriority priority)
+	{
+		return priority switch
+		{
+			TaskPriority.Low => "bg-slate-300",
+			TaskPriority.Medium => "bg-[#7E96E1]",
+			TaskPriority.High => "bg-[#E85D3F]",
+			_ => "bg-slate-300"
+		};
+	}
+
+	private string GetPriorityTextColor(TaskPriority priority)
+	{
+		return priority switch
+		{
+			TaskPriority.Low => "text-slate-400",
+			TaskPriority.Medium => "text-[#7E96E1]",
+			TaskPriority.High => "text-[#E85D3F]",
+			_ => "text-slate-400"
+		};
+	}
+
+	private string GetColumnName(KanbanTaskStatus status)
+	{
+		return status switch
+		{
+			KanbanTaskStatus.ToDo => "To Do",
+			KanbanTaskStatus.InProgress => "In Progress",
+			KanbanTaskStatus.ReadyForTest => "Ready for Test",
+			KanbanTaskStatus.Testing => "Testing",
+			KanbanTaskStatus.Done => "Done",
+			_ => status.ToString()
+		};
+	}
+
+	private int GetTaskCount(KanbanTaskStatus status) => tasks.Count(t => t.Status == status);
 }

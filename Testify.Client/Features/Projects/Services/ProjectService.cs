@@ -124,5 +124,18 @@ namespace Testify.Client.Features.Projects.Services
                 return false;
             }
         }
+
+        public async Task<ProjectUserContext?> GetProjectUserContextAsync(int projectId)
+        {
+            try
+            {
+                var context = await _httpClient.GetFromJsonAsync<ProjectUserContext?>($"{ApiEndpoint}/{projectId}/my-context");
+                return context;
+            }
+            catch (HttpRequestException)
+            {
+                return null;
+            }
+        }
     }
 }

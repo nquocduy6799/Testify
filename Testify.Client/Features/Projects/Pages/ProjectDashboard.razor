@@ -171,6 +171,7 @@
             isLoading = true;
             project = await ProjectService.GetProjectByIdAsync(Id);
             currentUserRole = await ProjectService.GetMyRoleInProjectAsync(Id);
+            var role = currentUserRole;
         }
         catch (Exception)
         {
