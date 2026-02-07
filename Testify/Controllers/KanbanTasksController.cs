@@ -8,7 +8,7 @@ namespace Testify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
+    [Authorize]
     public class KanbanTasksController : ControllerBase
     {
         private readonly IKanbanTaskRepository _kanbanTaskRepository;

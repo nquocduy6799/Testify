@@ -13,6 +13,7 @@ namespace Testify.Entities
         public int MilestoneId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public DateTime? DueDate { get; set; }
         public KanbanTaskStatus Status { get; set; } = KanbanTaskStatus.ToDo;
         public TaskPriority Priority { get; set; } = TaskPriority.Low;
         public string? AssigneeId { get; set; }
@@ -31,5 +32,6 @@ namespace Testify.Entities
         public virtual ICollection<TaskAttachment> Attachments { get; set; } = new List<TaskAttachment>();
     }
 }
+
 
 

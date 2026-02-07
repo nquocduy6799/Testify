@@ -1,28 +1,28 @@
-@using Microsoft.AspNetCore.Components.Forms
+﻿@using Microsoft.AspNetCore.Components.Forms
 @using Testify.Shared.DTOs.KanbanTasks
 @using Testify.Shared.DTOs.Projects
 @using Testify.Shared.Enums
 @using Testify.Client.Interfaces
 
+@* Backdrop *@
 <div class="fixed inset-0 z-[200] flex items-center justify-center p-6">
-    @* --- The Backdrop Layer --- *@
     <div class="absolute inset-0 animate-[fadeIn_0.3s_ease-out] bg-slate-900/60 backdrop-blur-md"
          @onclick="OnClose"></div>
 
-    @* --- The Modal Content --- *@
+    @* Modal Container *@
     <div class="animate-in zoom-in-95 fade-in relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[48px] bg-white shadow-2xl duration-300">
 
         @* Header *@
         <div class="flex items-center justify-between border-b border-slate-50 bg-slate-50/50 p-8">
             <div class="flex items-center gap-4">
-                <div class="@(formData.Type == TaskType.Bug ? "bg-red-500 shadow-red-100" : "bg-[#1C1D2A] shadow-slate-100") flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg">
+                <div class="@(formData.Type == TaskType.Bug ? "bg-red-500 shadow-red-100" : "bg-[#1C1D2A] shadow-slate-100") flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-lg transition-colors duration-300">
                     @if (formData.Type == TaskType.Bug)
                     {
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" /><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 10 2 2m4 0 2-2m-9 4h10m-10 4h10" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22a9 9 0 0 0 9-9c0-3.87-2.35-7.15-5.69-8.48L15 4h-6l-.31.52C5.35 5.85 3 9.13 3 13a9 9 0 0 0 9 9z" /></svg>
                     }
                     else
                     {
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18" /></svg>
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" stroke-width="2" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9h18" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 21V9" /></svg>
                     }
                 </div>
                 <div>
@@ -31,36 +31,39 @@
                 </div>
             </div>
             <button @onclick="OnClose" class="rounded-2xl p-3 text-slate-400 shadow-sm transition-all hover:bg-white">
-                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
         </div>
 
         <EditForm Model="formData" OnValidSubmit="HandleSubmit" class="no-scrollbar flex-1 overflow-y-auto">
             <DataAnnotationsValidator />
 
-            <div class="grid grid-cols-1 lg:grid-cols-12">
+            <div class="grid grid-cols-1 gap-0 lg:grid-cols-12">
 
+                @* --- LEFT COLUMN (Primary Details) --- *@
                 <div class="space-y-8 border-r border-slate-50 p-10 lg:col-span-7">
 
+                    @* Type Selector *@
                     <div class="space-y-3">
                         <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
                             Entity Category
                         </label>
                         <div class="flex rounded-2xl border border-slate-100/50 bg-slate-50 p-1.5">
                             <button type="button" @onclick="@(() => formData.Type = TaskType.Feature)" class="@GetTypeButtonClass(TaskType.Feature)">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /></svg>
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" stroke-width="2" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9h18" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 21V9" /></svg>
                                 Feature Request
                             </button>
                             <button type="button" @onclick="@(() => formData.Type = TaskType.Bug)" class="@GetTypeButtonClass(TaskType.Bug)">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" /></svg>
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 2 1.88 1.88" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.12 3.88 16 2" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 20v-9" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.53 9C4.6 8.8 3 7.1 3 5" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 13H2" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21c0-2.1 1.7-3.9 3.8-4" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.97 5c0 2.1-1.6 3.8-3.5 4" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 13h-4" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.2 17c2.1.1 3.8 1.9 3.8 4" /></svg>
                                 Bug Report
                             </button>
                         </div>
                     </div>
 
+                    @* Title Input *@
                     <div class="space-y-3">
                         <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
-                            <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16" /></svg>
+                            <svg class="h-3.5 w-3.5 @(formData.Type == TaskType.Bug ? "text-red-500" : "text-[#E85D3F]")" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="4" x2="20" y1="9" y2="9" stroke-width="2" stroke-linecap="round" /><line x1="4" x2="20" y1="15" y2="15" stroke-width="2" stroke-linecap="round" /><line x1="10" x2="8" y1="3" y2="21" stroke-width="2" stroke-linecap="round" /><line x1="16" x2="14" y1="3" y2="21" stroke-width="2" stroke-linecap="round" /></svg>
                             Identification / Title
                         </label>
                         <InputText @bind-Value="formData.Title"
@@ -69,19 +72,21 @@
                         <ValidationMessage For="@(() => formData.Title)" class="text-xs text-red-500" />
                     </div>
 
+                    @* Description Input *@
                     <div class="space-y-3">
                         <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
-                            <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" x2="8" y1="13" y2="13" /><line x1="16" x2="8" y1="17" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
                             Technical Specification
                         </label>
                         <InputTextArea @bind-Value="formData.Description" rows="8"
                                        placeholder="@(formData.Type == TaskType.Bug ? "Traceability Requirements:\n1. Reproduction Steps\n2. Input Data Sets\n3. Expected Outcome\n4. Observed Anomaly" : "Provide deep architectural details and requirement logic...")"
                                        class="w-full resize-none rounded-[32px] border-2 border-transparent bg-slate-50 px-6 py-6 text-sm leading-relaxed font-medium text-slate-600 shadow-inner transition-all outline-none focus:border-[#7E96E1] focus:bg-white" />
 
+                        @* Bug Warning Block *@
                         @if (formData.Type == TaskType.Bug)
                         {
                             <div class="flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2">
-                                <div class="h-2 w-2 animate-pulse rounded-full bg-red-500"></div>
+                                <svg class="h-3 w-3 animate-pulse text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                                 <p class="font-black tracking-widest text-[9px] text-red-600 uppercase">
                                     Quality Gate: Full reproduction matrix required for triage.
                                 </p>
@@ -90,12 +95,14 @@
                     </div>
                 </div>
 
+                @* --- RIGHT COLUMN (Meta Data) --- *@
                 <div class="space-y-8 bg-slate-50/30 p-10 lg:col-span-5">
 
                     <div class="grid grid-cols-1 gap-6">
+                        @* Assignee *@
                         <div class="space-y-3">
                             <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
-                                <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><circle cx="12" cy="7" r="4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                                 Assignee Matrix
                             </label>
                             <div class="group relative">
@@ -110,39 +117,57 @@
                                     }
                                     else
                                     {
-                                        <option value="@CurrentUserId">@CurrentUserName (Self Only)</option>
+                                        <option value="@CurrentUserId">@CurrentUserName</option>
                                     }
                                 </InputSelect>
                                 <svg class="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-300 transition-colors group-hover:text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
                             </div>
                         </div>
 
-                        <div class="space-y-3">
-                            <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
-                                <svg class="h-3.5 w-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                Severity / Priority
-                            </label>
-                            <div class="group relative">
-                                <InputSelect @bind-Value="formData.Priority"
-                                             class="w-full cursor-pointer appearance-none rounded-2xl border border-slate-100 bg-white px-6 py-4 text-sm font-bold text-slate-800 shadow-sm transition-all outline-none group-hover:border-[#7E96E1]">
-                                    <option value="@TaskPriority.Low">Low Priority</option>
-                                    <option value="@TaskPriority.Medium">Medium Priority</option>
-                                    <option value="@TaskPriority.High">High Severity</option>
-                                </InputSelect>
-                                <svg class="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-300 transition-colors group-hover:text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        <div class="grid grid-cols-2 gap-4">
+                            @* Priority *@
+                            <div class="space-y-3">
+                                <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                    <svg class="h-3.5 w-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                    Severity
+                                </label>
+                                <div class="group relative">
+                                    <InputSelect @bind-Value="formData.Priority"
+                                                 class="w-full cursor-pointer appearance-none rounded-2xl border border-slate-100 bg-white px-6 py-4 text-sm font-bold text-slate-800 shadow-sm transition-all outline-none group-hover:border-[#7E96E1]">
+                                        <option value="@TaskPriority.Low">Low</option>
+                                        <option value="@TaskPriority.Medium">Medium</option>
+                                        <option value="@TaskPriority.High">High</option>
+                                    </InputSelect>
+                                    <svg class="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-300 transition-colors group-hover:text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                </div>
+                            </div>
+
+                            @* Due Date *@
+                            <div class="space-y-3">
+                                <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                    <svg class="h-3.5 w-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><line x1="16" x2="16" y1="2" y2="6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><line x1="8" x2="8" y1="2" y2="6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><line x1="3" x2="21" y1="10" y2="10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                    Due Date
+                                </label>
+                                <InputDate @bind-Value="formData.DueDate"
+                                           class="w-full cursor-pointer rounded-2xl border border-slate-100 bg-white px-6 py-4 text-xs font-bold text-slate-800 shadow-sm transition-all outline-none focus:border-[#7E96E1]" />
                             </div>
                         </div>
                     </div>
 
+                    @* Attachments *@
                     <div class="space-y-4">
                         <label class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
-                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                            <svg class="h-3.5 w-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
                             Asset Integration
                         </label>
-                        <div @onclick="OpenFileDialog" class="@GetDropZoneClass()">
-                            <InputFile @ref="fileInput" OnChange="HandleFileSelect" multiple class="hidden" />
-                            <div class="@(dragActive ? "bg-blue-500 text-white shadow-lg" : "bg-slate-50 text-slate-400") flex h-14 w-14 items-center justify-center rounded-2xl transition-all">
-                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+
+                        @* Custom File Drop Zone using Label for InputFile *@
+                        <div class="@GetDropZoneClass()">
+                            <label for="fileInput" class="absolute inset-0 z-10 h-full w-full cursor-pointer"></label>
+                            <InputFile id="fileInput" OnChange="HandleFileSelect" multiple class="hidden" />
+
+                            <div class="@(dragActive ? "bg-blue-500 text-white shadow-lg" : "bg-slate-50 text-slate-400") flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-300">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><line x1="12" x2="12" y1="3" y2="15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                             </div>
                             <div class="text-center">
                                 <p class="text-xs font-black tracking-tight text-slate-800 uppercase">Drop files or click</p>
@@ -150,41 +175,47 @@
                             </div>
                         </div>
 
-                        <div class="no-scrollbar max-h-[200px] space-y-2 overflow-y-auto">
-                            @foreach (var file in selectedFiles)
-                            {
-                                <div class="group/item animate-in fade-in slide-in-from-top-1 flex items-center justify-between rounded-[22px] border border-slate-100 bg-white p-4 shadow-sm">
-                                    <div class="flex min-w-0 items-center gap-4">
-                                        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 group-hover/item:bg-slate-100">
-                                            @GetFileIcon(file.ContentType)
+                        @* File List *@
+                        @if (selectedFiles.Count > 0)
+                        {
+                            <div class="no-scrollbar max-h-[200px] space-y-2 overflow-y-auto pr-1">
+                                @foreach (var file in selectedFiles)
+                                {
+                                    <div class="group/item animate-in fade-in slide-in-from-top-1 flex items-center justify-between rounded-[22px] border border-slate-100 bg-white p-4 shadow-sm">
+                                        <div class="flex min-w-0 items-center gap-4">
+                                            <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 transition-colors group-hover/item:bg-slate-100">
+                                                @GetFileIcon(file.ContentType)
+                                            </div>
+                                            <div class="truncate">
+                                                <p class="truncate text-xs font-bold text-slate-800">@file.Name</p>
+                                                <p class="font-black text-[9px] text-slate-400 uppercase">@FormatFileSize(file.Size)</p>
+                                            </div>
                                         </div>
-                                        <div class="truncate">
-                                            <p class="truncate text-xs font-bold text-slate-800">@file.Name</p>
-                                            <p class="font-black text-[9px] text-slate-400 uppercase">@FormatFileSize(file.Size)</p>
-                                        </div>
+                                        <button type="button" @onclick="@(() => RemoveFile(file))" class="rounded-xl p-2.5 text-slate-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover/item:opacity-100">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><line x1="14" x2="14" y1="11" y2="17" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                        </button>
                                     </div>
-                                    <button type="button" @onclick="@(() => RemoveFile(file))" class="rounded-xl p-2.5 text-slate-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover/item:opacity-100">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </div>
-                            }
-                        </div>
+                                }
+                            </div>
+                        }
                     </div>
 
-                    <div class="space-y-3 rounded-[32px] border border-indigo-100 bg-indigo-50 p-6">
+                    @* Status Indicator *@
+                    @* <div class="space-y-3 rounded-[32px] border border-indigo-100 bg-indigo-50 p-6">
                         <div class="flex items-center gap-2">
                             <div class="h-2 w-2 animate-pulse rounded-full bg-indigo-500"></div>
                             <span class="font-black tracking-widest text-[10px] text-indigo-600 uppercase">Pipeline Target</span>
                         </div>
                         <p class="text-sm font-bold text-slate-800">@GetStatusName(InitialStatus)</p>
                         <p class="leading-relaxed font-medium text-[10px] text-indigo-400">Entity will be injected into this lane immediately upon initialization.</p>
-                    </div>
+                    </div> *@
                 </div>
             </div>
 
+            @* Footer *@
             <div class="flex items-center justify-between border-t border-slate-50 bg-white p-8 px-10">
                 <div class="flex items-center gap-3 text-slate-400">
-                    <svg class="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <svg class="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                     <p class="font-bold tracking-widest text-[10px] uppercase">Neural Link Active. Syncing with project root.</p>
                 </div>
                 <div class="flex gap-4">
@@ -192,8 +223,8 @@
                         Cancel
                     </button>
                     <button type="submit" disabled="@isSubmitting"
-                            class="@(formData.Type == TaskType.Bug ? "bg-red-500 hover:bg-red-600 shadow-red-100" : "bg-[#1C1D2A] hover:bg-slate-800 shadow-slate-100") flex items-center gap-3 rounded-2xl px-12 py-4 text-xs font-black tracking-widest text-white uppercase transition-all active:scale-95 disabled:opacity-50">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                            class="@(formData.Type == TaskType.Bug ? "bg-red-500 hover:bg-red-600 shadow-red-100" : "bg-[#1C1D2A] hover:bg-slate-800 shadow-slate-100") flex items-center gap-3 rounded-2xl px-12 py-4 text-xs font-black tracking-widest text-white uppercase transition-all hover:shadow-2xl active:scale-95 disabled:opacity-50">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><polyline points="17 21 17 13 7 13 7 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><polyline points="7 3 7 8 15 8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                         @(isSubmitting ? "Syncing..." : $"Initialize {formData.Type}")
                     </button>
                 </div>
@@ -208,7 +239,6 @@
     [Parameter] public EventCallback<(CreateKanbanTaskRequest Request, List<IBrowserFile> Files)> OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
-    // Injected services - Add these to get user info and project members
     [Parameter] public string CurrentUserId { get; set; } = string.Empty;
     [Parameter] public string CurrentUserName { get; set; } = string.Empty;
     [Parameter] public bool CanAssignToOthers { get; set; } = false;
@@ -218,12 +248,12 @@
     private List<IBrowserFile> selectedFiles = new();
     private bool dragActive = false;
     private bool isSubmitting = false;
-    private InputFile? fileInput;
 
     protected override void OnInitialized()
     {
         formData.MilestoneId = MilestoneId;
-        formData.Status = KanbanTaskStatus.ToDo; 
+        formData.Status = InitialStatus;
+        formData.DueDate = DateTime.Today.AddDays(3);
     }
 
     private async Task HandleSubmit()
@@ -239,16 +269,11 @@
         }
     }
 
-    private void OpenFileDialog()
-    {
-        // Trigger file input click via JavaScript interop if needed
-    }
-
     private async Task HandleFileSelect(InputFileChangeEventArgs e)
     {
-        foreach (var file in e.GetMultipleFiles(10)) // Max 10 files
+        foreach (var file in e.GetMultipleFiles(10))
         {
-            if (file.Size <= 10 * 1024 * 1024) // 10MB limit
+            if (file.Size <= 10 * 1024 * 1024)
             {
                 selectedFiles.Add(file);
             }
@@ -260,34 +285,28 @@
         selectedFiles.Remove(file);
     }
 
-    private void HandleDragEnter() => dragActive = true;
-    private void HandleDragLeave() => dragActive = false;
-    private void HandleDragOver() => dragActive = true;
-
-    private async Task HandleDrop(DragEventArgs e)
-    {
-        dragActive = false;
-        // Note: File drop handling in Blazor WASM is limited
-        // Consider using JavaScript interop for full drag-drop support
-    }
-
+    // Note: To fully implement drag/drop in pure Blazor without JS Interop is limited.
+    // This styling mimics the drag state but requires JS Interop to actually detect dragenter/leave on the div.
     private string GetDropZoneClass()
     {
-        var baseClass = "relative border-2 border-dashed rounded-[24px] p-6 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer";
+        var baseClass = "group relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[32px] border-2 border-dashed p-8 transition-all";
         return dragActive
-            ? $"{baseClass} bg-blue-50 border-blue-400"
-            : $"{baseClass} bg-slate-50 border-slate-200 hover:bg-white hover:border-[#7E96E1]";
+            ? $"{baseClass} bg-blue-50 border-blue-400 scale-[1.02]"
+            : $"{baseClass} bg-white border-slate-200 hover:border-[#7E96E1] hover:bg-white shadow-sm";
     }
 
     private string GetTypeButtonClass(TaskType type)
     {
-        var baseClass = "flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all";
-        var activeClass = type == TaskType.Feature
-            ? "bg-[#1C1D2A] text-white shadow-lg"
-            : "bg-red-500 text-white shadow-lg";
-        var inactiveClass = "text-slate-400 hover:text-slate-600";
+        var baseClass = "flex flex-1 items-center justify-center gap-3 rounded-xl py-3.5 text-xs font-black tracking-widest uppercase transition-all";
 
-        return formData.Type == type ? $"{baseClass} {activeClass}" : $"{baseClass} {inactiveClass}";
+        if (formData.Type == type)
+        {
+            return type == TaskType.Feature
+                ? $"{baseClass} bg-[#1C1D2A] text-white shadow-lg"
+                : $"{baseClass} bg-red-500 text-white shadow-lg shadow-red-100";
+        }
+
+        return $"{baseClass} text-slate-400 hover:text-slate-600";
     }
 
     private string GetStatusName(KanbanTaskStatus status) => status switch
@@ -296,16 +315,18 @@
         KanbanTaskStatus.InProgress => "In Progress",
         KanbanTaskStatus.ReadyForTest => "Ready for Test",
         KanbanTaskStatus.Testing => "Testing",
+        KanbanTaskStatus.Done => "Done",
         _ => status.ToString()
     };
 
     private RenderFragment GetFileIcon(string contentType)
     {
+        // Inline SVG Icons mimicking Lucide
         return contentType switch
         {
-            var ct when ct.StartsWith("image/") => @<svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></svg>,
-            "application/pdf" => @<svg class="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></svg>,
-            _ => @<svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            var ct when ct.StartsWith("image/") => @<svg class="h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><circle cx="9" cy="9" r="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>,
+            "application/pdf" => @<svg class="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M14 2v4a2 2 0 0 0 2 2h4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M10 9H8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M16 13H8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M16 17H8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>,
+            _ => @<svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M14 2v4a2 2 0 0 0 2 2h4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
             };
     }
 

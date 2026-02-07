@@ -10,8 +10,10 @@ namespace Testify.Shared.DTOs.KanbanTasks
     {
         public int Id { get; set; }
         public int MilestoneId { get; set; }
+        public int? TaskPlanId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public DateTime? DueDate { get; set; }
         public KanbanTaskStatus Status { get; set; }
         public TaskPriority Priority { get; set; }
 
