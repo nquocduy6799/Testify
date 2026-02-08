@@ -34,6 +34,7 @@ builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>(
 builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
 builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
 builder.Services.AddScoped<ITestCaseService, TestCaseService>();
+builder.Services.AddScoped<IAiTestCaseService, AiTestCaseService>();
 
 
 // Register SignalR for real-time notifications
