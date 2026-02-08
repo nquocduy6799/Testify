@@ -264,8 +264,21 @@ else
 				   CurrentUserName="@currentUser.UserName"
 				   CanAssignToOthers="@currentUser.IsPM"
 				   TeamMembers="@teamMembers"
-				   OnSave="@HandleAddTask"
+				   OnSave="@HandleSaveTask"
 				   OnClose="@(() => isFormOpen = false)" />
+}
+
+@if (isEditFormOpen && editingTask != null && currentUser != null)
+{
+	<QuickTaskForm InitialStatus="editingTask.Status"
+				   MilestoneId="@activeMilestone.Id"
+				   CurrentUserId="@currentUser.UserId"
+				   CurrentUserName="@currentUser.UserName"
+				   CanAssignToOthers="@currentUser.IsPM"
+				   TeamMembers="@teamMembers"
+				   ExistingTask="editingTask"
+				   OnSave="@HandleSaveTask"
+				   OnClose="@(() => { isEditFormOpen = false; editingTask = null; })" />
 }
 
 @if (viewingTask != null)
@@ -412,8 +425,63 @@ else
 		isFormOpen = true;
 	}
 
-	private async Task HandleAddTask((CreateKanbanTaskRequest Request, List<IBrowserFile> Files) data)
+	private async Task HandleSaveTask((CreateKanbanTaskRequest Request, List<IBrowserFile> Files, int? TaskId, bool IsEditMode) data)
 	{
+		if (data.IsEditMode && data.TaskId.HasValue)
+		{
+			try
+			{
+				var updateRequest = new UpdateKanbanTaskRequest
+				{
+					MilestoneId = data.Request.MilestoneId,
+					Title = data.Request.Title,
+					Description = data.Request.Description,
+					DueDate = data.Request.DueDate,
+					Status = data.Request.Status,
+					Priority = data.Request.Priority,
+					AssigneeId = data.Request.AssigneeId,
+					Type = data.Request.Type
+				};
+
+				await KanbanTaskService.UpdateTaskAsync(data.TaskId.Value, updateRequest);
+
+				if (data.Files.Count > 0)
+				{
+					try
+					{
+						await TaskAttachmentService.UploadAttachmentsAsync(data.TaskId.Value, data.Files);
+					}
+					catch (Exception ex)
+					{
+						errorMessage = $"Task updated but attachment upload failed: {ex.Message}";
+					}
+				}
+
+				var task = tasks.FirstOrDefault(t => t.Id == data.TaskId.Value);
+				if (task != null)
+				{
+					task.Title = data.Request.Title;
+					task.Description = data.Request.Description;
+					task.DueDate = data.Request.DueDate;
+					task.Status = data.Request.Status;
+					task.Priority = data.Request.Priority;
+					task.AssigneeId = data.Request.AssigneeId;
+					task.Type = data.Request.Type;
+					task.AssigneeName = teamMembers.FirstOrDefault(m => m.UserId == data.Request.AssigneeId)?.FullName ?? task.AssigneeName;
+				}
+
+				isEditFormOpen = false;
+				editingTask = null;
+				errorMessage = null;
+			}
+			catch (Exception ex)
+			{
+				errorMessage = $"Failed to update task: {ex.Message}";
+			}
+
+			return;
+		}
+
 		try
 		{
 			var newTask = await KanbanTaskService.CreateTaskAsync(data.Request);

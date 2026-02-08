@@ -18,9 +18,11 @@ namespace Testify.Shared.DTOs.KanbanTasks
         public TaskPriority Priority { get; set; }
 
         public string? AssigneeId { get; set; }
+
         // Flattened property: Useful for displaying the user's name without fetching the full object
         public string? AssigneeName { get; set; }
         public string? AssigneeAvatarUrl { get; set; }
+        public string? AssigneeRole { get; set; }
 
         public TaskType Type { get; set; }
 

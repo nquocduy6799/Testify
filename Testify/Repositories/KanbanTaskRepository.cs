@@ -4,6 +4,7 @@ using Testify.Entities;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
 using Testify.Shared.DTOs.Milestones;
+using Testify.Shared.DTOs.TaskAttachments;
 using static Testify.Shared.Enums.MilestoneEnum;
 
 namespace Testify.Repositories
@@ -23,6 +24,7 @@ namespace Testify.Repositories
                 .Where(t => t.MilestoneId == milestoneId && !t.IsDeleted)
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
+                .Include(t => t.Attachments)
                 .Select(t => MapToResponse(t))
                 .ToListAsync();
         }
@@ -33,9 +35,21 @@ namespace Testify.Repositories
                 .Where(t => t.Id == id && !t.IsDeleted)
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
+                .Include(t => t.Attachments)
                 .FirstOrDefaultAsync();
 
             return task != null ? MapToResponse(task) : null;
+        }
+
+        public async Task<IEnumerable<KanbanTaskResponse>> GetTasksByProjectIdAsync(int projectId)
+        {
+            return await _context.KanbanTasks
+                .Where(t => t.Milestone.ProjectId == projectId && !t.IsDeleted && t.Milestone.Status == MilestoneStatus.Active)
+                .Include(t => t.Assignee)
+                .Include(t => t.TestPlans)
+                .Include(t => t.Attachments)
+                .Select(t => MapToResponse(t))
+                .ToListAsync();
         }
 
         public async Task<KanbanTaskResponse> CreateTaskAsync(CreateKanbanTaskRequest request, string userName)
@@ -116,6 +130,7 @@ namespace Testify.Repositories
             return await _context.KanbanTasks.AnyAsync(t => t.Id == id && !t.IsDeleted);
         }
 
+
         private static KanbanTaskResponse MapToResponse(KanbanTask task)
         {
             return new KanbanTaskResponse
@@ -128,24 +143,24 @@ namespace Testify.Repositories
                 Priority = task.Priority,
                 DueDate = task.DueDate,
                 AssigneeId = task.AssigneeId,
-                AssigneeName = task.Assignee?.UserName,
+                AssigneeName = task.Assignee?.FullName,
                 AssigneeAvatarUrl = task.Assignee?.AvatarUrl,
                 Type = task.Type,
                 CreatedAt = task.CreatedAt,
                 CreatedBy = task.CreatedBy,
                 UpdatedAt = task.UpdatedAt,
-                TestPlanCount = task.TestPlans?.Count ?? 0
+                TestPlanCount = task.TestPlans?.Count ?? 0,
+                Attachments = task.Attachments.Select(a => new TaskAttachmentResponse
+                {
+                    Id = a.Id,
+                    KanbanTaskId = a.KanbanTaskId,
+                    FileName = a.FileName,
+                    FileUrl = a.FileUrl,
+                    PublicId = a.PublicId ?? string.Empty,
+                    FileSize = a.FileSize,
+                    ContentType = a.ContentType
+                }).ToList()
             };
-        }
-
-        public async Task<IEnumerable<KanbanTaskResponse>> GetTasksByProjectIdAsync(int projectId)
-        {
-            return await _context.KanbanTasks
-                .Where(t => t.Milestone.ProjectId == projectId && !t.IsDeleted && t.Milestone.Status == MilestoneStatus.Active)
-                .Include(t => t.Assignee)
-                .Include(t => t.TestPlans)
-                .Select(t => MapToResponse(t))
-                .ToListAsync();
         }
     }
 }
