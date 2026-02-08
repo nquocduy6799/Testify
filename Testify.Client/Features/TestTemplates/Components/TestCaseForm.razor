@@ -1,3 +1,4 @@
+@using Testify.Shared.DTOs
 @using Testify.Shared.DTOs.TestCases
 @using Testify.Shared.Enums
 
@@ -222,18 +223,42 @@
 
 @code {
     [Parameter]
-    public int SuiteTemplateId { get; set; }
+    public int ParentSuiteId { get; set; }
 
     [Parameter]
     public EventCallback OnClose { get; set; }
 
     [Parameter]
-    public EventCallback<CreateTestCaseTemplateRequest> OnSave { get; set; }
+    public EventCallback<TestCaseFormResult> OnSave { get; set; }
+
+    /// <summary>
+    /// Optional: pre-populate the form for editing.
+    /// </summary>
+    [Parameter]
+    public TestCaseFormResult? InitialData { get; set; }
 
     private TestCaseFormData _formData = new();
     private List<StepData> _steps = new() { new StepData() };
     private bool _isSubmitting;
     private int? _draggedIndex;
+
+    protected override void OnParametersSet()
+    {
+        if (InitialData is not null && string.IsNullOrEmpty(_formData.Title))
+        {
+            _formData.Title = InitialData.Title;
+            _formData.Priority = InitialData.Priority;
+            _formData.Preconditions = InitialData.Preconditions;
+            _formData.Postconditions = InitialData.Postconditions;
+            _steps = InitialData.Steps.Select(s => new StepData
+            {
+                Action = s.Action,
+                TestData = s.TestData,
+                ExpectedResult = s.ExpectedResult
+            }).ToList();
+            if (_steps.Count == 0) _steps.Add(new StepData());
+        }
+    }
 
     private void OnDragStart(int index)
     {
@@ -308,7 +333,7 @@
         {
             var validSteps = _steps
                 .Where(s => !string.IsNullOrWhiteSpace(s.Action))
-                .Select((s, i) => new CreateTestStepTemplateRequest
+                .Select((s, i) => new TestStepFormResult
                 {
                     StepNumber = i + 1,
                     Action = s.Action,
@@ -317,16 +342,16 @@
                 })
                 .ToList();
 
-            var request = new CreateTestCaseTemplateRequest
+            var result = new TestCaseFormResult
             {
                 Title = _formData.Title,
                 Preconditions = _formData.Preconditions,
                 Postconditions = _formData.Postconditions,
                 Priority = _formData.Priority,
-                TestStepTemplates = validSteps
+                Steps = validSteps
             };
 
-            await OnSave.InvokeAsync(request);
+            await OnSave.InvokeAsync(result);
         }
         finally
         {

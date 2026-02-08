@@ -1,5 +1,6 @@
 @page "/projects/{Id:int}"
 @using Testify.Client.Features.Kanban.Pages
+@using Testify.Client.Features.TestSuites.Components
 @using Testify.Shared.DTOs.Projects
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Features.Projects.Components
@@ -85,6 +86,14 @@
                 @* Tab Strategy (Test Plans) *@
                 @if (currentUserRole == ProjectRole.Tester || currentUserRole == ProjectRole.PM)
                 {
+                    <button @onclick='() => activeTab = "Test Suites"'
+                            class="@(activeTab == "Test Suites" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3" />
+                        </svg>
+                        Test Suites
+                    </button>
+
                     <button @onclick='() => activeTab = "Strategy"'
                             class="@(activeTab == "Strategy" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -133,6 +142,10 @@
                 else if (activeTab == "Milestones")
                 {
                     <MilestoneManager ProjectId="Id" />
+                }
+                else if (activeTab == "Test Suites")
+                {
+                    <TestSuitesTab ProjectId="@Id" />
                 }
                 else if (activeTab == "Strategy")
                 {

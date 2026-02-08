@@ -1,0 +1,372 @@
+@using Testify.Client.Features.TestTemplates.Components
+@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs
+@using Testify.Shared.DTOs.TestSuites
+@using Testify.Shared.Enums
+
+<div class="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div class="flex items-center gap-4">
+            <button @onclick="OnBack"
+                    class="p-3 bg-white hover:bg-slate-50 rounded-2xl border border-slate-100 shadow-sm transition-all text-slate-400 hover:text-slate-800 active:scale-95 cursor-pointer">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
+                </svg>
+            </button>
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="bg-blue-500 text-white px-3 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                        Project Suite
+                    </span>
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">TS-@Suite.Id</span>
+                    @if (Suite.SourceTemplateId.HasValue)
+                    {
+                        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Cloned from template</span>
+                    }
+                </div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight">@Suite.Name</h2>
+                @if (!string.IsNullOrWhiteSpace(Suite.Description))
+                {
+                    <p class="text-sm font-medium text-slate-400 mt-1">@Suite.Description</p>
+                }
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button @onclick="OnAddMarkdownCase"
+                    class="bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-100 transition-all border border-slate-100 cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
+                </svg>
+                Markdown
+            </button>
+            <button @onclick="OnAddTestCase"
+                    class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-100 transition-all border border-blue-100 cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Add Test Case
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Cases</p>
+                <h4 class="text-lg font-black text-slate-800">@Suite.TestCases.Count</h4>
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center">
+                <svg class="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">High Priority</p>
+                <h4 class="text-lg font-black text-slate-800">@Suite.TestCases.Count(c => c.Priority == TestCasePriority.High)</h4>
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center">
+                <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Medium</p>
+                <h4 class="text-lg font-black text-slate-800">@Suite.TestCases.Count(c => c.Priority == TestCasePriority.Medium)</h4>
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div class="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center">
+                <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Low</p>
+                <h4 class="text-lg font-black text-slate-800">@Suite.TestCases.Count(c => c.Priority == TestCasePriority.Low)</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Cases List -->
+    <div class="space-y-3">
+        @if (Suite.TestCases.Count == 0)
+        {
+            <div class="py-20 flex flex-col items-center justify-center text-center bg-white/40 rounded-[48px] border-2 border-dashed border-slate-100">
+                <svg class="w-12 h-12 text-slate-200 mb-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3" />
+                </svg>
+                <h5 class="text-xl font-black text-slate-400">No Test Cases</h5>
+                <p class="text-slate-300 text-sm font-medium mt-1 max-w-xs">Add test cases to this suite manually or via markdown import.</p>
+                <button @onclick="OnAddTestCase"
+                        class="mt-6 px-8 py-3 bg-[#1C1D2A] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-lg cursor-pointer">
+                    Add First Case
+                </button>
+            </div>
+        }
+        else
+        {
+            @foreach (var tc in Suite.TestCases)
+            {
+                <div class="bg-white p-6 rounded-[32px] border border-slate-50 shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all group flex items-center justify-between">
+                    <div class="flex items-center gap-5 flex-1 min-w-0">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 @GetPriorityBgClass(tc.Priority)">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <h5 class="text-[15px] font-black text-slate-800 group-hover:text-[#7E96E1] transition-colors truncate">@tc.Title</h5>
+                            <div class="flex items-center gap-3 mt-1.5">
+                                <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">TC-@tc.Id</span>
+                                <div class="w-1 h-1 bg-slate-200 rounded-full"></div>
+                                <span class="text-[10px] font-black uppercase tracking-widest @GetPriorityTextClass(tc.Priority)">@tc.Priority</span>
+                                <div class="w-1 h-1 bg-slate-200 rounded-full"></div>
+                                <span class="text-[10px] font-bold text-slate-300">@tc.TestSteps.Count steps</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 ml-4">
+                        <button @onclick="() => OnEditTestCase(tc)"
+                                @onclick:stopPropagation="true"
+                                class="p-2 text-slate-300 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            </svg>
+                        </button>
+                        <button @onclick="() => OnDeleteTestCase(tc.Id)"
+                                @onclick:stopPropagation="true"
+                                class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @* ── Test Case Form (shared with Templates) ── *@
+    @if (_isTestCaseFormOpen)
+    {
+        <TestCaseForm
+            ParentSuiteId="Suite.Id"
+            InitialData="_editFormData"
+            OnClose="CloseTestCaseForm"
+            OnSave="HandleSaveTestCase" />
+    }
+
+    @if (_isMarkdownImportOpen)
+    {
+        <MarkdownImportModal
+            SuiteTemplateId="Suite.Id"
+            OnClose="CloseMarkdownImport"
+            OnImport="HandleImportTestCase" />
+    }
+
+    @* ── Delete Confirm ── *@
+    @if (_deleteConfirmId.HasValue)
+    {
+        <div class="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @onclick="() => _deleteConfirmId = null"></div>
+            <div class="relative bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full space-y-6 animate-in zoom-in-95 duration-200">
+                <div class="text-center">
+                    <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-7 h-7 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-black text-slate-800">Delete Test Case?</h3>
+                    <p class="text-sm text-slate-400 mt-1">This action cannot be undone.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button @onclick="() => _deleteConfirmId = null"
+                            class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all cursor-pointer">
+                        Cancel
+                    </button>
+                    <button @onclick="ConfirmDelete"
+                            class="flex-1 py-3 bg-red-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-600 transition-all cursor-pointer">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public TestSuiteResponse Suite { get; set; } = default!;
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnReload { get; set; }
+
+    [Inject] private ITestCaseService TestCaseService { get; set; } = default!;
+
+    private bool _isTestCaseFormOpen;
+    private bool _isMarkdownImportOpen;
+    private int? _deleteConfirmId;
+    private int? _editingCaseId;
+    private TestCaseFormResult? _editFormData;
+    private string? _errorMessage;
+
+    private void OnAddTestCase()
+    {
+        _editingCaseId = null;
+        _editFormData = null;
+        _isTestCaseFormOpen = true;
+    }
+
+    private void OnEditTestCase(TestCaseResponse tc)
+    {
+        _editingCaseId = tc.Id;
+        _editFormData = new TestCaseFormResult
+        {
+            Title = tc.Title,
+            Preconditions = tc.Preconditions,
+            Postconditions = tc.Postconditions,
+            Priority = tc.Priority,
+            Steps = tc.TestSteps.Select(s => new TestStepFormResult
+            {
+                StepNumber = s.StepNumber,
+                Action = s.Action,
+                TestData = s.TestData,
+                ExpectedResult = s.ExpectedResult
+            }).ToList()
+        };
+        _isTestCaseFormOpen = true;
+    }
+
+    private void CloseTestCaseForm()
+    {
+        _isTestCaseFormOpen = false;
+        _editingCaseId = null;
+        _editFormData = null;
+    }
+
+    private async Task HandleSaveTestCase(TestCaseFormResult formResult)
+    {
+        try
+        {
+            var steps = formResult.Steps.Select(s => new CreateTestStepRequest
+            {
+                StepNumber = s.StepNumber,
+                Action = s.Action,
+                TestData = s.TestData,
+                ExpectedResult = s.ExpectedResult
+            }).ToList();
+
+            if (_editingCaseId.HasValue)
+            {
+                // Update existing
+                var updateRequest = new UpdateTestCaseRequest
+                {
+                    Title = formResult.Title,
+                    Preconditions = formResult.Preconditions,
+                    Postconditions = formResult.Postconditions,
+                    Priority = formResult.Priority,
+                    TestSteps = steps
+                };
+                await TestCaseService.UpdateTestCaseAsync(_editingCaseId.Value, updateRequest);
+            }
+            else
+            {
+                // Create new
+                var createRequest = new CreateTestCaseRequest
+                {
+                    Title = formResult.Title,
+                    Preconditions = formResult.Preconditions,
+                    Postconditions = formResult.Postconditions,
+                    Priority = formResult.Priority,
+                    TestSteps = steps
+                };
+                await TestCaseService.CreateTestCaseAsync(Suite.Id, createRequest);
+            }
+
+            _isTestCaseFormOpen = false;
+            _editingCaseId = null;
+            _editFormData = null;
+            await OnReload.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to save test case. {ex.Message}";
+        }
+    }
+
+    private void OnAddMarkdownCase() => _isMarkdownImportOpen = true;
+    private void CloseMarkdownImport() => _isMarkdownImportOpen = false;
+
+    private async Task HandleImportTestCase(TestCaseFormResult formResult)
+    {
+        var steps = formResult.Steps.Select(s => new CreateTestStepRequest
+        {
+            StepNumber = s.StepNumber,
+            Action = s.Action,
+            TestData = s.TestData,
+            ExpectedResult = s.ExpectedResult
+        }).ToList();
+
+        var request = new CreateTestCaseRequest
+        {
+            Title = formResult.Title,
+            Preconditions = formResult.Preconditions,
+            Postconditions = formResult.Postconditions,
+            Priority = formResult.Priority,
+            TestSteps = steps
+        };
+
+        try
+        {
+            await TestCaseService.CreateTestCaseAsync(Suite.Id, request);
+            _isMarkdownImportOpen = false;
+            await OnReload.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to import test case. {ex.Message}";
+        }
+    }
+
+    private void OnDeleteTestCase(int id) => _deleteConfirmId = id;
+
+    private async Task ConfirmDelete()
+    {
+        if (!_deleteConfirmId.HasValue) return;
+        try
+        {
+            await TestCaseService.DeleteTestCaseAsync(_deleteConfirmId.Value);
+            _deleteConfirmId = null;
+            await OnReload.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to delete test case. {ex.Message}";
+        }
+    }
+
+    private string GetPriorityBgClass(TestCasePriority p) => p switch
+    {
+        TestCasePriority.High => "bg-red-50 text-red-500",
+        TestCasePriority.Medium => "bg-amber-50 text-amber-500",
+        _ => "bg-emerald-50 text-emerald-500"
+    };
+
+    private string GetPriorityTextClass(TestCasePriority p) => p switch
+    {
+        TestCasePriority.High => "text-red-400",
+        TestCasePriority.Medium => "text-amber-400",
+        _ => "text-emerald-400"
+    };
+}

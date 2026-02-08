@@ -1,3 +1,4 @@
+@using Testify.Shared.DTOs
 @using Testify.Shared.DTOs.TestCases
 @using Testify.Shared.Enums
 @using System.Text.RegularExpressions
@@ -251,7 +252,7 @@
     public EventCallback OnClose { get; set; }
 
     [Parameter]
-    public EventCallback<CreateTestCaseTemplateRequest> OnImport { get; set; }
+    public EventCallback<TestCaseFormResult> OnImport { get; set; }
 
     private enum InputTab { Editor, AI }
     private InputTab _activeTab = InputTab.Editor;
@@ -418,11 +419,11 @@ The system should successfully handle the scenario: {_aiPrompt}";
 
     private async Task HandleSave()
     {
-        var request = new CreateTestCaseTemplateRequest
+        var result = new TestCaseFormResult
         {
             Title = _parsedData.Title,
             Priority = _parsedData.Priority,
-            TestStepTemplates = _parsedData.Steps.Select(s => new CreateTestStepTemplateRequest
+            Steps = _parsedData.Steps.Select(s => new TestStepFormResult
             {
                 StepNumber = s.StepNumber,
                 Action = s.Action,
@@ -431,7 +432,7 @@ The system should successfully handle the scenario: {_aiPrompt}";
             }).ToList()
         };
 
-        await OnImport.InvokeAsync(request);
+        await OnImport.InvokeAsync(result);
     }
 
     private string GetPriorityClasses(TestCasePriority priority) => priority switch

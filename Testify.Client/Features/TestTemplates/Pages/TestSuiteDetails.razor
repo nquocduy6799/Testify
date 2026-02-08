@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Testify.Client.Features.TestTemplates.Components
 @using Testify.Client.Interfaces
+@using Testify.Shared.DTOs
 @using Testify.Shared.DTOs.TestCases
 @using Testify.Shared.DTOs.TestTemplates
 @inject ITestSuiteTemplateService TestSuiteTemplateService
@@ -296,7 +297,7 @@ else if (_suite is not null)
     @if (_isTestCaseFormOpen)
     {
         <TestCaseForm 
-            SuiteTemplateId="TestSuiteId"
+            ParentSuiteId="TestSuiteId"
             OnClose="CloseTestCaseForm"
             OnSave="HandleSaveTestCase" />
     }
@@ -418,13 +419,28 @@ else if (_suite is not null)
         _isTestCaseFormOpen = false;
     }
 
-    private async Task HandleSaveTestCase(CreateTestCaseTemplateRequest testCaseRequest)
+    private async Task HandleSaveTestCase(TestCaseFormResult formResult)
     {
         if (_suite is null) return;
 
         try
         {
-            await TestCaseTemplateService.CreateTestCaseTemplateAsync(TestSuiteId, testCaseRequest);
+            var request = new CreateTestCaseTemplateRequest
+            {
+                Title = formResult.Title,
+                Preconditions = formResult.Preconditions,
+                Postconditions = formResult.Postconditions,
+                Priority = formResult.Priority,
+                TestStepTemplates = formResult.Steps.Select(s => new CreateTestStepTemplateRequest
+                {
+                    StepNumber = s.StepNumber,
+                    Action = s.Action,
+                    TestData = s.TestData,
+                    ExpectedResult = s.ExpectedResult
+                }).ToList()
+            };
+
+            await TestCaseTemplateService.CreateTestCaseTemplateAsync(TestSuiteId, request);
             
             // Reload suite to get updated data (and new stats)
             await LoadSuiteAsync();
@@ -446,13 +462,28 @@ else if (_suite is not null)
         _isMarkdownImportOpen = false;
     }
 
-    private async Task HandleImportTestCase(CreateTestCaseTemplateRequest testCaseRequest)
+    private async Task HandleImportTestCase(TestCaseFormResult formResult)
     {
         if (_suite is null) return;
 
         try
         {
-            await TestCaseTemplateService.CreateTestCaseTemplateAsync(TestSuiteId, testCaseRequest);
+            var request = new CreateTestCaseTemplateRequest
+            {
+                Title = formResult.Title,
+                Preconditions = formResult.Preconditions,
+                Postconditions = formResult.Postconditions,
+                Priority = formResult.Priority,
+                TestStepTemplates = formResult.Steps.Select(s => new CreateTestStepTemplateRequest
+                {
+                    StepNumber = s.StepNumber,
+                    Action = s.Action,
+                    TestData = s.TestData,
+                    ExpectedResult = s.ExpectedResult
+                }).ToList()
+            };
+
+            await TestCaseTemplateService.CreateTestCaseTemplateAsync(TestSuiteId, request);
 
             // Reload suite to get updated data
             await LoadSuiteAsync();
