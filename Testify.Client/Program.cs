@@ -34,6 +34,6 @@ builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>(
 
 // Register SignalR for real-time notifications
 builder.Services.AddScoped<NotificationHubService>();
-builder.Services.AddScoped<ConfirmDialogService>();
+builder.Services.AddScoped<ModalService>();
 
 await builder.Build().RunAsync();

@@ -17,7 +17,7 @@
 @inject IMilestoneService MilestoneService
 @inject ITaskAttachmentService TaskAttachmentService
 @inject IProjectService ProjectService
-@inject ConfirmDialogService ConfirmDialogService
+@inject ModalService ModalService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 @attribute [Authorize]
@@ -282,8 +282,11 @@ else
 	private ProjectUserContext? currentUser;
 	private List<TeamMemberResponse> teamMembers = new();
 	private MilestoneResponse activeMilestone = new();
+	private KanbanTaskResponse? editingTask = null;
 	private bool isLoading = true;
 	private string? errorMessage;
+	private bool isEditFormOpen = false;
+
 
 	// UI State
 	private bool isFormOpen = false;
@@ -437,7 +440,7 @@ else
 	private void ViewTaskDetails(KanbanTaskResponse task)
 	{
 		viewingTask = task;
-		menuOpenTaskId = null; // Close menu when viewing details
+		menuOpenTaskId = null; 
 	}
 
 	private void ToggleTaskMenu(int taskId)
@@ -452,22 +455,25 @@ else
 
 	private void HandleEditTask(KanbanTaskResponse task)
 	{
-		// TODO: Implement edit task functionality
-		// You can open a modal or navigate to edit page
-		Console.WriteLine($"Edit task: {task.Id} - {task.Title}");
+		editingTask = task;
+		isEditFormOpen = true;
 		menuOpenTaskId = null;
 	}
 
 	private async Task HandleDeleteTask(int taskId)
 	{
-		Console.WriteLine("Delete button clicked");
-		menuOpenTaskId = null;
+		bool confirmed = await ModalService.ShowConfirmation(
+			"Delete Item",
+			"Are you sure you want to delete this item?"
+		);
 
-		var task = tasks.FirstOrDefault(t => t.Id == taskId);
-		if (task == null) return;
-
-		ConfirmDialogService.ShowDelete(task.Title, async () =>
+		if (confirmed)
 		{
+			menuOpenTaskId = null;
+
+			var task = tasks.FirstOrDefault(t => t.Id == taskId);
+			if (task == null) return;
+
 			try
 			{
 				await KanbanTaskService.DeleteTaskAsync(taskId);
@@ -478,7 +484,7 @@ else
 			{
 				errorMessage = $"Failed to delete task: {ex.Message}";
 			}
-		});
+		}
 	}
 
 	private void EnableReassign(int taskId)

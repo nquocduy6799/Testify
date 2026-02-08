@@ -1,4 +1,4 @@
-﻿@* @using Testify.Client.Shared.Components
+﻿@using Testify.Client.Shared.Components
 @using Testify.Client.Shared.Services
 @inherits LayoutComponentBase
 
@@ -8,76 +8,7 @@
 		@Body
 	</main>
 	<Footer />
-</div> *@
+</div> 
 
 
 
-@inherits LayoutComponentBase
-@inject ConfirmDialogService DialogService
-@using Testify.Client.Shared.Components
-@using Testify.Client.Shared.Services
-@using Testify.Shared.Enums
-@implements IDisposable
-
-<div>
-	<NavMenu /> 
-	<main>
-		@Body
-	</main>
-	<Footer />
-</div>
-
-@* Add the dialog at the end *@
-<ConfirmationDialog @ref="confirmDialog" 
-                    Title="@dialogTitle"
-                    Message="@dialogMessage"
-                    ConfirmText="@dialogConfirmText"
-                    CancelText="@dialogCancelText"
-                    Type="@dialogType"
-                    OnConfirm="@dialogOnConfirm"
-                    OnCancel="@dialogOnCancel" />
-
-@code {
-    private ConfirmationDialog? confirmDialog;
-    private string dialogTitle = "Are you sure?";
-    private string dialogMessage = "This action cannot be undone.";
-    private string dialogConfirmText = "Confirm";
-    private string dialogCancelText = "Cancel";
-    private ConfirmDialogType dialogType = ConfirmDialogType.Danger;
-    private EventCallback dialogOnConfirm;
-    private EventCallback dialogOnCancel;
-
-    protected override void OnInitialized()
-    {
-        DialogService.OnShow += ShowDialog;
-    }
-
-    private void ShowDialog(ConfirmDialogOptions options)
-    {
-        if (confirmDialog != null)
-        {
-            dialogTitle = options.Title;
-            dialogMessage = options.Message;
-            dialogConfirmText = options.ConfirmText;
-            dialogCancelText = options.CancelText;
-            dialogType = options.Type;
-            dialogOnConfirm = EventCallback.Factory.Create(this, async () =>
-            {
-                if (options.OnConfirm != null)
-                    await options.OnConfirm.Invoke();
-            });
-            dialogOnCancel = EventCallback.Factory.Create(this, async () =>
-            {
-                if (options.OnCancel != null)
-                    await options.OnCancel.Invoke();
-            });
-            StateHasChanged();
-            confirmDialog.Show();
-        }
-    }
-
-    public void Dispose()
-    {
-        DialogService.OnShow -= ShowDialog;
-    }
-}

@@ -15,6 +15,7 @@ namespace Testify.Shared.DTOs.KanbanTasks
         [StringLength(255, MinimumLength = 3, ErrorMessage = "Title must be between 3 and 255 characters.")]
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public DateTime? DueDate { get; set; }
 
         public KanbanTaskStatus Status { get; set; }
 
@@ -26,3 +27,5 @@ namespace Testify.Shared.DTOs.KanbanTasks
         public TaskType Type { get; set; }
     }
 }
+
+
