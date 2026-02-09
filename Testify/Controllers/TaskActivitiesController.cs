@@ -20,7 +20,7 @@ namespace Testify.Controllers
         }
 
         // GET: api/TaskActivities/task/5
-        [HttpGet("task/{taskId}")]
+        [HttpGet("activities/{taskId}")]
         public async Task<ActionResult<IEnumerable<TaskActivityResponse>>> GetActivitiesByTaskId(int taskId)
         {
             var activities = await _taskActivityRepository.GetActivitiesByTaskIdAsync(taskId);

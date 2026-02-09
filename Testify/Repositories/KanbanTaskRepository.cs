@@ -5,6 +5,7 @@ using Testify.Interfaces;
 using Testify.Interfaces.Testify.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
 using Testify.Shared.DTOs.Milestones;
+using Testify.Shared.DTOs.TaskActivity;
 using Testify.Shared.DTOs.TaskAttachments;
 using static Testify.Shared.Enums.MilestoneEnum;
 
@@ -39,6 +40,7 @@ namespace Testify.Repositories
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
                 .Include(t => t.Attachments)
+ 
                 .FirstOrDefaultAsync();
 
             return task != null ? MapToResponse(task) : null;
@@ -51,6 +53,7 @@ namespace Testify.Repositories
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
                 .Include(t => t.Attachments)
+                .Include(t => t.Activities)
                 .Select(t => MapToResponse(t))
                 .ToListAsync();
         }
@@ -209,6 +212,18 @@ namespace Testify.Repositories
                     PublicId = a.PublicId ?? string.Empty,
                     FileSize = a.FileSize,
                     ContentType = a.ContentType
+                }).ToList(),
+                Activities = task.Activities.Select(act => new TaskActivityResponse
+                {
+                    Id = act.Id,
+                    KanbanTaskId = act.KanbanTaskId,
+                    FullName = act.FullName,
+                    Action = act.Action,
+                    OldValue = act.OldValue,
+                    NewValue = act.NewValue,
+                    Description = act.Description,
+                    CreatedBy = act.CreatedBy,
+                    CreatedAt = act.CreatedAt
                 }).ToList()
             };
         }

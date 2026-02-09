@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Json;
 using Testify.Client.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
+using Testify.Shared.DTOs.TaskActivity;
 
 namespace Testify.Client.Features.Kanban.Services
 {
@@ -95,6 +96,19 @@ namespace Testify.Client.Features.Kanban.Services
             catch (HttpRequestException)
             {
                 return new List<KanbanTaskResponse>();
+            }
+        }
+
+        async Task<List<TaskActivityResponse>> IKanbanTaskService.GetTaskActivityResponsesAsync(int taskId)
+        {
+            try
+            {
+                var activities = await _httpClient.GetFromJsonAsync<List<TaskActivityResponse>>($"{ApiEndpoint}/activities/{taskId}");
+                return activities ?? new List<TaskActivityResponse>();
+            }
+            catch (HttpRequestException)
+            {
+                return new List<TaskActivityResponse>();
             }
         }
     }

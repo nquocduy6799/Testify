@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Testify.Shared.DTOs.TaskActivity;
 using Testify.Shared.DTOs.TaskAttachments;
 using Testify.Shared.Enums;
 
@@ -33,5 +34,6 @@ namespace Testify.Shared.DTOs.KanbanTasks
 
         public int TestPlanCount { get; set; }
         public List<TaskAttachmentResponse> Attachments { get; set; } = new();
+        public List<TaskActivityResponse> Activities { get; set; } = new();
     }
 }
