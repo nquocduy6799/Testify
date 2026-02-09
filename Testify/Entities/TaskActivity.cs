@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using System.ComponentModel.DataAnnotations;
 using Testify.Data;
 using Testify.Shared.Helpers;
 
@@ -9,8 +10,9 @@ namespace Testify.Entities
         public int Id { get; set; }
 
         [Required]
-        public int TaskId { get; set; }
+        public int KanbanTaskId { get; set; }
         public string UserId { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
         public string Action { get; set; } = string.Empty;
         public string? OldValue { get; set; }
         public string? NewValue { get; set; }
@@ -23,3 +25,4 @@ namespace Testify.Entities
         public virtual ApplicationUser User { get; set; } = null!;
     }
 }
+

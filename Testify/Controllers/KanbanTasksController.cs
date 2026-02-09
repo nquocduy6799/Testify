@@ -52,8 +52,9 @@ namespace Testify.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTask(int id, UpdateKanbanTaskRequest request)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System";
             var userName = User.Identity?.Name ?? "System";
-            var updated = await _kanbanTaskRepository.UpdateTaskAsync(id, request, userName);
+            var updated = await _kanbanTaskRepository.UpdateTaskAsync(id, request, userName, userId);
 
             if (!updated)
             {
@@ -68,9 +69,10 @@ namespace Testify.Controllers
         [HttpPost]
         public async Task<ActionResult<KanbanTaskResponse>> PostTask(CreateKanbanTaskRequest request)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System";
             var userName = User.Identity?.Name ?? "System";
 
-            var task = await _kanbanTaskRepository.CreateTaskAsync(request, userName);
+            var task = await _kanbanTaskRepository.CreateTaskAsync(request, userName, userId);
 
             return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
         }

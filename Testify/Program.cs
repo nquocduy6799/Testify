@@ -19,6 +19,7 @@ using Testify.Client.Shared.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Testify.Interfaces.Testify.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +79,7 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
 builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
 builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
+builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
 
 
 // Register services for server-side

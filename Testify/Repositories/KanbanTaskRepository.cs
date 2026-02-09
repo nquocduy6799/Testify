@@ -2,6 +2,7 @@
 using Testify.Data;
 using Testify.Entities;
 using Testify.Interfaces;
+using Testify.Interfaces.Testify.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
 using Testify.Shared.DTOs.Milestones;
 using Testify.Shared.DTOs.TaskAttachments;
@@ -12,10 +13,12 @@ namespace Testify.Repositories
     public class KanbanTaskRepository : IKanbanTaskRepository
     {
         private readonly ApplicationDbContext _context;
+        private ITaskActivityRepository _taskActivityRepository;
 
-        public KanbanTaskRepository(ApplicationDbContext context)
+        public KanbanTaskRepository(ApplicationDbContext context, ITaskActivityRepository taskActivityRepository)
         {
             _context = context;
+            _taskActivityRepository = taskActivityRepository;
         }
 
         public async Task<IEnumerable<KanbanTaskResponse>> GetTasksByMilestoneIdAsync(int milestoneId)
@@ -52,7 +55,39 @@ namespace Testify.Repositories
                 .ToListAsync();
         }
 
-        public async Task<KanbanTaskResponse> CreateTaskAsync(CreateKanbanTaskRequest request, string userName)
+        //public async Task<KanbanTaskResponse> CreateTaskAsync(CreateKanbanTaskRequest request, string userName)
+        //{
+        //    var task = new KanbanTask
+        //    {
+        //        MilestoneId = request.MilestoneId,
+        //        Title = request.Title,
+        //        Description = request.Description,
+        //        DueDate = request.DueDate,
+        //        Status = request.Status,
+        //        Priority = request.Priority,
+        //        AssigneeId = request.AssigneeId,
+        //        Type = request.Type
+        //    };
+
+        //    task.MarkAsCreated(userName);
+
+        //    _context.KanbanTasks.Add(task);
+        //    await _context.SaveChangesAsync();
+
+        //    // Reload with navigation properties
+        //    await _context.Entry(task)
+        //        .Reference(t => t.Assignee)
+        //        .LoadAsync();
+
+        //    await _context.Entry(task)
+        //        .Collection(t => t.TestPlans)
+        //        .LoadAsync();
+
+        //    return MapToResponse(task);
+        //}
+
+
+        public async Task<KanbanTaskResponse> CreateTaskAsync(CreateKanbanTaskRequest request, string userName, string userId)
         {
             var task = new KanbanTask
             {
@@ -71,6 +106,9 @@ namespace Testify.Repositories
             _context.KanbanTasks.Add(task);
             await _context.SaveChangesAsync();
 
+            // Log task creation activity
+            await _taskActivityRepository.RecordTaskCreationAsync(task, userName, userId);
+
             // Reload with navigation properties
             await _context.Entry(task)
                 .Reference(t => t.Assignee)
@@ -83,8 +121,17 @@ namespace Testify.Repositories
             return MapToResponse(task);
         }
 
-        public async Task<bool> UpdateTaskAsync(int id, UpdateKanbanTaskRequest request, string userName)
+        public async Task<bool> UpdateTaskAsync(int id, UpdateKanbanTaskRequest request, string userName, string userId)
         {
+            // Get the original task state for activity tracking
+            var originalTask = await _context.KanbanTasks
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (originalTask == null || originalTask.IsDeleted)
+                return false;
+
+            // Get the task for updating
             var task = await _context.KanbanTasks.FindAsync(id);
 
             if (task == null || task.IsDeleted)
@@ -102,6 +149,9 @@ namespace Testify.Repositories
             try
             {
                 await _context.SaveChangesAsync();
+
+                await _taskActivityRepository.RecordTaskUpdateAsync(originalTask, task, userName, userId);
+
                 return true;
             }
             catch (DbUpdateConcurrencyException)
