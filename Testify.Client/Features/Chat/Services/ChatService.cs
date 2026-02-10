@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Testify.Client.Interfaces;
 using Testify.Shared.DTOs.Chat;
@@ -105,6 +106,26 @@ namespace Testify.Client.Features.Chat.Services
             catch (HttpRequestException) { return new List<ChatMessageResponse>(); }
         }
 
+        public async Task<(List<ChatMessageResponse> Messages, int TotalCount)> SearchMessagesAsync(int roomId, string query, int skip = 0, int take = 20)
+        {
+            try
+            {
+                var url = $"{ApiEndpoint}/rooms/{roomId}/messages/search?query={Uri.EscapeDataString(query)}&skip={skip}&take={take}";
+                var response = await _httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+                var messages = json.GetProperty("messages").Deserialize<List<ChatMessageResponse>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+                var totalCount = json.GetProperty("totalCount").GetInt32();
+
+                return (messages, totalCount);
+            }
+            catch (HttpRequestException)
+            {
+                return (new List<ChatMessageResponse>(), 0);
+            }
+        }
+
         public async Task<ChatMessageResponse> SendMessageAsync(SendMessageRequest request)
         {
             try
@@ -118,6 +139,42 @@ namespace Testify.Client.Features.Chat.Services
             catch (HttpRequestException ex)
             {
                 throw new InvalidOperationException($"Failed to send message: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<ChatMessageResponse> SendMessageWithAttachmentsAsync(
+            int roomId,
+            string? content,
+            int? parentMessageId,
+            IReadOnlyList<FileUploadItem> files)
+        {
+            try
+            {
+                using var formData = new MultipartFormDataContent();
+                formData.Add(new StringContent(roomId.ToString()), "roomId");
+
+                if (!string.IsNullOrWhiteSpace(content))
+                    formData.Add(new StringContent(content), "content");
+
+                if (parentMessageId.HasValue)
+                    formData.Add(new StringContent(parentMessageId.Value.ToString()), "parentMessageId");
+
+                foreach (var file in files)
+                {
+                    var streamContent = new StreamContent(file.Content);
+                    streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                    formData.Add(streamContent, "files", file.FileName);
+                }
+
+                var response = await _httpClient.PostAsync($"{ApiEndpoint}/messages/with-attachments", formData);
+                response.EnsureSuccessStatusCode();
+
+                var message = await response.Content.ReadFromJsonAsync<ChatMessageResponse>();
+                return message ?? throw new InvalidOperationException("Failed to send message with attachments");
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new InvalidOperationException($"Failed to send message with attachments: {ex.Message}", ex);
             }
         }
 
@@ -194,6 +251,104 @@ namespace Testify.Client.Features.Chat.Services
                 return count;
             }
             catch (HttpRequestException) { return 0; }
+        }
+
+        #endregion
+
+        #region Pinned Messages
+
+        public async Task<ChatPinnedMessageResponse> PinMessageAsync(int roomId, int messageId, string? note = null)
+        {
+            try
+            {
+                var request = new PinMessageRequest { MessageId = messageId, Note = note };
+                var response = await _httpClient.PostAsJsonAsync($"{ApiEndpoint}/rooms/{roomId}/pin", request);
+                response.EnsureSuccessStatusCode();
+
+                var pinned = await response.Content.ReadFromJsonAsync<ChatPinnedMessageResponse>();
+                return pinned ?? throw new InvalidOperationException("Failed to pin message");
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new InvalidOperationException($"Failed to pin message: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<bool> UnpinMessageAsync(int roomId, int messageId)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"{ApiEndpoint}/rooms/{roomId}/pin/{messageId}");
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException) { return false; }
+        }
+
+        public async Task<List<ChatPinnedMessageResponse>> GetPinnedMessagesAsync(int roomId)
+        {
+            try
+            {
+                var pinned = await _httpClient.GetFromJsonAsync<List<ChatPinnedMessageResponse>>($"{ApiEndpoint}/rooms/{roomId}/pinned");
+                return pinned ?? new List<ChatPinnedMessageResponse>();
+            }
+            catch (HttpRequestException) { return new List<ChatPinnedMessageResponse>(); }
+        }
+
+        #endregion
+
+        #region Room Settings
+
+        public async Task<ChatRoomResponse?> UpdateRoomAsync(int roomId, UpdateRoomRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync($"{ApiEndpoint}/rooms/{roomId}", request);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<ChatRoomResponse>();
+            }
+            catch (HttpRequestException) { return null; }
+        }
+
+        public async Task<bool> LeaveRoomAsync(int roomId)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"{ApiEndpoint}/rooms/{roomId}/leave", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException) { return false; }
+        }
+
+        public async Task<List<ChatParticipantResponse>> AddMembersAsync(int roomId, List<string> userIds)
+        {
+            try
+            {
+                var request = new AddMembersRequest { UserIds = userIds };
+                var response = await _httpClient.PostAsJsonAsync($"{ApiEndpoint}/rooms/{roomId}/members", request);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<List<ChatParticipantResponse>>() ?? new();
+            }
+            catch (HttpRequestException) { return new(); }
+        }
+
+        public async Task<bool> RemoveMemberAsync(int roomId, string memberId)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"{ApiEndpoint}/rooms/{roomId}/members/{memberId}");
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException) { return false; }
+        }
+
+        public async Task<bool> ToggleMuteAsync(int roomId)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"{ApiEndpoint}/rooms/{roomId}/mute", null);
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException) { return false; }
         }
 
         #endregion

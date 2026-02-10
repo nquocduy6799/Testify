@@ -43,7 +43,6 @@ namespace Testify.Data
         public DbSet<ChatMessageReaction> ChatMessageReactions { get; set; }
         public DbSet<ChatMessageRead> ChatMessageReads { get; set; }
         public DbSet<ChatPinnedMessage> ChatPinnedMessages { get; set; }
-        public DbSet<ChatNotification> ChatNotifications { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<TaskActivity> TaskActivities { get; set; }
         public DbSet<TaskAttachment> TaskAttachments { get; set; }
@@ -77,6 +76,25 @@ namespace Testify.Data
                 .WithMany(r => r.PinnedMessages)
                 .HasForeignKey(pm => pm.RoomId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<ChatPinnedMessage>()
+                .HasOne(pm => pm.PinnedBy)
+                .WithMany()
+                .HasForeignKey(pm => pm.PinnedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Unique constraints to prevent duplicates
+            builder.Entity<ChatRoomParticipant>()
+                .HasIndex(p => new { p.RoomId, p.UserId })
+                .IsUnique();
+
+            builder.Entity<ChatMessageReaction>()
+                .HasIndex(r => new { r.MessageId, r.UserId, r.Reaction })
+                .IsUnique();
+
+            builder.Entity<ChatMessageRead>()
+                .HasIndex(r => new { r.MessageId, r.UserId })
+                .IsUnique();
 
             // Test Plans - prevent cascade delete conflicts
             builder.Entity<TestPlanSuite>()

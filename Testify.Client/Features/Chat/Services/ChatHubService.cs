@@ -23,6 +23,11 @@ namespace Testify.Client.Features.Chat.Services
         public event Action<int, string, string, string>? OnReactionAdded; // messageId, userId, userName, emoji
         public event Action<int, string, string>? OnReactionRemoved; // messageId, userId, emoji
         public event Action<int, string, string>? OnMessageRead; // messageId, userId, userName
+        public event Action<ChatPinnedMessageResponse>? OnMessagePinned; // pinned message response
+        public event Action<int, int>? OnMessageUnpinned; // roomId, messageId
+        public event Action<ChatRoomResponse>? OnRoomUpdated; // updated room
+        public event Action<int, List<ChatParticipantResponse>>? OnParticipantsAdded; // roomId, added participants
+        public event Action<int, string, string>? OnParticipantRemoved; // roomId, userId, userName
 
         public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
         public int? CurrentRoomId => _currentRoomId;
@@ -52,6 +57,11 @@ namespace Testify.Client.Features.Chat.Services
                 _hubConnection.On<int, string, string, string>("ReactionAdded", (mid, uid, name, emoji) => OnReactionAdded?.Invoke(mid, uid, name, emoji));
                 _hubConnection.On<int, string, string>("ReactionRemoved", (mid, uid, emoji) => OnReactionRemoved?.Invoke(mid, uid, emoji));
                 _hubConnection.On<int, string, string>("MessageRead", (mid, uid, name) => OnMessageRead?.Invoke(mid, uid, name));
+                _hubConnection.On<ChatPinnedMessageResponse>("MessagePinned", (pin) => OnMessagePinned?.Invoke(pin));
+                _hubConnection.On<int, int>("MessageUnpinned", (roomId, messageId) => OnMessageUnpinned?.Invoke(roomId, messageId));
+                _hubConnection.On<ChatRoomResponse>("RoomUpdated", (room) => OnRoomUpdated?.Invoke(room));
+                _hubConnection.On<int, List<ChatParticipantResponse>>("ParticipantsAdded", (roomId, participants) => OnParticipantsAdded?.Invoke(roomId, participants));
+                _hubConnection.On<int, string, string>("ParticipantRemoved", (roomId, userId, userName) => OnParticipantRemoved?.Invoke(roomId, userId, userName));
 
                 _hubConnection.Reconnected += async _ =>
                 {
@@ -61,6 +71,7 @@ namespace Testify.Client.Features.Chat.Services
 
                 _hubConnection.Closed += async _ =>
                 {
+                    _hubConnection = null;
                     await Task.Delay(5000);
                     await StartAsync();
                 };
@@ -76,9 +87,16 @@ namespace Testify.Client.Features.Chat.Services
         public async Task StopAsync()
         {
             if (_hubConnection == null) return;
-            if (_currentRoomId.HasValue)
-                await LeaveRoomAsync(_currentRoomId.Value);
-            await _hubConnection.StopAsync();
+            try
+            {
+                if (_currentRoomId.HasValue)
+                    await LeaveRoomAsync(_currentRoomId.Value);
+                await _hubConnection.StopAsync();
+            }
+            finally
+            {
+                _hubConnection = null;
+            }
         }
 
         #region Room Management
@@ -138,7 +156,15 @@ namespace Testify.Client.Features.Chat.Services
         {
             if (_hubConnection != null)
             {
+                try
+                {
+                    if (_currentRoomId.HasValue && _hubConnection.State == HubConnectionState.Connected)
+                        await _hubConnection.InvokeAsync("LeaveRoom", _currentRoomId.Value);
+                }
+                catch { }
                 await _hubConnection.DisposeAsync();
+                _hubConnection = null;
+                _currentRoomId = null;
             }
         }
     }

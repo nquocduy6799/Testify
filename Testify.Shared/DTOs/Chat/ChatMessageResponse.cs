@@ -36,5 +36,8 @@ namespace Testify.Shared.DTOs.Chat
 
         [JsonPropertyName("parentMessage")]
         public ChatMessageResponse? ParentMessage { get; set; }
+
+        [JsonPropertyName("isPinned")]
+        public bool IsPinned { get; set; }
     }
 }

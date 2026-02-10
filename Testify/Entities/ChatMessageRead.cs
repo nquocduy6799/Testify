@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Testify.Data;
+﻿using Testify.Data;
 using Testify.Shared.Helpers;
 
 namespace Testify.Entities

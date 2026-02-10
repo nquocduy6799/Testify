@@ -6,28 +6,28 @@ namespace Testify.Services
 {
     public class UserPresenceService : IUserPresenceService
     {
-        private readonly ConcurrentDictionary<string, HashSet<string>> _userConnections = new();
+        private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _userConnections = new();
 
         public void AddConnection(string userId, string connectionId)
         {
             _userConnections.AddOrUpdate(
                 userId,
-                new HashSet<string> { connectionId },
-                (_, existing) => { existing.Add(connectionId); return existing; });
+                _ => new ConcurrentDictionary<string, byte>(new[] { new KeyValuePair<string, byte>(connectionId, 0) }),
+                (_, existing) => { existing.TryAdd(connectionId, 0); return existing; });
         }
 
         public void RemoveConnection(string userId, string connectionId)
         {
             if (!_userConnections.TryGetValue(userId, out var connections))
                 return;
-            connections.Remove(connectionId);
-            if (connections.Count == 0)
+            connections.TryRemove(connectionId, out _);
+            if (connections.IsEmpty)
                 _userConnections.TryRemove(userId, out _);
         }
 
         public bool IsOnline(string userId)
         {
-            return _userConnections.ContainsKey(userId) && _userConnections[userId].Count > 0;
+            return _userConnections.TryGetValue(userId, out var connections) && !connections.IsEmpty;
         }
 
         public IReadOnlyList<string> GetOnlineUserIds()

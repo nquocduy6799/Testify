@@ -1,8 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Testify.Data;
 using Testify.Entities;
 using Testify.Interfaces;
@@ -35,6 +31,7 @@ namespace Testify.Repositories
                 .Include(r => r.Project)
                 .Where(r => !r.IsArchived && r.Participants.Any(p => p.UserId == userId))
                 .OrderByDescending(r => r.LastActivityAt)
+                .AsSplitQuery()
                 .ToListAsync();
 
             // Batch compute unread counts to avoid N+1 queries
@@ -159,6 +156,75 @@ namespace Testify.Repositories
             return await CreateChatRoomAsync(request, userId1);
         }
 
+        public async Task<ChatRoomResponse?> UpdateRoomAsync(int roomId, UpdateRoomRequest request, string currentUserId)
+        {
+            var room = await _context.Set<ChatRoom>()
+                .FirstOrDefaultAsync(r => r.Id == roomId);
+            if (room == null) return null;
+
+            // Only group/project rooms can be renamed
+            if (room.RoomType == ChatRoomType.Private) return null;
+
+            if (!string.IsNullOrWhiteSpace(request.RoomName))
+            {
+                room.RoomName = request.RoomName.Trim();
+            }
+
+            room.UpdatedAt = DateTimeHelper.GetVietnamTime();
+            room.UpdatedBy = currentUserId;
+            await _context.SaveChangesAsync();
+
+            return await GetChatRoomByIdAsync(roomId);
+        }
+
+        public async Task<bool> LeaveRoomAsync(int roomId, string userId)
+        {
+            var room = await _context.Set<ChatRoom>()
+                .Include(r => r.Participants)
+                .FirstOrDefaultAsync(r => r.Id == roomId);
+            if (room == null) return false;
+
+            // Can't leave a private (1-1) room
+            if (room.RoomType == ChatRoomType.Private) return false;
+
+            var participant = room.Participants.FirstOrDefault(p => p.UserId == userId);
+            if (participant == null) return false;
+
+            _context.Set<ChatRoomParticipant>().Remove(participant);
+
+            // If user was owner, transfer ownership to next admin or oldest member
+            if (participant.Role == ChatParticipantRole.Owner)
+            {
+                var remaining = room.Participants.Where(p => p.UserId != userId).OrderBy(p => p.JoinedAt).ToList();
+                var nextOwner = remaining.FirstOrDefault(p => p.Role == ChatParticipantRole.Admin) ?? remaining.FirstOrDefault();
+                if (nextOwner != null)
+                {
+                    nextOwner.Role = ChatParticipantRole.Owner;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ToggleMuteAsync(int roomId, string userId)
+        {
+            var participant = await _context.Set<ChatRoomParticipant>()
+                .FirstOrDefaultAsync(p => p.RoomId == roomId && p.UserId == userId);
+            if (participant == null) return false;
+
+            participant.IsMuted = !participant.IsMuted;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<ChatParticipantRole?> GetUserRoleInRoomAsync(int roomId, string userId)
+        {
+            var participant = await _context.Set<ChatRoomParticipant>()
+                .FirstOrDefaultAsync(p => p.RoomId == roomId && p.UserId == userId);
+            return participant?.Role;
+        }
+
         #endregion
 
         #region Messages
@@ -174,13 +240,45 @@ namespace Testify.Repositories
                     .ThenInclude(r => r.User)
                 .Include(m => m.ParentMessage)
                     .ThenInclude(pm => pm.User)
+                .Include(m => m.PinnedInRooms)
                 .Where(m => m.RoomId == roomId)
                 .OrderByDescending(m => m.CreatedAt)
                 .Skip(skip)
                 .Take(take)
+                .AsSplitQuery()
                 .ToListAsync();
 
             return messages.Select(MapToMessageResponse).Reverse().ToList();
+        }
+
+        public async Task<(List<ChatMessageResponse> Messages, int TotalCount)> SearchMessagesAsync(int roomId, string query, int skip = 0, int take = 20)
+        {
+            var normalizedQuery = query.Trim().ToLower();
+
+            var baseQuery = _context.Set<ChatMessage>()
+                .Where(m => m.RoomId == roomId && !m.IsDeleted)
+                .Where(m => EF.Functions.Like(m.Content.ToLower(), $"%{normalizedQuery}%")
+                          || m.Attachments.Any(a => EF.Functions.Like(a.FileName.ToLower(), $"%{normalizedQuery}%")));
+
+            var totalCount = await baseQuery.CountAsync();
+
+            var messages = await baseQuery
+                .Include(m => m.User)
+                .Include(m => m.Attachments)
+                .Include(m => m.Reactions)
+                    .ThenInclude(r => r.User)
+                .Include(m => m.Reads)
+                    .ThenInclude(r => r.User)
+                .Include(m => m.ParentMessage)
+                    .ThenInclude(pm => pm!.User)
+                .Include(m => m.PinnedInRooms)
+                .OrderByDescending(m => m.CreatedAt)
+                .Skip(skip)
+                .Take(take)
+                .AsSplitQuery()
+                .ToListAsync();
+
+            return (messages.Select(MapToMessageResponse).ToList(), totalCount);
         }
 
         public async Task<ChatMessageResponse> SendMessageAsync(SendMessageRequest request, string currentUserId)
@@ -215,6 +313,7 @@ namespace Testify.Repositories
                 .Include(m => m.Reads)
                 .Include(m => m.ParentMessage)
                     .ThenInclude(pm => pm.User)
+                .AsSplitQuery()
                 .FirstAsync(m => m.Id == message.Id);
 
             return MapToMessageResponse(savedMessage);
@@ -226,6 +325,52 @@ namespace Testify.Repositories
             return message?.RoomId;
         }
 
+        public async Task<ChatMessageResponse> SendMessageWithAttachmentsAsync(SendMessageRequest request, string currentUserId, List<ChatMessageAttachment> attachments)
+        {
+            var message = new ChatMessage
+            {
+                RoomId = request.RoomId,
+                UserId = currentUserId,
+                MessageType = request.MessageType,
+                Content = request.Content,
+                ParentMessageId = request.ParentMessageId
+            };
+
+            message.MarkAsCreated(currentUserId);
+
+            _context.Set<ChatMessage>().Add(message);
+            await _context.SaveChangesAsync();
+
+            // Link attachments to the saved message
+            foreach (var attachment in attachments)
+            {
+                attachment.MessageId = message.Id;
+                _context.Set<ChatMessageAttachment>().Add(attachment);
+            }
+
+            // Update room's last activity
+            var room = await _context.Set<ChatRoom>().FindAsync(request.RoomId);
+            if (room != null)
+            {
+                room.LastActivityAt = DateTimeHelper.GetVietnamTime();
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Reload with includes
+            var savedMessage = await _context.Set<ChatMessage>()
+                .Include(m => m.User)
+                .Include(m => m.Attachments)
+                .Include(m => m.Reactions)
+                .Include(m => m.Reads)
+                .Include(m => m.ParentMessage)
+                    .ThenInclude(pm => pm!.User)
+                .AsSplitQuery()
+                .FirstAsync(m => m.Id == message.Id);
+
+            return MapToMessageResponse(savedMessage);
+        }
+
         public async Task<bool> DeleteMessageAsync(int messageId, string currentUserId)
         {
             var message = await _context.Set<ChatMessage>().FindAsync(messageId);
@@ -234,7 +379,7 @@ namespace Testify.Repositories
                 return false;
 
             message.IsDeleted = true;
-            message.Content = "Đã thu hồi";
+            message.Content = "The message has been withdrawn.";
             message.MarkAsUpdated(currentUserId);
 
             await _context.SaveChangesAsync();
@@ -252,6 +397,7 @@ namespace Testify.Repositories
                     .ThenInclude(r => r.User)
                 .Include(m => m.ParentMessage)
                     .ThenInclude(pm => pm!.User)
+                .Include(m => m.PinnedInRooms)
                 .FirstOrDefaultAsync(m => m.Id == messageId);
 
             if (message == null || message.UserId != currentUserId)
@@ -263,6 +409,12 @@ namespace Testify.Repositories
             await _context.SaveChangesAsync();
 
             return MapToMessageResponse(message);
+        }
+
+        public async Task<ChatMessageAttachment?> GetAttachmentByIdAsync(int attachmentId)
+        {
+            return await _context.Set<ChatMessageAttachment>()
+                .FirstOrDefaultAsync(a => a.Id == attachmentId);
         }
 
         #endregion
@@ -336,7 +488,11 @@ namespace Testify.Repositories
 
             if (participant != null)
             {
-                participant.LastReadMessageId = messageId;
+                // Only advance LastReadMessageId forward, never regress
+                if (!participant.LastReadMessageId.HasValue || messageId > participant.LastReadMessageId.Value)
+                {
+                    participant.LastReadMessageId = messageId;
+                }
             }
 
             await _context.SaveChangesAsync();
@@ -481,7 +637,7 @@ namespace Testify.Repositories
                 IsArchived = room.IsArchived,
                 CreatedAt = room.CreatedAt,
                 CreatedBy = room.CreatedByUserId,
-                LastMessage = lastMessage != null ? (lastMessage.IsDeleted ? "Đã thu hồi" : lastMessage.Content) : null,
+                LastMessage = lastMessage != null ? (lastMessage.IsDeleted ? "The message has been withdrawn." : lastMessage.Content) : null,
                 LastMessageSender = lastMessage?.User?.UserName,
                 LastMessageTime = lastMessage?.CreatedAt,
                 Participants = room.Participants?.Select(p => new ChatParticipantResponse
@@ -568,10 +724,102 @@ namespace Testify.Repositories
                     Id = message.ParentMessage.Id,
                     UserId = message.ParentMessage.UserId,
                     UserName = message.ParentMessage.User?.UserName ?? "",
-                    Content = message.ParentMessage.IsDeleted ? "[Đã thu hồi]" : message.ParentMessage.Content,
+                    Content = message.ParentMessage.IsDeleted ? "[The message has been withdrawn.]" : message.ParentMessage.Content,
                     IsDeleted = message.ParentMessage.IsDeleted,
                     CreatedAt = message.ParentMessage.CreatedAt
-                } : null
+                } : null,
+                IsPinned = message.PinnedInRooms?.Any() ?? false
+            };
+        }
+
+        #endregion
+
+        #region Pinned Messages
+
+        public async Task<ChatPinnedMessageResponse> PinMessageAsync(int roomId, int messageId, string userId, string? note)
+        {
+            // Check if already pinned
+            var existing = await _context.Set<ChatPinnedMessage>()
+                .FirstOrDefaultAsync(p => p.RoomId == roomId && p.MessageId == messageId);
+
+            if (existing != null)
+                throw new InvalidOperationException("Message is already pinned in this room.");
+
+            var pinnedMessage = new ChatPinnedMessage
+            {
+                RoomId = roomId,
+                MessageId = messageId,
+                PinnedByUserId = userId,
+                Note = note
+            };
+
+            _context.Set<ChatPinnedMessage>().Add(pinnedMessage);
+            await _context.SaveChangesAsync();
+
+            // Reload with navigation properties
+            var result = await _context.Set<ChatPinnedMessage>()
+                .Include(p => p.PinnedBy)
+                .Include(p => p.Message)
+                    .ThenInclude(m => m.User)
+                .Include(p => p.Message)
+                    .ThenInclude(m => m.Attachments)
+                .Include(p => p.Message)
+                    .ThenInclude(m => m.Reactions)
+                        .ThenInclude(r => r.User)
+                .FirstAsync(p => p.Id == pinnedMessage.Id);
+
+            return MapToPinnedMessageResponse(result);
+        }
+
+        public async Task<bool> UnpinMessageAsync(int roomId, int messageId, string userId)
+        {
+            var pinned = await _context.Set<ChatPinnedMessage>()
+                .FirstOrDefaultAsync(p => p.RoomId == roomId && p.MessageId == messageId);
+
+            if (pinned == null) return false;
+
+            _context.Set<ChatPinnedMessage>().Remove(pinned);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<ChatPinnedMessageResponse>> GetPinnedMessagesAsync(int roomId)
+        {
+            var pinned = await _context.Set<ChatPinnedMessage>()
+                .Include(p => p.PinnedBy)
+                .Include(p => p.Message)
+                    .ThenInclude(m => m.User)
+                .Include(p => p.Message)
+                    .ThenInclude(m => m.Attachments)
+                .Include(p => p.Message)
+                    .ThenInclude(m => m.Reactions)
+                        .ThenInclude(r => r.User)
+                .Where(p => p.RoomId == roomId)
+                .OrderByDescending(p => p.PinnedAt)
+                .AsSplitQuery()
+                .ToListAsync();
+
+            return pinned.Select(MapToPinnedMessageResponse).ToList();
+        }
+
+        public async Task<bool> IsMessagePinnedAsync(int roomId, int messageId)
+        {
+            return await _context.Set<ChatPinnedMessage>()
+                .AnyAsync(p => p.RoomId == roomId && p.MessageId == messageId);
+        }
+
+        private ChatPinnedMessageResponse MapToPinnedMessageResponse(ChatPinnedMessage pin)
+        {
+            return new ChatPinnedMessageResponse
+            {
+                Id = pin.Id,
+                RoomId = pin.RoomId,
+                MessageId = pin.MessageId,
+                PinnedByUserId = pin.PinnedByUserId,
+                PinnedByUserName = pin.PinnedBy?.UserName ?? "",
+                PinnedAt = pin.PinnedAt,
+                Note = pin.Note,
+                Message = MapToMessageResponse(pin.Message)
             };
         }
 

@@ -12,6 +12,7 @@ using Testify.Data;
 using Testify.Interfaces;
 using Testify.Repositories;
 using Testify.Hubs;
+using Testify.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +69,11 @@ builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
+
+// File upload settings and storage
+builder.Services.Configure<FileUploadSettings>(
+    builder.Configuration.GetSection(FileUploadSettings.SectionName));
+builder.Services.AddSingleton<IFileStorageService, Testify.Services.LocalFileStorageService>();
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();
