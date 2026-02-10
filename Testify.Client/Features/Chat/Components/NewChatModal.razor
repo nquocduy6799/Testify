@@ -1,0 +1,156 @@
+@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs.Chat
+@inject IChatService ChatService
+
+@if (IsVisible)
+{
+    <div class="fixed inset-0 z-[200] flex items-center justify-center p-6">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" @onclick="Close"></div>
+        <div class="relative flex w-full max-w-md max-h-[80vh] flex-col overflow-hidden rounded-[48px] bg-white shadow-2xl" @onclick:stopPropagation="true">
+            <div class="flex items-start justify-between border-b border-slate-50 bg-slate-50/50 p-6 flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E85D3F] text-white shadow-lg">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-slate-800">New Chat</h2>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Choose a person to message</p>
+                    </div>
+                </div>
+                <button type="button" @onclick="Close" class="rounded-2xl p-2 text-slate-400 hover:bg-slate-100 transition-all cursor-pointer">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="p-4 border-b border-slate-50 flex-shrink-0">
+                <div class="relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <input type="text"
+                           value="@searchQuery"
+                           @oninput="OnSearchInput"
+                           placeholder="Search by name or email..."
+                           class="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20 border border-slate-100" />
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-1 min-h-0">
+                @if (isLoadingUsers)
+                {
+                    <div class="flex items-center justify-center py-12">
+                        <div class="h-8 w-8 animate-spin rounded-full border-2 border-[#E85D3F] border-t-transparent"></div>
+                    </div>
+                }
+                else if (users.Any())
+                {
+                    @foreach (var user in users)
+                    {
+                        <button type="button"
+                                @onclick="() => SelectUser(user)"
+                                class="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-slate-50 transition-all text-left">
+                            @if (!string.IsNullOrEmpty(user.AvatarUrl))
+                            {
+                                <img src="@user.AvatarUrl" class="w-11 h-11 rounded-xl object-cover flex-shrink-0" alt="" />
+                            }
+                            else
+                            {
+                                <div class="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-sm flex-shrink-0">
+                                    @GetInitials(user.FullName ?? user.UserName)
+                                </div>
+                            }
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-slate-800 text-sm truncate">@(user.FullName ?? user.UserName)</p>
+                                @if (!string.IsNullOrEmpty(user.Email))
+                                {
+                                    <p class="text-[11px] text-slate-400 truncate">@user.Email</p>
+                                }
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-300 flex-shrink-0">
+                                <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                            </svg>
+                        </button>
+                    }
+                }
+                else
+                {
+                    <div class="text-center py-12">
+                        <p class="text-sm text-slate-400">@(string.IsNullOrWhiteSpace(searchQuery) ? "No other users found." : "No matching users.")</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnCloseRequested { get; set; }
+    [Parameter] public EventCallback<ChatUserItemResponse> OnUserSelected { get; set; }
+
+    private string searchQuery = string.Empty;
+    private List<ChatUserItemResponse> users = new();
+    private bool isLoadingUsers = false;
+    private System.Threading.CancellationTokenSource? _searchCts;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible)
+        {
+            searchQuery = string.Empty;
+            await LoadUsersAsync(null);
+        }
+    }
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? string.Empty;
+        _searchCts?.Cancel();
+        _searchCts = new System.Threading.CancellationTokenSource();
+        try
+        {
+            await Task.Delay(300, _searchCts.Token);
+            await LoadUsersAsync(string.IsNullOrWhiteSpace(searchQuery) ? null : searchQuery.Trim());
+        }
+        catch (System.Threading.Tasks.TaskCanceledException) { }
+    }
+
+    private async Task LoadUsersAsync(string? search)
+    {
+        isLoadingUsers = true;
+        StateHasChanged();
+        try
+        {
+            users = await ChatService.GetUsersForChatAsync(search);
+        }
+        finally
+        {
+            isLoadingUsers = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectUser(ChatUserItemResponse user)
+    {
+        await OnUserSelected.InvokeAsync(user);
+        await Close();
+    }
+
+    private async Task Close()
+    {
+        await OnCloseRequested.InvokeAsync();
+    }
+
+    private static string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+        return parts[0][..1].ToUpperInvariant();
+    }
+}

@@ -67,6 +67,7 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -74,12 +75,15 @@ builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
 builder.Services.AddScoped<IMilestoneService, MilestoneService>();
 builder.Services.AddScoped<INotificationService, ServerNotificationRepository>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<IChatService, Testify.Client.Features.Chat.Services.ChatService>();
+builder.Services.AddScoped<Testify.Client.Features.Chat.Services.ChatHubService>();
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();
 
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<Testify.Interfaces.IUserPresenceService, Testify.Services.UserPresenceService>();
 
 var app = builder.Build();
 
@@ -123,6 +127,7 @@ app.MapControllers();
 
 // Map SignalR Hub
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

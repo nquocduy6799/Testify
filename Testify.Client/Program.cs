@@ -27,9 +27,11 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
+builder.Services.AddScoped<IChatService, Testify.Client.Features.Chat.Services.ChatService>();
 
 
 // Register SignalR for real-time notifications
 builder.Services.AddScoped<NotificationHubService>();
+builder.Services.AddScoped<Testify.Client.Features.Chat.Services.ChatHubService>();
 
 await builder.Build().RunAsync();

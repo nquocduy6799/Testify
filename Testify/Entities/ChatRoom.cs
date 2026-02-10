@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Testify.Data;
 using Testify.Shared.Enums;
+using Testify.Shared.Helpers;
 
 namespace Testify.Entities
 {
@@ -13,7 +14,7 @@ namespace Testify.Entities
         public ChatRoomType RoomType { get; set; } = ChatRoomType.Private;
         public int? ProjectId { get; set; }
         public string CreatedByUserId { get; set; } = string.Empty;
-        public DateTime LastActivityAt { get; set; } = DateTime.Now;
+        public DateTime LastActivityAt { get; set; } = DateTimeHelper.GetVietnamTime();
         public bool IsArchived { get; set; } = false;
 
         // Navigation properties

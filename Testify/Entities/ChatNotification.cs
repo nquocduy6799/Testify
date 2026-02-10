@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Testify.Data;
 using Testify.Shared.Enums;
+using Testify.Shared.Helpers;
 
 namespace Testify.Entities
 {
@@ -14,7 +15,7 @@ namespace Testify.Entities
         public int? MessageId { get; set; }
         public NotificationType NotificationType { get; set; } = NotificationType.NewMessage;
         public bool IsRead { get; set; } = false;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTimeHelper.GetVietnamTime();
 
         // Navigation properties
         public virtual ApplicationUser User { get; set; } = null!;

@@ -1,0 +1,1292 @@
+@page "/messages"
+@using Microsoft.AspNetCore.Authorization
+@using Testify.Client.Interfaces
+@using Testify.Client.Features.Chat.Components
+@using Testify.Client.Features.Chat.Services
+@using Testify.Client.Shared.Services
+@using Testify.Shared.DTOs.Chat
+@using Testify.Shared.Enums
+@using System.Threading
+@inject IChatService ChatService
+@inject IServiceProvider ServiceProvider
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveWebAssembly
+@attribute [Authorize]
+@implements IAsyncDisposable
+
+<PageTitle>Messages - Testify</PageTitle>
+
+@if (isLoading)
+{
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-[#E85D3F]"></div>
+    </div>
+}
+else
+{
+    <div class="max-w-[1400px] mx-auto px-6 h-[calc(100vh-160px)] flex gap-8">
+        @* Sidebar *@
+        <div class="w-80 flex flex-col gap-6 h-full">
+            <div class="bg-white rounded-[40px] p-6 border border-slate-100 shadow-sm flex flex-col h-full overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-black text-slate-800">Messages</h2>
+                    <div class="flex gap-1">
+                        <button @onclick="OpenCreateGroupModal" class="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all text-slate-600" title="Create group">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </button>
+                        <button @onclick="OpenNewChatDialog" class="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all text-[#E85D3F]" title="Chat mới">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12h14"/><path d="M12 5v14"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <input 
+                        type="text" 
+                        value="@searchQuery"
+                        @oninput="OnSearchQueryInput"
+                        placeholder="Find people or channels"
+                        class="w-full pl-11 pr-4 py-3 bg-slate-50 rounded-2xl text-xs font-bold focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-100 transition-all"
+                    />
+                </div>
+
+                <div class="flex-1 overflow-y-auto no-scrollbar space-y-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-2">Recent Chats</p>
+                    
+                    @if (filteredRooms.Any())
+                    {
+                        @foreach (var room in filteredRooms)
+                        {
+                            <button
+                                @onclick="() => SelectRoom(room.Id)"
+                                class="@GetRoomButtonClass(room.Id) w-full flex items-center gap-3 p-3 rounded-3xl transition-all relative group text-left"
+                            >
+                                <div class="relative flex-shrink-0">
+                                    @if (room.RoomType == ChatRoomType.Private && room.OtherParticipant != null)
+                                    {
+                                        @if (!string.IsNullOrEmpty(room.OtherParticipant.AvatarUrl))
+                                        {
+                                            <img src="@room.OtherParticipant.AvatarUrl" class="w-12 h-12 rounded-2xl object-cover" alt="" />
+                                        }
+                                        else
+                                        {
+                                            <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-bold text-slate-600">
+                                                @GetInitials(room.OtherParticipant.FullName ?? room.OtherParticipant.UserName)
+                                            </div>
+                                        }
+                                        <div class="@GetStatusDotClass(room.OtherParticipant.IsOnline, activeRoomId == room.Id) absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"></div>
+                                    }
+                                    else
+                                    {
+                                        <div class="@(activeRoomId == room.Id ? "bg-slate-700" : "bg-slate-100 text-slate-400") w-12 h-12 rounded-2xl flex items-center justify-center font-bold">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M4 21V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v17"/>
+                                            </svg>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                <div class="flex-1 min-w-0 text-left overflow-hidden">
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span class="font-black text-xs truncate">@GetRoomDisplayName(room)</span>
+                                        <span class="@(activeRoomId == room.Id ? "text-slate-400" : "text-slate-300") text-[9px] font-bold flex-shrink-0">
+                                            @FormatTime(room.LastMessageTime)
+                                        </span>
+                                    </div>
+                                    <p class="@(activeRoomId == room.Id ? "text-slate-300" : "text-slate-400") text-[10px] truncate mt-0.5">
+                                        @(room.LastMessage ?? "No messages yet")
+                                    </p>
+                                </div>
+
+                                @if (room.UnreadCount > 0 && room.Id != activeRoomId)
+                                {
+                                    <div class="absolute right-3 bottom-4 bg-[#E85D3F] text-white text-[9px] font-black min-w-5 h-5 flex items-center justify-center rounded-full px-1">
+                                        @(room.UnreadCount > 9 ? "9+" : room.UnreadCount.ToString())
+                                    </div>
+                                }
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-12">
+                            <p class="text-sm text-slate-400">No conversations yet</p>
+                            <button @onclick="OpenNewChatDialog" class="mt-4 text-xs font-black text-[#E85D3F] hover:underline">
+                                Start New Chat
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* Chat Area *@
+        @if (activeRoom != null)
+        {
+            <div class="flex-1 bg-white rounded-[48px] border border-slate-100 shadow-sm flex flex-col overflow-hidden relative">
+                @* Chat Header *@
+                <div class="p-8 border-b border-slate-50 flex items-center justify-between bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            @if (activeRoom.RoomType == ChatRoomType.Private && activeRoom.OtherParticipant != null)
+                            {
+                                @if (!string.IsNullOrEmpty(activeRoom.OtherParticipant.AvatarUrl))
+                                {
+                                    <img src="@activeRoom.OtherParticipant.AvatarUrl" class="w-14 h-14 rounded-[22px] object-cover shadow-sm" alt="" />
+                                }
+                                else
+                                {
+                                    <div class="w-14 h-14 rounded-[22px] bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-xl shadow-sm">
+                                        @GetInitials(activeRoom.OtherParticipant.FullName ?? activeRoom.OtherParticipant.UserName)
+                                    </div>
+                                }
+                                <div class="@GetStatusDotClass(activeRoom.OtherParticipant.IsOnline, false) absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white"></div>
+                            }
+                            else
+                            {
+                                <div class="w-14 h-14 bg-slate-100 rounded-[22px] flex items-center justify-center text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 21V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v17"/>
+                                    </svg>
+                                </div>
+                            }
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                                @GetRoomDisplayName(activeRoom)
+                                @if (activeRoom.RoomType != ChatRoomType.Private)
+                                {
+                                    <span class="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                        @(activeRoom.RoomType == ChatRoomType.Group ? "Group" : "Project")
+                                    </span>
+                                }
+                            </h3>
+                            <p class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mt-0.5 uppercase tracking-widest">
+                                @if (activeRoom.RoomType == ChatRoomType.Private && activeRoom.OtherParticipant != null)
+                                {
+                                    <span class="w-2 h-2 rounded-full @(activeRoom.OtherParticipant.IsOnline ? "bg-emerald-500" : "bg-slate-300")"></span>
+                                    <span>@(activeRoom.OtherParticipant.IsOnline ? "Online" : "Offline")</span>
+                                }
+                                else
+                                {
+                                    <span class="opacity-30">•</span>
+                                    <span>@activeRoom.Participants.Count Members</span>
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                        </button>
+                        <button class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                            </svg>
+                        </button>
+                        <div class="w-px h-8 bg-slate-100 mx-2"></div>
+                        <button class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+                            </svg>
+                        </button>
+                        <button class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                @* Message List *@
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+                    @if (hasMoreMessages)
+                    {
+                        <div class="flex justify-center mb-4">
+                            <button @onclick="LoadMoreMessages" disabled="@isLoadingMore"
+                                    class="px-4 py-2 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-full transition-all disabled:opacity-50">
+                                @(isLoadingMore ? "Loading..." : "Load older messages")
+                            </button>
+                        </div>
+                    }
+                    @{
+                        DateTime? _lastMsgDate = null;
+                    }
+                    @foreach (var message in messages)
+                    {
+                        var msgDate = message.CreatedAt.Date;
+                        if (_lastMsgDate == null || msgDate != _lastMsgDate.Value)
+                        {
+                            _lastMsgDate = msgDate;
+                            <div class="flex flex-col items-center my-6">
+                                <div class="bg-slate-50 px-4 py-1.5 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    @FormatDateSeparator(msgDate)
+                                </div>
+                            </div>
+                        }
+                        var isOwn = IsOwnMessage(message);
+                        <div @key="message.Id" class="@(isOwn ? "flex flex-row-reverse items-start gap-4 ml-auto max-w-2xl" : "flex items-start gap-4 max-w-2xl") group/message">
+                        @if (isOwn)
+                        {
+                            <div class="w-10 h-10 bg-[#E85D3F] rounded-2xl mt-1 flex items-center justify-center font-black text-white text-xs flex-shrink-0">
+                                @GetInitials(message.UserName)
+                            </div>
+                            <div class="space-y-1.5 min-w-0 flex-1">
+                                @if (_editingMessageId == message.Id)
+                                {
+                                    <div class="flex flex-col gap-2 items-end">
+                                        <textarea @bind="_editContent" @onkeydown="HandleEditKeyDown" rows="2" class="w-full max-w-md p-3 rounded-2xl border border-slate-200 text-sm text-slate-800 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/30" />
+                                        <div class="flex gap-2">
+                                            <button type="button" @onclick="CancelEditing" class="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-xl bg-slate-100">Hủy</button>
+                                            <button type="button" @onclick="() => SaveEdit(message.Id)" class="text-xs font-bold text-white bg-[#E85D3F] hover:opacity-90 px-3 py-1.5 rounded-xl">Lưu</button>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="flex flex-row-reverse items-end gap-2">
+                                        <div class="@(message.IsDeleted ? "bg-slate-200 text-slate-500 italic" : "bg-[#1C1D2A] text-white") p-5 rounded-3xl rounded-tr-none text-sm font-medium leading-relaxed shadow-lg shadow-slate-200">
+                                            @if (message.ParentMessage != null)
+                                            {
+                                                <div class="mb-2 pl-3 border-l-2 border-white/50 text-[11px] opacity-90">
+                                                    <span class="font-bold">@message.ParentMessage.UserName</span>
+                                                    <p class="truncate max-w-[200px] @(message.ParentMessage.IsDeleted ? "italic" : "")">@(message.ParentMessage.IsDeleted ? "Đã thu hồi" : message.ParentMessage.Content)</p>
+                                                </div>
+                                            }
+                                            @(message.IsDeleted ? "Đã thu hồi" : message.Content)
+                                            @if (message.UpdatedAt.HasValue && !message.IsDeleted)
+                                            {
+                                                <span class="text-[10px] opacity-80 block mt-1">(đã chỉnh sửa)</span>
+                                            }
+                                        </div>
+                                        <span class="text-[9px] font-bold text-slate-300 uppercase mb-2">@message.CreatedAt.ToString("HH:mm")</span>
+                                    </div>
+                                    <div class="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                                        @if (!message.IsDeleted)
+                                        {
+                                            <button type="button" @onclick="() => SetReplyTo(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Trả lời</button>
+                                            <span class="text-slate-200">·</span>
+                                            <button type="button" @onclick="() => StartEdit(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Sửa</button>
+                                            <span class="text-slate-200">·</span>
+                                            <button type="button" @onclick="() => ConfirmDeleteMessage(message.Id)" class="text-[10px] font-bold text-slate-400 hover:text-red-500">Thu hồi</button>
+                                        }
+                                        @if (message.Reactions.Any())
+                                        {
+                                            <span class="text-slate-200">·</span>
+                                            @foreach (var r in message.Reactions.GroupBy(x => x.Emoji).Select(g => new { Emoji = g.Key, Count = g.Count() }))
+                                            {
+                                                <span class="text-xs bg-slate-100/80 rounded-full px-2 py-0.5">@r.Emoji @(r.Count > 1 ? r.Count.ToString() : "")</span>
+                                            }
+                                        }
+                                        @if (!message.IsDeleted)
+                                        {
+                                            @foreach (var emoji in new[] { "👍", "❤️", "😂", "😮", "😢" })
+                                            {
+                                                var hasReacted = message.Reactions.Any(r => r.UserId == currentUserId && r.Emoji == emoji);
+                                                <button type="button" @onclick="() => ToggleReaction(message.Id, emoji, hasReacted)"
+                                                        class="p-0.5 rounded hover:bg-slate-200/80 text-base leading-none @(hasReacted ? "ring-1 ring-[#E85D3F]" : "")">@emoji</button>
+                                            }
+                                        }
+                                        @if (message.ReadBy.Any())
+                                        {
+                                            <span class="text-[9px] text-slate-400 ml-1">Đã xem</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            @if (!string.IsNullOrEmpty(message.UserAvatarUrl))
+                            {
+                                <img src="@message.UserAvatarUrl" class="w-10 h-10 rounded-2xl mt-1 object-cover flex-shrink-0" alt="" />
+                            }
+                            else
+                            {
+                                <div class="w-10 h-10 rounded-2xl bg-slate-100 mt-1 flex items-center justify-center font-bold text-slate-600 text-xs flex-shrink-0">
+                                    @GetInitials(message.UserName)
+                                </div>
+                            }
+                            <div class="space-y-1.5 min-w-0 flex-1">
+                                @if (activeRoom?.RoomType != ChatRoomType.Private)
+                                {
+                                    <p class="text-[10px] font-bold text-slate-500 ml-1 mb-0.5">@message.UserName</p>
+                                }
+                                <div class="flex items-end gap-2">
+                                    <div class="@(message.IsDeleted ? "bg-slate-100 text-slate-400 italic" : "bg-slate-100 text-slate-700") p-5 rounded-3xl rounded-tl-none text-sm font-medium leading-relaxed">
+                                        @if (message.ParentMessage != null)
+                                        {
+                                            <div class="mb-2 pl-3 border-l-2 border-slate-300 text-[11px] text-slate-500">
+                                                <span class="font-bold">@message.ParentMessage.UserName</span>
+                                                <p class="truncate max-w-[200px] @(message.ParentMessage.IsDeleted ? "italic" : "")">@(message.ParentMessage.IsDeleted ? "Đã thu hồi" : message.ParentMessage.Content)</p>
+                                            </div>
+                                        }
+                                        @(message.IsDeleted ? "Đã thu hồi" : message.Content)
+                                        @if (message.UpdatedAt.HasValue && !message.IsDeleted)
+                                        {
+                                            <span class="text-[10px] text-slate-400 block mt-1">(đã chỉnh sửa)</span>
+                                        }
+                                    </div>
+                                    <span class="text-[9px] font-bold text-slate-300 uppercase mb-2">@message.CreatedAt.ToString("HH:mm")</span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                                    @if (!message.IsDeleted)
+                                    {
+                                        <button type="button" @onclick="() => SetReplyTo(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Trả lời</button>
+                                    }
+                                    @if (message.Reactions.Any())
+                                    {
+                                        @foreach (var r in message.Reactions.GroupBy(x => x.Emoji).Select(g => new { Emoji = g.Key, Count = g.Count() }))
+                                        {
+                                            <span class="text-xs bg-slate-100 rounded-full px-2 py-0.5">@r.Emoji @(r.Count > 1 ? r.Count.ToString() : "")</span>
+                                        }
+                                    }
+                                    @if (!message.IsDeleted)
+                                    {
+                                        @foreach (var emoji in new[] { "👍", "❤️", "😂", "😮", "😢" })
+                                        {
+                                            var hasReactedOther = message.Reactions.Any(r => r.UserId == currentUserId && r.Emoji == emoji);
+                                            <button type="button" @onclick="() => ToggleReaction(message.Id, emoji, hasReactedOther)"
+                                                    class="p-0.5 rounded hover:bg-slate-200/80 text-base leading-none @(hasReactedOther ? "ring-1 ring-[#E85D3F]" : "")">@emoji</button>
+                                        }
+                                    }
+                                </div>
+                                @if (message.Attachments.Any())
+                                {
+                                    @foreach (var attachment in message.Attachments)
+                                    {
+                                        <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100 flex items-center gap-4 hover:bg-slate-100 transition-colors cursor-pointer group">
+                                            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#7E96E1]">
+                                                    <path d="M4 21V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v17"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs font-black text-slate-800">@attachment.FileName</p>
+                                                <p class="text-[10px] font-bold text-slate-400">@FormatFileSize(attachment.FileSize) • @attachment.FileType</p>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+                        </div>
+                    }
+
+                    @if (typingUsers.Any())
+                    {
+                        <div class="flex items-center gap-2 text-slate-400 text-xs">
+                            <div class="flex gap-1">
+                                <div class="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                                <div class="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                                <div class="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                            </div>
+                            <span class="font-bold">@string.Join(", ", typingUsers) is typing...</span>
+                        </div>
+                    }
+                </div>
+
+                @* Message Input *@
+                <div class="p-8 pt-4">
+                    @if (replyToMessage != null)
+                    {
+                        <div class="mb-2 flex items-center justify-between gap-2 rounded-2xl bg-slate-100 border border-slate-200 px-4 py-2">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] font-black text-slate-500 uppercase">Trả lời @(replyToMessage.UserName)</p>
+                                <p class="text-xs text-slate-600 truncate">@replyToMessage.Content</p>
+                            </div>
+                            <button type="button" @onclick="ClearReplyTo" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-all flex-shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                        </div>
+                    }
+                    <div class="bg-slate-50 rounded-[32px] p-2 border border-slate-100 focus-within:ring-2 focus-within:ring-[#7E96E1]/20 transition-all">
+                        <div class="flex items-center gap-2">
+                            <button class="p-3 text-slate-400 hover:text-slate-600 hover:bg-white rounded-2xl transition-all">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 12h14"/><path d="M12 5v14"/>
+                                </svg>
+                            </button>
+                            <button class="p-3 text-slate-400 hover:text-slate-600 hover:bg-white rounded-2xl transition-all">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                </svg>
+                            </button>
+                            
+                            <input 
+                                type="text" 
+                                value="@messageInput"
+                                @oninput="OnMessageInput"
+                                @onkeydown="HandleKeyDown"
+                                placeholder="@($"Message {GetRoomDisplayName(activeRoom)}...")"
+                                class="flex-1 bg-transparent py-4 px-2 text-sm font-bold text-slate-700 placeholder:text-slate-300 outline-none"
+                            />
+
+                            <div class="flex items-center gap-1 pr-2">
+                                <button class="p-3 text-slate-400 hover:text-slate-600 hover:bg-white rounded-2xl transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M16 18a4 4 0 0 0 8 0c0-4-8-4-8-12a4 4 0 1 0-8 0c0 8-8 8-8 12a4 4 0 0 0 8 0"/>
+                                        <path d="M15 2c-1.35 1.5-2.092 3-2.5 4.5M9 22c1.35-1.5 2.092-3 2.5-4.5"/>
+                                    </svg>
+                                </button>
+                                <button class="p-3 text-slate-400 hover:text-slate-600 hover:bg-white rounded-2xl transition-all">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>
+                                    </svg>
+                                </button>
+                                <button 
+                                    @onclick="SendMessage"
+                                    disabled="@string.IsNullOrWhiteSpace(messageInput)"
+                                    class="@(string.IsNullOrWhiteSpace(messageInput) ? "bg-slate-200 text-slate-400" : "bg-[#E85D3F] text-white shadow-lg") p-4 rounded-2xl transition-all active:scale-90 disabled:cursor-not-allowed"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-[9px] text-center mt-3 text-slate-300 font-bold uppercase tracking-widest">Press Enter to send message</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            @* No Room Selected *@
+            <div class="flex-1 bg-white rounded-[48px] border border-slate-100 shadow-sm flex items-center justify-center">
+                <div class="text-center space-y-4">
+                    <div class="w-20 h-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300">
+                            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-slate-800">Select a conversation</h3>
+                        <p class="text-slate-400 text-sm mt-2">Choose a chat from the sidebar to start messaging</p>
+                    </div>
+                </div>
+            </div>
+        }
+        <NewChatModal IsVisible="showNewChatModal"
+                     OnCloseRequested="CloseNewChatModal"
+                     OnUserSelected="HandleNewChatUserSelected" />
+
+        @* Create Group Modal *@
+        @if (showCreateGroupModal)
+        {
+            <div class="fixed inset-0 z-[200] flex items-center justify-center p-6">
+                <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" @onclick="CloseCreateGroupModal"></div>
+                <div class="relative flex w-full max-w-md max-h-[85vh] flex-col overflow-hidden rounded-[48px] bg-white shadow-2xl" @onclick:stopPropagation="true">
+                    <div class="flex items-start justify-between border-b border-slate-50 bg-slate-50/50 p-6 flex-shrink-0">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800">Create group chat</h2>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">Name the group and add members</p>
+                        </div>
+                        <button type="button" @onclick="CloseCreateGroupModal" class="rounded-2xl p-2 text-slate-400 hover:bg-slate-100 transition-all">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="p-4 space-y-4 flex-shrink-0">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Group name</label>
+                            <input type="text" @bind="newGroupRoomName" placeholder="e.g. Team Dev"
+                                   class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Add members</label>
+                            @if (isLoadingUsersForGroup)
+                            {
+                                <div class="flex justify-center py-6"><div class="h-8 w-8 animate-spin rounded-full border-2 border-[#E85D3F] border-t-transparent"></div></div>
+                            }
+                            else
+                            {
+                                <div class="max-h-48 overflow-y-auto space-y-1 rounded-2xl border border-slate-100 p-2">
+                                    @foreach (var u in usersForGroup)
+                                    {
+                                        var isSelected = selectedUserIdsForGroup.Contains(u.Id);
+                                        <button type="button" @onclick="() => ToggleGroupUser(u.Id)"
+                                                class="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all @(isSelected ? "bg-[#E85D3F]/10 ring-1 ring-[#E85D3F]/30" : "hover:bg-slate-50")">
+                                            @if (!string.IsNullOrEmpty(u.AvatarUrl))
+                                            {
+                                                <img src="@u.AvatarUrl" class="w-9 h-9 rounded-xl object-cover flex-shrink-0" alt="" />
+                                            }
+                                            else
+                                            {
+                                                <div class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-xs flex-shrink-0">@GetInitials(u.FullName ?? u.UserName)</div>
+                                            }
+                                            <span class="flex-1 font-bold text-slate-800 text-sm truncate">@(u.FullName ?? u.UserName)</span>
+                                            @if (isSelected)
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#E85D3F] flex-shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
+                                            }
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-slate-50 flex-shrink-0">
+                        <button type="button" @onclick="CreateGroup"
+                                disabled="@(string.IsNullOrWhiteSpace(newGroupRoomName) || !selectedUserIdsForGroup.Any())"
+                                class="w-full py-3.5 rounded-2xl font-black text-sm text-white bg-[#E85D3F] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                            Create group
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<ChatRoomResponse> rooms = new();
+    private List<ChatRoomResponse> filteredRooms = new();
+    private List<ChatMessageResponse> messages = new();
+    private List<string> typingUsers = new();
+    
+    private bool isLoading = true;
+    private int? activeRoomId;
+    private ChatRoomResponse? activeRoom;
+    private string messageInput = string.Empty;
+    private string searchQuery = string.Empty;
+    private string? currentUserId;
+    private ChatHubService? hubService;
+    private NotificationHubService? notificationHubService;
+    private bool showNewChatModal;
+    private CancellationTokenSource? _typingStopCts;
+    private CancellationTokenSource? _typingStartCts;
+    private bool _hasSentTyping;
+    private int? _editingMessageId;
+    private string _editContent = string.Empty;
+    private ChatMessageResponse? replyToMessage;
+    private int messageSkip;
+    private bool hasMoreMessages = true;
+    private bool isLoadingMore;
+    private bool showCreateGroupModal;
+    private string newGroupRoomName = string.Empty;
+    private List<string> selectedUserIdsForGroup = new();
+    private List<ChatUserItemResponse> usersForGroup = new();
+    private bool isLoadingUsersForGroup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrentUser();
+        await LoadRooms();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            hubService = ServiceProvider.GetService<ChatHubService>();
+            if (hubService != null)
+            {
+                if (!hubService.IsConnected)
+                    await hubService.StartAsync();
+                hubService.OnMessageReceived += HandleMessageReceived;
+                hubService.OnUserTyping += HandleUserTyping;
+                hubService.OnMessageDeleted += HandleMessageDeleted;
+                hubService.OnMessageUpdated += HandleMessageUpdated;
+                hubService.OnReactionAdded += HandleReactionAdded;
+                hubService.OnReactionRemoved += HandleReactionRemoved;
+                hubService.OnMessageRead += HandleMessageRead;
+            }
+
+            notificationHubService = ServiceProvider.GetService<NotificationHubService>();
+            if (notificationHubService != null)
+            {
+                if (!notificationHubService.IsConnected)
+                    await notificationHubService.StartAsync();
+                notificationHubService.OnUserStatusChanged += HandleUserStatusChanged;
+            }
+        }
+    }
+
+    private void HandleUserStatusChanged(string userId, bool isOnline)
+    {
+        foreach (var room in rooms.Where(r => r.OtherParticipant?.UserId == userId))
+        {
+            room.OtherParticipant!.IsOnline = isOnline;
+            room.OtherParticipant.Status = isOnline ? "Online" : "Offline";
+        }
+        if (activeRoom?.OtherParticipant?.UserId == userId)
+        {
+            activeRoom.OtherParticipant.IsOnline = isOnline;
+            activeRoom.OtherParticipant.Status = isOnline ? "Online" : "Offline";
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadCurrentUser()
+    {
+        currentUserId = await ChatService.GetCurrentUserIdAsync();
+    }
+
+    private async Task LoadRooms()
+    {
+        try
+        {
+            isLoading = true;
+            rooms = await ChatService.GetChatRoomsAsync();
+            FilterRooms();
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnSearchQueryInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterRooms();
+    }
+
+    private void FilterRooms()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredRooms = rooms;
+        }
+        else
+        {
+            filteredRooms = rooms.Where(r => 
+                GetRoomDisplayName(r).Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                (r.LastMessage?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
+            ).ToList();
+        }
+    }
+
+    private async Task SelectRoom(int roomId)
+    {
+        activeRoomId = roomId;
+        activeRoom = rooms.FirstOrDefault(r => r.Id == roomId);
+        messages.Clear();
+        typingUsers.Clear();
+        replyToMessage = null;
+        _editingMessageId = null;
+        messageSkip = 0;
+        hasMoreMessages = true;
+
+        if (activeRoom != null)
+        {
+            messages = await ChatService.GetRoomMessagesAsync(roomId);
+            messageSkip = messages.Count;
+            hasMoreMessages = messages.Count >= 50;
+            if (hubService != null)
+                await hubService.JoinRoomAsync(roomId);
+            if (messages.Any())
+            {
+                var lastMessage = messages.Last();
+                await ChatService.MarkAsReadAsync(roomId, lastMessage.Id);
+            }
+            StateHasChanged();
+            await ScrollToBottomAsync(false);
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(messageInput) || !activeRoomId.HasValue)
+            return;
+
+        if (hubService != null && activeRoomId.HasValue)
+            await hubService.StopTypingAsync(activeRoomId.Value);
+        _hasSentTyping = false;
+
+        try
+        {
+            var request = new SendMessageRequest
+            {
+                RoomId = activeRoomId.Value,
+                Content = messageInput.Trim(),
+                MessageType = MessageType.Text,
+                ParentMessageId = replyToMessage?.Id
+            };
+
+            var msg = await ChatService.SendMessageAsync(request);
+            messageInput = string.Empty;
+            replyToMessage = null;
+
+            // Add own message immediately (sender is excluded from SignalR broadcast)
+            if (!messages.Any(m => m.Id == msg.Id))
+                messages.Add(msg);
+
+            // Update sidebar
+            var room = rooms.FirstOrDefault(r => r.Id == msg.RoomId);
+            if (room != null)
+            {
+                room.LastMessage = msg.Content;
+                room.LastMessageSender = msg.UserName;
+                room.LastMessageTime = msg.CreatedAt;
+                room.LastActivityAt = msg.CreatedAt;
+                rooms = rooms.OrderByDescending(r => r.LastActivityAt).ToList();
+                FilterRooms();
+            }
+
+            StateHasChanged();
+            await ScrollToBottomAsync();
+        }
+        catch { }
+    }
+
+    private void OnMessageInput(ChangeEventArgs e)
+    {
+        messageInput = e.Value?.ToString() ?? string.Empty;
+        NotifyTyping();
+        StateHasChanged();
+    }
+
+    private async void NotifyTyping()
+    {
+        if (!activeRoomId.HasValue || hubService == null) return;
+
+        _typingStopCts?.Cancel();
+        _typingStartCts?.Cancel();
+        _typingStopCts = new CancellationTokenSource();
+        _typingStartCts = new CancellationTokenSource();
+        var stopCts = _typingStopCts;
+        var startCts = _typingStartCts;
+        var roomId = activeRoomId.Value;
+
+        if (!string.IsNullOrWhiteSpace(messageInput))
+        {
+            if (!_hasSentTyping)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(300, startCts.Token);
+                        await InvokeAsync(async () =>
+                        {
+                            if (hubService != null && activeRoomId == roomId)
+                            {
+                                await hubService.StartTypingAsync(roomId);
+                                _hasSentTyping = true;
+                                StateHasChanged();
+                            }
+                        });
+                    }
+                    catch (OperationCanceledException) { }
+                });
+            }
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(2000, stopCts.Token);
+                    await InvokeAsync(async () =>
+                    {
+                        if (hubService != null && activeRoomId == roomId)
+                        {
+                            await hubService.StopTypingAsync(roomId);
+                            _hasSentTyping = false;
+                            StateHasChanged();
+                        }
+                    });
+                }
+                catch (OperationCanceledException) { }
+            });
+        }
+        else
+        {
+            _ = InvokeAsync(async () =>
+            {
+                await hubService!.StopTypingAsync(roomId);
+                _hasSentTyping = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private async void HandleMessageReceived(ChatMessageResponse message)
+    {
+        await InvokeAsync(async () =>
+        {
+            var room = rooms.FirstOrDefault(r => r.Id == message.RoomId);
+            if (room == null)
+            {
+                var newRoom = await ChatService.GetChatRoomByIdAsync(message.RoomId);
+                if (newRoom != null)
+                {
+                    newRoom.LastMessage = message.Content;
+                    newRoom.LastMessageSender = message.UserName;
+                    newRoom.LastMessageTime = message.CreatedAt;
+                    newRoom.LastActivityAt = message.CreatedAt;
+                    if (message.UserId != currentUserId)
+                        newRoom.UnreadCount = 1;
+                    rooms.Insert(0, newRoom);
+                    rooms = rooms.OrderByDescending(r => r.LastActivityAt).ToList();
+                    FilterRooms();
+                }
+            }
+            else
+            {
+                room.LastMessage = message.Content;
+                room.LastMessageSender = message.UserName;
+                room.LastMessageTime = message.CreatedAt;
+                room.LastActivityAt = message.CreatedAt;
+                if (message.RoomId != activeRoomId && message.UserId != currentUserId)
+                    room.UnreadCount++;
+                rooms = rooms.OrderByDescending(r => r.LastActivityAt).ToList();
+                FilterRooms();
+            }
+
+            if (message.RoomId == activeRoomId)
+            {
+                if (!messages.Any(m => m.Id == message.Id))
+                    messages.Add(message);
+                if (message.UserId != currentUserId)
+                    _ = ChatService.MarkAsReadAsync(message.RoomId, message.Id);
+            }
+
+            StateHasChanged();
+            if (message.RoomId == activeRoomId)
+                await ScrollToBottomAsync();
+        });
+    }
+
+    private void HandleUserTyping(string userId, string userName, bool isTyping)
+    {
+        if (userId == currentUserId) return;
+
+        if (isTyping)
+        {
+            if (!typingUsers.Contains(userName))
+            {
+                typingUsers.Add(userName);
+            }
+        }
+        else
+        {
+            typingUsers.Remove(userName);
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleMessageDeleted(int messageId)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null)
+        {
+            msg.Content = "Đã thu hồi";
+            msg.IsDeleted = true;
+
+            // Update ParentMessage references in replies
+            foreach (var m in messages.Where(m => m.ParentMessage?.Id == messageId))
+            {
+                m.ParentMessage!.Content = "Đã thu hồi";
+                m.ParentMessage.IsDeleted = true;
+            }
+
+            // Update sidebar if this was the last message in the room
+            var room = rooms.FirstOrDefault(r => r.Id == msg.RoomId);
+            if (room != null && messages.LastOrDefault()?.Id == messageId)
+            {
+                room.LastMessage = "Đã thu hồi";
+            }
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleMessageUpdated(ChatMessageResponse message)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == message.Id);
+        if (msg != null)
+        {
+            msg.Content = message.Content;
+            msg.UpdatedAt = message.UpdatedAt;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleReactionAdded(int messageId, string userId, string userName, string emoji)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null)
+        {
+            if (msg.Reactions.All(r => r.UserId != userId || r.Emoji != emoji))
+                msg.Reactions.Add(new ChatMessageReactionResponse { MessageId = messageId, UserId = userId, UserName = userName, Emoji = emoji });
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleReactionRemoved(int messageId, string userId, string emoji)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null)
+        {
+            var r = msg.Reactions.FirstOrDefault(x => x.UserId == userId && x.Emoji == emoji);
+            if (r != null) msg.Reactions.Remove(r);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleMessageRead(int messageId, string userId, string userName)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null && msg.ReadBy.All(x => x.UserId != userId))
+        {
+            msg.ReadBy.Add(new ChatMessageReadResponse { MessageId = messageId, UserId = userId, UserName = userName });
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleReaction(int messageId, string emoji, bool hasReacted)
+    {
+        try
+        {
+            var msg = messages.FirstOrDefault(m => m.Id == messageId);
+            if (msg == null) return;
+
+            if (hasReacted)
+            {
+                // Optimistic local update: remove reaction
+                var existing = msg.Reactions.FirstOrDefault(r => r.UserId == currentUserId && r.Emoji == emoji);
+                if (existing != null) msg.Reactions.Remove(existing);
+                StateHasChanged();
+                await ChatService.RemoveReactionAsync(messageId, emoji);
+            }
+            else
+            {
+                // Optimistic local update: add reaction
+                if (msg.Reactions.All(r => r.UserId != currentUserId || r.Emoji != emoji))
+                {
+                    msg.Reactions.Add(new ChatMessageReactionResponse
+                    {
+                        MessageId = messageId,
+                        UserId = currentUserId ?? "",
+                        UserName = "",
+                        Emoji = emoji
+                    });
+                }
+                StateHasChanged();
+                await ChatService.AddReactionAsync(new AddReactionRequest { MessageId = messageId, Emoji = emoji });
+            }
+        }
+        catch { }
+    }
+
+    private void StartEdit(ChatMessageResponse message)
+    {
+        _editingMessageId = message.Id;
+        _editContent = message.Content ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private void CancelEditing()
+    {
+        _editingMessageId = null;
+        _editContent = string.Empty;
+        StateHasChanged();
+    }
+
+    private void HandleEditKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            CancelEditing();
+    }
+
+    private async Task SaveEdit(int messageId)
+    {
+        if (string.IsNullOrWhiteSpace(_editContent)) return;
+        try
+        {
+            var updated = await ChatService.UpdateMessageAsync(messageId, _editContent.Trim());
+            // Update local state from HTTP response (sender excluded from SignalR broadcast)
+            var msg = messages.FirstOrDefault(m => m.Id == messageId);
+            if (msg != null)
+            {
+                msg.Content = updated.Content;
+                msg.UpdatedAt = updated.UpdatedAt;
+            }
+            _editingMessageId = null;
+            _editContent = string.Empty;
+            StateHasChanged();
+        }
+        catch { }
+    }
+
+    private async Task ConfirmDeleteMessage(int messageId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Thu hồi tin nhắn này?"))
+            return;
+        try
+        {
+            var success = await ChatService.DeleteMessageAsync(messageId);
+            if (success)
+            {
+                // Update local state immediately (sender is excluded from SignalR broadcast)
+                var msg = messages.FirstOrDefault(m => m.Id == messageId);
+                if (msg != null)
+                {
+                    msg.Content = "Đã thu hồi";
+                    msg.IsDeleted = true;
+
+                    // Update ParentMessage references
+                    foreach (var m in messages.Where(m => m.ParentMessage?.Id == messageId))
+                    {
+                        m.ParentMessage!.Content = "Đã thu hồi";
+                        m.ParentMessage.IsDeleted = true;
+                    }
+
+                    // Update sidebar
+                    var room = rooms.FirstOrDefault(r => r.Id == msg.RoomId);
+                    if (room != null && messages.LastOrDefault()?.Id == messageId)
+                    {
+                        room.LastMessage = "Đã thu hồi";
+                    }
+                }
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    private void SetReplyTo(ChatMessageResponse message)
+    {
+        replyToMessage = message;
+        StateHasChanged();
+    }
+
+    private void ClearReplyTo()
+    {
+        replyToMessage = null;
+        StateHasChanged();
+    }
+
+    private async Task OpenCreateGroupModal()
+    {
+        showCreateGroupModal = true;
+        newGroupRoomName = string.Empty;
+        selectedUserIdsForGroup = new List<string>();
+        isLoadingUsersForGroup = true;
+        StateHasChanged();
+        try
+        {
+            usersForGroup = await ChatService.GetUsersForChatAsync(null);
+        }
+        finally
+        {
+            isLoadingUsersForGroup = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseCreateGroupModal()
+    {
+        showCreateGroupModal = false;
+        StateHasChanged();
+    }
+
+    private void ToggleGroupUser(string userId)
+    {
+        if (selectedUserIdsForGroup.Contains(userId))
+            selectedUserIdsForGroup.Remove(userId);
+        else
+            selectedUserIdsForGroup.Add(userId);
+        StateHasChanged();
+    }
+
+    private async Task CreateGroup()
+    {
+        if (string.IsNullOrWhiteSpace(newGroupRoomName) || !selectedUserIdsForGroup.Any()) return;
+        try
+        {
+            var request = new CreateChatRoomRequest
+            {
+                RoomName = newGroupRoomName.Trim(),
+                RoomType = ChatRoomType.Group,
+                ParticipantUserIds = selectedUserIdsForGroup.ToList()
+            };
+            var room = await ChatService.CreateChatRoomAsync(request);
+            rooms.Insert(0, room);
+            FilterRooms();
+            await SelectRoom(room.Id);
+            CloseCreateGroupModal();
+        }
+        catch { }
+    }
+
+    private void OpenNewChatDialog()
+    {
+        showNewChatModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseNewChatModal()
+    {
+        showNewChatModal = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleNewChatUserSelected(ChatUserItemResponse user)
+    {
+        if (string.IsNullOrEmpty(user.Id)) return;
+        var room = await ChatService.GetOrCreateDirectRoomAsync(user.Id);
+        if (room == null) return;
+        var existing = rooms.FirstOrDefault(r => r.Id == room.Id);
+        if (existing == null)
+        {
+            rooms.Insert(0, room);
+            FilterRooms();
+        }
+        await SelectRoom(room.Id);
+        CloseNewChatModal();
+    }
+
+    private bool IsOwnMessage(ChatMessageResponse message)
+    {
+        if (string.IsNullOrEmpty(currentUserId) || message == null)
+            return false;
+        var msgUserId = message.UserId?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(msgUserId))
+            return false;
+        return string.Equals(msgUserId, currentUserId.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetRoomButtonClass(int roomId)
+    {
+        return activeRoomId == roomId 
+            ? "bg-[#1C1D2A] text-white" 
+            : "hover:bg-slate-50";
+    }
+
+    private string GetRoomDisplayName(ChatRoomResponse room)
+    {
+        if (room.RoomType == ChatRoomType.Private && room.OtherParticipant != null)
+        {
+            return room.OtherParticipant.FullName ?? room.OtherParticipant.UserName;
+        }
+        return room.RoomName ?? "Unnamed Room";
+    }
+
+    private string GetStatusDotClass(bool isOnline, bool isActive)
+    {
+        var borderColor = isActive ? "border-[#1C1D2A]" : "border-white";
+        var bgColor = isOnline ? "bg-emerald-500" : "bg-slate-300";
+        return $"{borderColor} {bgColor}";
+    }
+
+    private string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return parts[0][..1].ToUpper();
+    }
+
+    private string FormatTime(DateTime? time)
+    {
+        if (!time.HasValue) return "";
+        
+        var now = DateTime.Now;
+        var diff = now - time.Value;
+        
+        if (diff.TotalMinutes < 1) return "Now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
+        if (diff.TotalDays < 1) return time.Value.ToString("HH:mm");
+        if (diff.TotalDays < 2) return "Yesterday";
+        if (diff.TotalDays < 7) return time.Value.ToString("ddd");
+        return time.Value.ToString("MMM dd");
+    }
+
+    private string FormatDateSeparator(DateTime date)
+    {
+        var today = DateTime.Today;
+        if (date == today) return $"Today, {date:MMMM dd}";
+        if (date == today.AddDays(-1)) return $"Yesterday, {date:MMMM dd}";
+        if (date.Year == today.Year) return date.ToString("dddd, MMMM dd");
+        return date.ToString("dddd, MMMM dd, yyyy");
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private async Task LoadMoreMessages()
+    {
+        if (!activeRoomId.HasValue || isLoadingMore || !hasMoreMessages) return;
+        isLoadingMore = true;
+        StateHasChanged();
+        try
+        {
+            var olderMessages = await ChatService.GetRoomMessagesAsync(activeRoomId.Value, messageSkip, 50);
+            if (olderMessages.Count < 50) hasMoreMessages = false;
+            if (olderMessages.Any())
+            {
+                messages.InsertRange(0, olderMessages);
+                messageSkip += olderMessages.Count;
+            }
+        }
+        catch { }
+        finally
+        {
+            isLoadingMore = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ScrollToBottomAsync(bool smooth = true)
+    {
+        try
+        {
+            await Task.Yield();
+            var behavior = smooth ? "smooth" : "instant";
+            await JSRuntime.InvokeVoidAsync("eval",
+                $"setTimeout(()=>{{var el=document.getElementById('chat-messages');if(el)el.scrollTo({{top:el.scrollHeight,behavior:'{behavior}'}});}},50)");
+        }
+        catch { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _typingStopCts?.Cancel();
+        _typingStartCts?.Cancel();
+        if (hubService != null)
+        {
+            hubService.OnMessageReceived -= HandleMessageReceived;
+            hubService.OnUserTyping -= HandleUserTyping;
+            hubService.OnMessageDeleted -= HandleMessageDeleted;
+            hubService.OnMessageUpdated -= HandleMessageUpdated;
+            hubService.OnReactionAdded -= HandleReactionAdded;
+            hubService.OnReactionRemoved -= HandleReactionRemoved;
+            hubService.OnMessageRead -= HandleMessageRead;
+            if (activeRoomId.HasValue)
+                await hubService.LeaveRoomAsync(activeRoomId.Value);
+        }
+        if (notificationHubService != null)
+            notificationHubService.OnUserStatusChanged -= HandleUserStatusChanged;
+    }
+}
