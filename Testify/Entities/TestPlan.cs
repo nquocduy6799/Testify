@@ -9,6 +9,7 @@ public class TestPlan : AuditEntity
     public int? MilestoneId { get; set; }  
     public TestPlanScope Scope { get; set; } = TestPlanScope.Project;
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; } 
     public TestPlanStatus Status { get; set; } = TestPlanStatus.Draft;
     public TestPlanOutcome? Outcome { get; set; }
     public DateTime? StartedAt { get; set; }

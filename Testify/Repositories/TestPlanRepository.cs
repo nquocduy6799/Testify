@@ -11,73 +11,10 @@ namespace Testify.Repositories
     public class TestPlanRepository : ITestPlanRepository
     {
         private readonly ApplicationDbContext _context;
-        private readonly ITestPlanSuiteRepository _testPlanSuiteRepository;
 
-        public TestPlanRepository(ApplicationDbContext context, ITestPlanSuiteRepository testPlanSuiteRepository)
+        public TestPlanRepository(ApplicationDbContext context)
         {
             _context = context;
-            _testPlanSuiteRepository = testPlanSuiteRepository;
-        }
-
-        public async Task<IEnumerable<TestPlanResponse>> GetAllTestPlansAsync(int projectId)
-        {
-            return await _context.TestPlans
-                .Where(p => p.ProjectId == projectId && !p.IsDeleted)
-                .Include(p => p.TestPlanSuites)
-                    .ThenInclude(tps => tps.TestSuite)
-                .OrderByDescending(p => p.CreatedAt)
-                .Select(p => new TestPlanResponse
-                {
-                    Id = p.Id,
-                    ProjectId = p.ProjectId,
-                    TaskId = p.TaskId,
-                    MilestoneId = p.MilestoneId,
-                    Scope = p.Scope,
-                    Name = p.Name,
-                    Status = p.Status,
-                    Outcome = p.Outcome,
-                    StartedAt = p.StartedAt,
-                    CompletedAt = p.CompletedAt,
-                    Priority = p.Priority,
-                    TestSuites = p.TestPlanSuites
-                        .Where(tps => !tps.TestSuite.IsDeleted)
-                        .Select(tps => new TestSuiteResponse
-                        {
-                            Id = tps.TestSuite.Id,
-                            ProjectId = tps.TestSuite.ProjectId,
-                            Name = tps.TestSuite.Name,
-                            Description = tps.TestSuite.Description,
-                            FolderId = tps.TestSuite.FolderId,
-                            SourceTemplateId = tps.TestSuite.SourceTemplateId,
-                            CreatedAt = tps.TestSuite.CreatedAt,
-                            CreatedBy = tps.TestSuite.CreatedBy,
-                            UpdatedAt = tps.TestSuite.UpdatedAt,
-                            UpdatedBy = tps.TestSuite.UpdatedBy
-                        })
-                        .ToList()
-                })
-                .ToListAsync();
-        }
-
-        public async Task<TestPlanResponse?> GetTestPlanByIdAsync(int id)
-        {
-            return await _context.TestPlans
-                .Where(p => p.Id == id && !p.IsDeleted)
-                .Select(p => new TestPlanResponse
-                {
-                    Id = p.Id,
-                    ProjectId = p.ProjectId,
-                    TaskId = p.TaskId,
-                    MilestoneId = p.MilestoneId,
-                    Scope = p.Scope,
-                    Name = p.Name,
-                    Status = p.Status,
-                    Outcome = p.Outcome,
-                    StartedAt = p.StartedAt,
-                    CompletedAt = p.CompletedAt,
-                    Priority = p.Priority
-                })
-                .FirstOrDefaultAsync();
         }
 
         public async Task<TestPlanResponse> CreateTestPlanAsync(CreateTestPlanRequest request, string userName, string userId)
@@ -89,22 +26,48 @@ namespace Testify.Repositories
                 MilestoneId = request.MilestoneId,
                 Scope = request.Scope,
                 Name = request.Name,
+                Description = request.Description,
                 Status = request.Status,
                 Priority = request.Priority
             };
 
             testPlan.MarkAsCreated(userName);
 
-            // Add test suites if provided
-            if (request.TestSuiteIds != null && request.TestSuiteIds.Any())
-            {
-                await _testPlanSuiteRepository.CreateTestPlanSuiteAsync(testPlan.Id, request.TestSuiteIds);
-            }
-
             _context.TestPlans.Add(testPlan);
             await _context.SaveChangesAsync();
 
-            return MapToResponse(testPlan);
+            await UpdateTestPlanSuitesAsync(testPlan.Id, request.TestSuites);
+
+            return await GetTestPlanByIdInternalAsync(testPlan.Id)
+                   ?? MapToResponse(testPlan, new List<TestSuiteResponse>());
+        }
+
+        public async Task<bool> DeleteTestPlanAsync(int id, string userName)
+        {
+            var testPlan = await _context.TestPlans.FindAsync(id);
+
+            if (testPlan == null || testPlan.IsDeleted)
+                return false;
+
+            testPlan.MarkAsDeleted(userName);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<IEnumerable<TestPlanResponse>> GetAllTestPlansAsync(int projectId)
+        {
+            var plans = await _context.TestPlans
+                .Include(tp => tp.TestPlanSuites)
+                    .ThenInclude(tps => tps.TestSuite)
+                .Where(tp => tp.ProjectId == projectId && !tp.IsDeleted)
+                .ToListAsync();
+
+            return plans.Select(p => MapToResponse(p)).ToList();
+        }
+
+        public async Task<TestPlanResponse?> GetTestPlanByIdAsync(int id)
+        {
+            return await GetTestPlanByIdInternalAsync(id);
         }
 
         public async Task<bool> UpdateTestPlanAsync(int id, UpdateTestPlanRequest request, string userName)
@@ -121,19 +84,15 @@ namespace Testify.Repositories
             testPlan.MilestoneId = request.MilestoneId;
             testPlan.Scope = request.Scope;
             testPlan.Name = request.Name;
+            testPlan.Description = request.Description;
             testPlan.Status = request.Status;
             testPlan.Priority = request.Priority;
             testPlan.MarkAsUpdated(userName);
 
-            // Update test suites
-            if (request.TestSuiteIds != null)
-            {
-                await _testPlanSuiteRepository.UpdateTestPlanSuiteAsync(testPlan.Id, request.TestSuiteIds);
-            }
-
             try
             {
                 await _context.SaveChangesAsync();
+                await UpdateTestPlanSuitesAsync(testPlan.Id, request.TestSuites);
                 return true;
             }
             catch (DbUpdateConcurrencyException)
@@ -145,62 +104,100 @@ namespace Testify.Repositories
             }
         }
 
-        public async Task<bool> DeleteTestPlanAsync(int id, string userName)
+        private async Task<TestPlanResponse?> GetTestPlanByIdInternalAsync(int id)
         {
-            var testPlan = await _context.TestPlans.FindAsync(id);
+            var plan = await _context.TestPlans
+                .Include(tp => tp.TestPlanSuites)
+                    .ThenInclude(tps => tps.TestSuite)
+                .FirstOrDefaultAsync(tp => tp.Id == id && !tp.IsDeleted);
 
-            if (testPlan == null || testPlan.IsDeleted)
-                return false;
+            return plan == null ? null : MapToResponse(plan);
+        }
 
-            testPlan.MarkAsDeleted(userName);
+        private async Task UpdateTestPlanSuitesAsync(int testPlanId, List<TestSuiteResponse> suites)
+        {
+            var existingSuites = await _context.TestPlanSuites
+                .Where(tps => tps.TestPlanId == testPlanId)
+                .ToListAsync();
 
-            try
+            _context.TestPlanSuites.RemoveRange(existingSuites);
+
+            var suiteIds = suites?
+                .Select(s => s.Id)
+                .Distinct()
+                .ToList() ?? new List<int>();
+
+            if (suiteIds.Count == 0)
             {
                 await _context.SaveChangesAsync();
-                return true;
+                return;
             }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await TestPlanExistsAsync(id))
-                    return false;
 
-                throw;
-            }
+            var validSuiteIds = await _context.TestSuites
+                .Where(ts => suiteIds.Contains(ts.Id) && !ts.IsDeleted)
+                .Select(ts => ts.Id)
+                .ToListAsync();
+
+            var planSuites = validSuiteIds.Select(id => new TestPlanSuite
+            {
+                TestPlanId = testPlanId,
+                TestSuiteId = id,
+                AddedAt = DateTimeHelper.GetVietnamTime()
+            });
+
+            await _context.TestPlanSuites.AddRangeAsync(planSuites);
+            await _context.SaveChangesAsync();
         }
 
         private async Task<bool> TestPlanExistsAsync(int id)
         {
-            return await _context.TestPlans.AnyAsync(e => e.Id == id && !e.IsDeleted);
+            return await _context.TestPlans.AnyAsync(tp => tp.Id == id && !tp.IsDeleted);
         }
 
-        private static TestPlanResponse MapToResponse(TestPlan testPlan)
+        private static TestPlanResponse MapToResponse(TestPlan plan)
+        {
+            var suites = plan.TestPlanSuites
+                .Where(tps => !tps.TestSuite.IsDeleted)
+                .Select(tps => MapToResponse(tps.TestSuite))
+                .ToList();
+
+            return MapToResponse(plan, suites);
+        }
+
+        private static TestPlanResponse MapToResponse(TestPlan plan, List<TestSuiteResponse> suites)
         {
             return new TestPlanResponse
             {
-                Id = testPlan.Id,
-                ProjectId = testPlan.ProjectId,
-                TaskId = testPlan.TaskId,
-                MilestoneId = testPlan.MilestoneId,
-                Scope = testPlan.Scope,
-                Name = testPlan.Name,
-                Status = testPlan.Status,
-                Outcome = testPlan.Outcome,
-                StartedAt = testPlan.StartedAt,
-                CompletedAt = testPlan.CompletedAt,
-                Priority = testPlan.Priority,
-                TestSuites = testPlan.TestPlanSuites.Select(tps => new TestSuiteResponse
-                {
-                    Id = tps.TestSuite.Id,
-                    ProjectId = tps.TestSuite.ProjectId,
-                    Name = tps.TestSuite.Name,
-                    Description = tps.TestSuite.Description,
-                    FolderId = tps.TestSuite.FolderId,
-                    SourceTemplateId = tps.TestSuite.SourceTemplateId,
-                    CreatedAt = tps.TestSuite.CreatedAt,
-                    CreatedBy = tps.TestSuite.CreatedBy,
-                    UpdatedAt = tps.TestSuite.UpdatedAt,
-                    UpdatedBy = tps.TestSuite.UpdatedBy
-                }).ToList()
+                Id = plan.Id,
+                ProjectId = plan.ProjectId,
+                TaskId = plan.TaskId,
+                MilestoneId = plan.MilestoneId,
+                Scope = plan.Scope,
+                Name = plan.Name,
+                Description = plan.Description,
+                Status = plan.Status,
+                Outcome = plan.Outcome,
+                StartedAt = plan.StartedAt,
+                CompletedAt = plan.CompletedAt,
+                Priority = plan.Priority,
+                TestSuites = suites
+            };
+        }
+
+        private static TestSuiteResponse MapToResponse(TestSuite suite)
+        {
+            return new TestSuiteResponse
+            {
+                Id = suite.Id,
+                ProjectId = suite.ProjectId,
+                Name = suite.Name,
+                Description = suite.Description,
+                FolderId = suite.FolderId,
+                SourceTemplateId = suite.SourceTemplateId,
+                CreatedAt = suite.CreatedAt,
+                CreatedBy = suite.CreatedBy,
+                UpdatedAt = suite.UpdatedAt,
+                UpdatedBy = suite.UpdatedBy
             };
         }
     }

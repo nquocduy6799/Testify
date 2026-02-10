@@ -16,6 +16,7 @@ namespace Testify.Shared.DTOs.TestPlans
         public int? MilestoneId { get; set; }
         public TestPlanScope Scope { get; set; } = TestPlanScope.Project;
         public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
         public TestPlanStatus Status { get; set; } = TestPlanStatus.Draft;
         public TestPlanOutcome? Outcome { get; set; }
         public DateTime? StartedAt { get; set; }
@@ -31,9 +32,10 @@ namespace Testify.Shared.DTOs.TestPlans
         public int? MilestoneId { get; set; }
         public TestPlanScope Scope { get; set; } = TestPlanScope.Project;
         public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
         public TestPlanStatus Status { get; set; } = TestPlanStatus.Draft;
         public TestPlanPriority Priority { get; set; } = TestPlanPriority.Medium;
-        public List<int> TestSuiteIds { get; set; } = new List<int>();
+        public List<TestSuiteResponse> TestSuites { get; set; } = new List<TestSuiteResponse>();
     }
 
     public class UpdateTestPlanRequest
@@ -43,9 +45,10 @@ namespace Testify.Shared.DTOs.TestPlans
         public int? MilestoneId { get; set; }
         public TestPlanScope Scope { get; set; } = TestPlanScope.Project;
         public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
         public TestPlanStatus Status { get; set; } = TestPlanStatus.Draft;
         public TestPlanPriority Priority { get; set; } = TestPlanPriority.Medium;
-        public List<int> TestSuiteIds { get; set; } = new List<int>();
+        public List<TestSuiteResponse> TestSuites { get; set; } = new List<TestSuiteResponse>();
     }
 }
 

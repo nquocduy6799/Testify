@@ -217,10 +217,5 @@ namespace Testify.Repositories
                 return false;
             }
         }
-
-        Task<IEnumerable<TestSuiteResponse>> ITestPlanSuiteRepository.GetAllTestSuitesByProjectIdAsync(int projectId)
-        {
-            throw new NotImplementedException();
-        }
     }
 }
