@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Testify.Interfaces.Testify.Interfaces;
+using Testify.Client.Features.TestPlans.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,6 +81,8 @@ builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>(
 builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
 builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
 builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
+builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>();
+builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();
 
 
 // Register services for server-side
@@ -91,8 +94,8 @@ builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<ITestPlanService, TestPlanService>();
 builder.Services.AddScoped<ModalService>();
-
 
 
 // Add controllers for API endpoints

@@ -11,7 +11,7 @@ public class TestPlan : AuditEntity
     public string Name { get; set; } = string.Empty;
     public TestPlanStatus Status { get; set; } = TestPlanStatus.Draft;
     public TestPlanOutcome? Outcome { get; set; }
-    public DateTime StartedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public TestPlanPriority Priority { get; set; } = TestPlanPriority.Medium;
 

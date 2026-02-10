@@ -1,5 +1,6 @@
 ﻿@page "/projects/{Id:int}"
 @using Testify.Client.Features.Kanban.Pages
+@using Testify.Client.Features.TestPlans.Pages
 @using Testify.Shared.DTOs.Projects
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Features.Projects.Components
@@ -11,7 +12,7 @@
 @rendermode InteractiveWebAssembly
 
 <div class="min-h-screen bg-white text-slate-900">
-    <div class="animate-in fade-in mx-auto max-w-[1400px] pt-8 pb-24 duration-700">
+    <div class="animate-in fade-in mx-auto max-w-[1400px] px-6 pt-8 pb-24 duration-700">
 
         @if (isLoading)
         {
@@ -30,10 +31,8 @@
         {
             @* Breadcrumb / Back button *@
             <div class="mb-6 flex items-center gap-4">
-                <button 
-                    @onclick='() => Navigation.NavigateTo("/projects")'
-                    class="p-2 hover:bg-white rounded-xl transition-all text-slate-400 hover:text-slate-800 border border-transparent hover:border-slate-100"
-                >
+                <button @onclick='() => Navigation.NavigateTo("/projects")'
+                        class="p-2 hover:bg-white rounded-xl transition-all text-slate-400 hover:text-slate-800 border border-transparent hover:border-slate-100">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="m15 18-6-6 6-6" />
                     </svg>
@@ -61,15 +60,15 @@
                 </button>
 
                 @* Tab Board *@
-                <button @onclick='() => activeTab = "Board"'
-                        class="@(activeTab == "Board" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
+                <button @onclick='() => activeTab = "KanbanBoard"'
+                        class="@(activeTab == "Kanban Board" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect width="18" height="18" x="3" y="3" rx="2" />
                         <path d="M8 7v7" />
                         <path d="M12 7v4" />
                         <path d="M16 7v10" />
                     </svg>
-                    Board
+                    KanbanBoard
                 </button>
 
                 @* Tab Milestones *@
@@ -83,29 +82,29 @@
                 </button>
 
                 @* Tab Strategy (Test Plans) *@
-                @if (currentUserRole == ProjectRole.Tester || currentUserRole == ProjectRole.PM)
-                {
-                    <button @onclick='() => activeTab = "Strategy"'
-                            class="@(activeTab == "Strategy" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
+                @* @if (currentUserRole == ProjectRole.Tester || currentUserRole == ProjectRole.PM)
+                { *@
+                    <button @onclick='() => activeTab = "TestPlans"'
+                            class="@(activeTab == "TestPlans" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/>
-                            <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
-                            <path d="M12 2v2"/>
-                            <path d="M12 22v-2"/>
-                            <path d="m17 20.66-1-1.73"/>
-                            <path d="M11 10.27 7 3.34"/>
-                            <path d="m20.66 17-1.73-1"/>
-                            <path d="m3.34 7 1.73 1"/>
-                            <path d="M14 12h8"/>
-                            <path d="M2 12h2"/>
-                            <path d="m20.66 7-1.73 1"/>
-                            <path d="m3.34 17 1.73-1"/>
-                            <path d="m17 3.34-1 1.73"/>
-                            <path d="m11 13.73-4 6.93"/>
+                            <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" />
+                            <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
+                            <path d="M12 2v2" />
+                            <path d="M12 22v-2" />
+                            <path d="m17 20.66-1-1.73" />
+                            <path d="M11 10.27 7 3.34" />
+                            <path d="m20.66 17-1.73-1" />
+                            <path d="m3.34 7 1.73 1" />
+                            <path d="M14 12h8" />
+                            <path d="M2 12h2" />
+                            <path d="m20.66 7-1.73 1" />
+                            <path d="m3.34 17 1.73-1" />
+                            <path d="m17 3.34-1 1.73" />
+                            <path d="m11 13.73-4 6.93" />
                         </svg>
-                        Strategy
+                        TestPlans
                     </button>
-                }
+                @* } *@
 
                 @* Tab Team *@
                 <button @onclick='() => activeTab = "Team"'
@@ -126,26 +125,17 @@
                 {
                     <ProjectOverview ProjectId="@Id" />
                 }
-                else if (activeTab == "Board")
+                else if (activeTab == "KanbanBoard")
                 {
                     <Kanban ProjectId="@Id" />
                 }
                 else if (activeTab == "Milestones")
                 {
-                    <MilestoneManager ProjectId="Id" />
+                    <MilestoneManager ProjectId="@Id" />
                 }
-                else if (activeTab == "Strategy")
+                else if (activeTab == "TestPlans")
                 {
-                    <div class="flex min-h-[400px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-slate-200 bg-white/50 p-12 text-center text-slate-400">
-                        <div class="mb-4 rounded-full bg-slate-50 p-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/>
-                                <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-slate-700">Test Strategy</h3>
-                        <p>Test plans and execution strategies coming soon.</p>
-                    </div>
+					<TestPlanManager ProjectId="@Id" />
                 }
                 else if (activeTab == "Team")
                 {
@@ -171,7 +161,6 @@
             isLoading = true;
             project = await ProjectService.GetProjectByIdAsync(Id);
             currentUserRole = await ProjectService.GetMyRoleInProjectAsync(Id);
-            var role = currentUserRole;
         }
         catch (Exception)
         {

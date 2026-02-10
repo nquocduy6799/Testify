@@ -1,0 +1,654 @@
+﻿@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs.TestPlans
+@using Testify.Shared.Enums
+@inject HttpClient Http
+@inject ITestPlanService TestPlanService
+
+@if (IsVisible)
+{
+    <div class="fixed inset-0 z-[250] flex items-center justify-center p-6">
+        <div class="animate-in fade-in absolute inset-0 bg-slate-900/60 backdrop-blur-md" @onclick="Cancel"></div>
+
+        <div class="animate-in zoom-in-95 relative flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-[48px] bg-white shadow-2xl">
+
+            <div class="flex items-start justify-between border-b border-slate-50 bg-slate-50/50 p-10">
+                <div class="flex items-center gap-4">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#1C1D2A] text-white shadow-lg">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-black tracking-tight text-slate-800">
+                            @(ExistingPlan != null ? "Edit Test Plan" : "New Test Plan")
+                        </h2>
+                        <p class="mt-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">Quality Strategy Architect</p>
+                    </div>
+                </div>
+                <button type="button" @onclick="Cancel" class="rounded-2xl p-3 text-slate-400 shadow-sm transition-all hover:bg-white hover:text-slate-600">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <EditForm Model="FormData" OnValidSubmit="HandleSubmit" class="flex flex-1 flex-col overflow-hidden">
+                <DataAnnotationsValidator />
+
+                <div class="no-scrollbar flex-1 space-y-10 overflow-y-auto p-10">
+                    <div class="grid grid-cols-1 gap-12 md:grid-cols-2">
+
+                        <div class="space-y-8">
+                            <div class="space-y-1.5">
+                                <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                    <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Plan Name
+                                </label>
+                                <InputText @bind-Value="FormData.Name"
+                                           placeholder="e.g. Q2 Global Regression"
+                                           class="w-full rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-bold text-slate-800 transition-all outline-none focus:border-[#7E96E1] focus:bg-white" />
+                                <ValidationMessage For="@(() => FormData.Name)" class="text-[10px] font-bold text-red-500 uppercase tracking-wide" />
+                            </div>
+
+                            <div class="space-y-1.5">
+                                <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                    Scope Type
+                                </label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    @foreach (var scope in Enum.GetValues<TestPlanScope>())
+                                    {
+                                        <button type="button"
+                                                @onclick="() => SelectScope(scope)"
+                                                class="rounded-xl py-3 text-[10px] font-black uppercase transition-all @(FormData.Scope == scope ? "bg-[#1C1D2A] text-white shadow-md" : "bg-slate-50 text-slate-400 hover:bg-slate-100")">
+                                            @scope
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (FormData.Scope == TestPlanScope.Milestone)
+                            {
+                                <div class="animate-in slide-in-from-top-2 space-y-1.5">
+                                    <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        Select Target Milestone
+                                    </label>
+                                    <div class="relative">
+                                        <InputSelect @bind-Value="FormData.MilestoneId"
+                                                     class="w-full appearance-none rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-bold text-slate-800 outline-none focus:border-[#7E96E1] focus:bg-white">
+                                            <option value="">Select a milestone...</option>
+                                            @* Add options here *@
+                                        </InputSelect>
+                                        <svg class="pointer-events-none absolute top-1/2 right-6 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (FormData.Scope == TestPlanScope.Task)
+                            {
+                                <div class="animate-in slide-in-from-top-2 space-y-1.5">
+                                    <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                        Search Target Task
+                                    </label>
+                                    <div class="relative">
+                                        <InputSelect @bind-Value="FormData.TaskId"
+                                                     class="w-full appearance-none rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-bold text-slate-800 outline-none focus:border-[#7E96E1] focus:bg-white">
+                                            <option value="">Select a task...</option>
+                                            @* Add options here *@
+                                        </InputSelect>
+                                        <svg class="pointer-events-none absolute top-1/2 right-6 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="space-y-1.5">
+                                <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                    Priority Level
+                                </label>
+                                <div class="grid grid-cols-4 gap-2">
+                                    @foreach (var priority in Enum.GetValues<TestPlanPriority>())
+                                    {
+                                        <button type="button"
+                                                @onclick="() => FormData.Priority = priority"
+                                                class="rounded-xl py-3 text-[10px] font-black uppercase transition-all @(FormData.Priority == priority ? GetPriorityClass(priority) : "bg-slate-50 text-slate-400 hover:bg-slate-100")">
+                                            @priority
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between px-1">
+                                    <h4 class="flex items-center gap-2 font-black tracking-widest text-[11px] text-slate-800 uppercase">
+                                        <svg class="h-4 w-4 text-[#7E96E1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                        </svg>
+                                        Enrolled Logic Suites
+                                        <span class="ml-2 rounded-lg bg-indigo-50 px-3 py-1 font-black text-[9px] text-indigo-600">@FormData.TestSuiteIds.Count Selected</span>
+                                    </h4>
+                                </div>
+
+                                <div class="group relative">
+                                    <svg class="absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    <div class="flex gap-2">
+                                        <input type="number"
+                                               @bind="newSuiteId"
+                                               placeholder="Enter Suite ID to enroll..."
+                                               class="w-full rounded-[24px] border-2 border-transparent bg-slate-50 py-4 pr-4 pl-11 text-xs font-bold text-slate-800 shadow-inner transition-all outline-none focus:border-purple-400 focus:bg-white" />
+                                        <button type="button"
+                                                @onclick="AddSuite"
+                                                class="rounded-[24px] bg-purple-100 px-6 py-2 font-black text-[10px] text-purple-600 uppercase transition-all hover:bg-purple-200">
+                                            Add
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="no-scrollbar max-h-[480px] space-y-3 overflow-y-auto pr-1 pb-10">
+                                @if (FormData.TestSuiteIds.Any())
+                                {
+                                    @foreach (var suiteId in FormData.TestSuiteIds.ToList())
+                                    {
+                                        <div class="group flex w-full items-center justify-between rounded-[28px] border border-blue-400 bg-blue-50 p-4 text-left shadow-md ring-2 ring-blue-100 transition-all">
+                                            <div class="flex items-center gap-4">
+                                                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white transition-colors">
+                                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p class="max-w-[180px] truncate text-xs font-black text-slate-800">Test Suite #@suiteId</p>
+                                                    <p class="font-bold text-[9px] text-slate-400 uppercase">Manual Entry • Ready</p>
+                                                </div>
+                                            </div>
+                                            <button type="button" @onclick="() => RemoveSuite(suiteId)" class="mr-2 rounded-full p-2 text-blue-400 hover:bg-blue-100 hover:text-red-500 transition-colors">
+                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="rounded-[32px] border-2 border-dashed border-slate-100 bg-slate-50 py-12 text-center">
+                                        <svg class="mx-auto mb-2 h-8 w-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                        </svg>
+                                        <p class="font-black text-[10px] text-slate-300 uppercase">No logical entities enrolled</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between border-t border-slate-50 bg-slate-50/50 p-8 px-10">
+                    <div class="flex items-center gap-4">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm">
+                            <svg class="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+                        <p class="leading-relaxed font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                            Suites will be processed <br /> into execution queue upon save.
+                        </p>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button type="button"
+                                @onclick="Cancel"
+                                class="rounded-2xl border border-slate-200 bg-white px-8 py-4 text-xs font-black tracking-widest text-slate-400 uppercase transition-all hover:text-slate-600">
+                            Discard
+                        </button>
+                        <button type="submit"
+                                disabled="@isSubmitting"
+                                class="flex items-center gap-2 rounded-2xl bg-[#1C1D2A] px-12 py-4 text-xs font-black tracking-widest text-white uppercase shadow-xl transition-all hover:bg-slate-800 active:scale-95 disabled:opacity-50">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                            </svg>
+                            @(isSubmitting ? "Processing..." : ExistingPlan != null ? "Commit Protocol" : "Initialize Strategy")
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+    [Parameter] public TestPlanResponse? ExistingPlan { get; set; }
+    [Parameter] public EventCallback<TestPlanResponse> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
+
+    private TestPlanFormData FormData { get; set; } = new();
+    private bool isSubmitting;
+    private int? newSuiteId;
+
+    protected override void OnParametersSet()
+    {
+        if (ExistingPlan != null)
+        {
+            FormData = new TestPlanFormData
+            {
+                Name = ExistingPlan.Name,
+                Scope = ExistingPlan.Scope,
+                Priority = ExistingPlan.Priority,
+                TaskId = ExistingPlan.TaskId,
+                MilestoneId = ExistingPlan.MilestoneId,
+                TestSuiteIds = new List<int>() // Assuming you populate this from existing plan logic if available
+            };
+        }
+        else
+        {
+            FormData = new TestPlanFormData { Scope = TestPlanScope.Project };
+        }
+    }
+
+    private void SelectScope(TestPlanScope scope)
+    {
+        FormData.Scope = scope;
+        FormData.TaskId = null;
+        FormData.MilestoneId = null;
+    }
+
+    private void AddSuite()
+    {
+        if (newSuiteId.HasValue && !FormData.TestSuiteIds.Contains(newSuiteId.Value))
+        {
+            FormData.TestSuiteIds.Add(newSuiteId.Value);
+            newSuiteId = null;
+        }
+    }
+
+    private void RemoveSuite(int suiteId)
+    {
+        FormData.TestSuiteIds.Remove(suiteId);
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        try
+        {
+            if (ExistingPlan != null)
+            {
+                var updateRequest = new UpdateTestPlanRequest
+                {
+                    ProjectId = ProjectId,
+                    Name = FormData.Name,
+                    Scope = FormData.Scope,
+                    Priority = FormData.Priority,
+                    TaskId = FormData.TaskId,
+                    MilestoneId = FormData.MilestoneId,
+                    TestSuiteIds = FormData.TestSuiteIds,
+                    Status = ExistingPlan.Status
+                };
+
+                var response = await Http.PutAsJsonAsync($"api/TestPlans/{ExistingPlan.Id}", updateRequest);
+                response.EnsureSuccessStatusCode();
+
+                var updated = await Http.GetFromJsonAsync<TestPlanResponse>($"api/TestPlans/{ExistingPlan.Id}");
+                if (updated != null)
+                    await OnSave.InvokeAsync(updated);
+            }
+            else
+            {
+                var createRequest = new CreateTestPlanRequest
+                {
+                    ProjectId = ProjectId,
+                    Name = FormData.Name,
+                    Scope = FormData.Scope,
+                    Priority = FormData.Priority,
+                    TaskId = FormData.TaskId,
+                    MilestoneId = FormData.MilestoneId,
+                    TestSuiteIds = FormData.TestSuiteIds
+                };
+
+                var created = await Http.PostAsJsonAsync<CreateTestPlanRequest>("api/TestPlans", createRequest);
+                created.EnsureSuccessStatusCode();
+
+                var result = await created.Content.ReadFromJsonAsync<TestPlanResponse>();
+                if (result != null)
+                    await OnSave.InvokeAsync(result);
+            }
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        OnCancel.InvokeAsync();
+    }
+
+    private string GetPriorityClass(TestPlanPriority priority) => priority switch
+    {
+        TestPlanPriority.High => "bg-orange-600 text-white shadow-md",
+        TestPlanPriority.Medium => "bg-blue-600 text-white shadow-md",
+        TestPlanPriority.Low => "bg-slate-600 text-white shadow-md",
+        _ => "bg-[#1C1D2A] text-white shadow-md"
+    };
+
+    private class TestPlanFormData
+    {
+        public string Name { get; set; } = string.Empty;
+        public TestPlanScope Scope { get; set; }
+        public TestPlanPriority Priority { get; set; }
+        public int? TaskId { get; set; }
+        public int? MilestoneId { get; set; }
+        public List<int> TestSuiteIds { get; set; } = new();
+    }
+}
+
+
+
+@*     <div className="fixed inset-0 z-[250] flex items-center justify-center p-6">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in" onClick={onClose}></div>
+      
+      <div className="relative bg-white w-full max-w-6xl rounded-[48px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 h-[90vh]">
+        <div className="p-10 border-b border-slate-50 flex items-start justify-between bg-slate-50/50">
+          <div className="flex items-center gap-4">
+             <div className="w-14 h-14 bg-[#1C1D2A] rounded-2xl flex items-center justify-center text-white shadow-lg">
+                <ClipboardList className="w-7 h-7" />
+             </div>
+             <div>
+                <h2 className="text-3xl font-black text-slate-800 tracking-tight">
+                  {existingPlan ? 'Edit Test Plan' : 'New Test Plan'}
+                </h2>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Quality Strategy Architect</p>
+             </div>
+          </div>
+          <button onClick={onClose} className="p-3 hover:bg-white rounded-2xl text-slate-400 transition-all shadow-sm">
+             <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-y-auto p-10 space-y-10 no-scrollbar">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              
+              <div className="space-y-8">
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      <ClipboardList className="w-3.5 h-3.5 text-[#7E96E1]" /> Plan Name
+                    </label>
+                    <input 
+                      required
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="e.g. Q2 Global Regression"
+                      className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800"
+                    />
+                 </div>
+
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                      Scope Type
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['Project', 'Milestone', 'Task'] as const).map(type => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, targetType: type, targetId: '' });
+                            setTaskSearchQuery('');
+                          }}
+                          className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${
+                            formData.targetType === type ? 'bg-[#1C1D2A] text-white shadow-md' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                 </div>
+
+                 {formData.targetType === 'Milestone' && (
+                   <div className="space-y-1.5 animate-in slide-in-from-top-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <Target className="w-3.5 h-3.5" /> Select Target Milestone
+                      </label>
+                      <div className="relative">
+                        <select
+                          required
+                          value={formData.targetId}
+                          onChange={(e) => setFormData({ ...formData, targetId: e.target.value })}
+                          className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none font-bold text-slate-800 appearance-none"
+                        >
+                          <option value="">Select a milestone...</option>
+                          {allMilestones.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+                   </div>
+                 )}
+
+                 {formData.targetType === 'Task' && (
+                   <div className="space-y-1.5 animate-in slide-in-from-top-2 relative" ref={taskDropdownRef}>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <Search className="w-3.5 h-3.5" /> Search Target Task
+                      </label>
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          value={taskSearchQuery}
+                          onFocus={() => setIsTaskDropdownOpen(true)}
+                          onChange={(e) => {
+                            setTaskSearchQuery(e.target.value);
+                            setIsTaskDropdownOpen(true);
+                          }}
+                          placeholder="Search by ID or Title..."
+                          className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800 pr-12"
+                        />
+                        <ChevronDown className={`absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${isTaskDropdownOpen ? 'rotate-180' : ''}`} />
+                      </div>
+
+                      {isTaskDropdownOpen && (
+                        <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                          <div className="max-h-60 overflow-y-auto no-scrollbar p-2 space-y-1">
+                            {filteredTasks.length > 0 ? filteredTasks.map(task => (
+                              <button
+                                key={task.id}
+                                type="button"
+                                onClick={() => handleSelectTask(task)}
+                                className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all text-left ${
+                                  formData.targetId === task.id ? 'bg-blue-50' : 'hover:bg-slate-50'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                    task.type === 'Bug' ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'
+                                  }`}>
+                                    {task.type === 'Bug' ? <Bug className="w-4 h-4" /> : <Layout className="w-4 h-4" />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-black text-slate-800 truncate">{task.title}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{task.id} • {task.status}</p>
+                                  </div>
+                                </div>
+                                {formData.targetId === task.id && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                              </button>
+                            )) : (
+                              <div className="p-8 text-center">
+                                <p className="text-[10px] font-black text-slate-300 uppercase">No matching tasks</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                   </div>
+                 )}
+
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Strategy Description</label>
+                    <textarea 
+                      rows={4}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="What is the objective of this testing campaign?"
+                      className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] rounded-[32px] outline-none font-medium text-slate-600 resize-none transition-all"
+                    />
+                 </div>
+              </div>
+
+              <div className="space-y-6">
+                 <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                       <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                          <Layers className="w-4 h-4 text-[#7E96E1]" />
+                          Enrolled Logic Suites
+                          <span className="ml-2 bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-[9px] font-black">{formData.suiteIds.length} Selected</span>
+                       </h4>
+                    </div>
+
+                    <div className="relative group">
+                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-purple-500 transition-colors" />
+                       <input 
+                         type="text" 
+                         value={suiteSearchQuery}
+                         onChange={(e) => setSuiteSearchQuery(e.target.value)}
+                         placeholder="Search project suites or library templates..."
+                         className="w-full pl-11 pr-4 py-4 bg-slate-50 border-2 border-transparent focus:border-purple-400 focus:bg-white rounded-[24px] outline-none transition-all font-bold text-slate-800 text-xs shadow-inner"
+                       />
+                    </div>
+                 </div>
+                 
+                 <div className="space-y-6 max-h-[480px] overflow-y-auto pr-3 no-scrollbar pb-10">
+                    <div className="space-y-2">
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-2 mb-3">
+                          <Layout className="w-3 h-3" /> Project Scope
+                       </p>
+                       {allAvailableSuites.filter(s => s.source === 'Project').map(suite => (
+                        <button
+                          key={suite.id}
+                          type="button"
+                          onClick={() => toggleSuite(suite.id)}
+                          className={`w-full flex items-center justify-between p-4 rounded-[28px] border transition-all text-left group ${
+                            formData.suiteIds.includes(suite.id)
+                              ? 'bg-blue-50 border-blue-400 shadow-md ring-2 ring-blue-100'
+                              : 'bg-white border-slate-100 hover:border-blue-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                               formData.suiteIds.includes(suite.id) ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-100'
+                             }`}>
+                                <Layers className="w-5 h-5" />
+                             </div>
+                             <div>
+                                <p className="text-xs font-black text-slate-800 truncate max-w-[180px]">{suite.name}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Local Suite • {suite.testCases.length} Scenarios</p>
+                             </div>
+                          </div>
+                          {formData.suiteIds.includes(suite.id) && (
+                            <CheckCircle2 className="w-5 h-5 text-blue-600" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2 pt-4">
+                       <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest flex items-center gap-2 px-2 mb-3">
+                          <Library className="w-3 h-3" /> Global Library Templates
+                       </p>
+                       {allAvailableSuites.filter(s => s.source === 'Library').map(suite => (
+                        <button
+                          key={suite.id}
+                          type="button"
+                          onClick={() => toggleSuite(suite.id)}
+                          className={`w-full flex items-center justify-between p-4 rounded-[28px] border transition-all text-left group ${
+                            formData.suiteIds.includes(suite.id)
+                              ? 'bg-purple-50 border-purple-400 shadow-md ring-2 ring-purple-100'
+                              : 'bg-white border-slate-100 hover:border-purple-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                               formData.suiteIds.includes(suite.id) ? 'bg-purple-600 text-white shadow-lg' : 'bg-purple-50 text-purple-400'
+                             }`}>
+                                <Sparkles className="w-5 h-5" />
+                             </div>
+                             <div>
+                                <p className="text-xs font-black text-slate-800 truncate max-w-[180px]">{suite.name}</p>
+                                <div className="flex items-center gap-2">
+                                   <p className="text-[9px] font-bold text-purple-400 uppercase tracking-tight">Master Template</p>
+                                   <div className="w-1 h-1 bg-slate-200 rounded-full"></div>
+                                   <p className="text-[9px] font-black text-slate-400 uppercase">{suite.testCases.length} Scenarios</p>
+                                </div>
+                             </div>
+                          </div>
+                          {formData.suiteIds.includes(suite.id) ? (
+                            <CheckCircle2 className="w-5 h-5 text-purple-600" />
+                          ) : (
+                             <div className="p-2 bg-slate-50 text-slate-300 rounded-lg group-hover:bg-purple-50 group-hover:text-purple-400 transition-all">
+                                <Plus className="w-3.5 h-3.5" />
+                             </div>
+                          )}
+                        </button>
+                      ))}
+
+                      {allAvailableSuites.length === 0 && (
+                        <div className="py-12 text-center bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-100">
+                           <Zap className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                           <p className="text-[10px] font-black text-slate-300 uppercase">No matching logical entities</p>
+                        </div>
+                      )}
+                    </div>
+                 </div>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div className="p-8 border-t border-slate-50 bg-slate-50/50 flex items-center justify-between px-10">
+           <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
+                 <Zap className="w-5 h-5 text-amber-500" />
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+                Library suites will be intelligently cloned <br /> into the project scope upon commitment.
+              </p>
+           </div>
+           <div className="flex gap-4">
+              <button 
+                type="button"
+                onClick={onClose}
+                className="px-8 py-4 bg-white border border-slate-200 text-slate-400 font-black text-xs uppercase tracking-widest rounded-2xl hover:text-slate-600 transition-all"
+              >
+                Discard
+              </button>
+              <button 
+                onClick={handleSubmit}
+                className="px-12 py-4 bg-[#1C1D2A] text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-800 shadow-xl transition-all active:scale-95 flex items-center gap-2"
+              >
+                 <Save className="w-4 h-4" /> {existingPlan ? 'Commit Protocol' : 'Initialize Strategy'}
+              </button>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+}; *@

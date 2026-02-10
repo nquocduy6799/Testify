@@ -1,0 +1,760 @@
+﻿@* @page "/projects/{ProjectId:int}/test-plans" *@
+@using Testify.Client.Interfaces
+@using Testify.Client.Shared.Services
+@using Testify.Shared.DTOs.TestPlans
+@using Testify.Shared.Enums
+@using Testify.Client.Features.TestPlans.Components
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ModalService ModalService
+@inject ITestPlanService TestPlanService
+
+<div class="animate-in fade-in slide-in-from-bottom-4 space-y-10 pb-20 duration-700">
+
+    <!-- STRATEGIC HEADER -->
+    <div class="flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+        <div>
+            <h2 class="flex items-center gap-4 text-4xl font-black tracking-tight text-slate-900">
+                Strategy Center
+                <div class="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-1 font-black tracking-widest text-indigo-600 text-[10px] uppercase">
+                    Operational v4.2
+                </div>
+            </h2>
+            <p class="mt-2 max-w-2xl font-medium text-slate-400">Provision and orchestrate high-integrity validation blueprints for project deliverables and critical logical paths.</p>
+        </div>
+
+        <button @onclick="OpenCreateForm"
+                class="group flex items-center gap-3 rounded-[28px] bg-[#1C1D2A] px-10 py-5 text-xs font-black tracking-widest text-white uppercase shadow-2xl transition-all hover:bg-slate-800 active:scale-95">
+            <svg class="h-5 w-5 text-indigo-400 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Architect New Plan</span>
+        </button>
+    </div>
+
+    <!-- SPLIT-PANE HUB -->
+    <div class="grid grid-cols-1 items-start gap-8 xl:grid-cols-12">
+
+        <!-- LEFT: PLAN NAVIGATOR -->
+        <div class="space-y-6 xl:col-span-4">
+            <div class="flex flex-col overflow-hidden rounded-[40px] border border-slate-100 bg-white shadow-sm">
+                <div class="space-y-4 border-b border-slate-50 bg-slate-50/30 p-6">
+                    <!-- Search -->
+                    <div class="group relative">
+                        <svg class="absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-slate-300 transition-colors group-focus-within:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text"
+                               placeholder="Search identifier or title..."
+                               @bind="searchQuery"
+                               @bind:event="oninput"
+                               class="w-full rounded-2xl border border-slate-200 bg-white py-3 pr-4 pl-11 font-bold text-[11px] transition-all outline-none focus:ring-4 focus:ring-indigo-500/5" />
+                    </div>
+
+                    <!-- Filter Tabs -->
+                    <div class="no-scrollbar flex items-center gap-1 overflow-x-auto pb-1">
+                        @foreach (var scope in scopeFilters)
+                        {
+                            <button @onclick="() => scopeFilter = scope"
+                                    class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap @(scopeFilter == scope ? "bg-indigo-600 text-white shadow-lg" : "bg-white text-slate-400 border border-slate-100 hover:bg-slate-50")">
+                                @scope
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="no-scrollbar max-h-[600px] space-y-1 overflow-y-auto p-2">
+                    @if (FilteredPlans.Any())
+                    {
+                        @foreach (var plan in FilteredPlans)
+                        {
+                            <button @onclick="() => SelectPlan(plan.Id)"
+                                    class="w-full p-5 rounded-[28px] transition-all text-left flex items-center justify-between group @(selectedPlanId == plan.Id ? "bg-indigo-50 border border-indigo-100 shadow-sm" : "hover:bg-slate-50")">
+                                <div class="flex items-center gap-4 truncate">
+                                    <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl transition-all @GetStatusClass(plan.Status)">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                        </svg>
+                                    </div>
+                                    <div class="truncate">
+                                        <p class="font-mono font-bold tracking-widest text-[10px] text-slate-300 uppercase">TP-@plan.Id</p>
+                                        <h4 class="truncate text-sm font-black text-slate-800">@plan.Name</h4>
+                                    </div>
+                                </div>
+                                <svg class="h-4 w-4 transition-transform @(selectedPlanId == plan.Id ? "translate-x-1 text-indigo-500" : "text-slate-200 group-hover:text-slate-400")" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <div class="flex flex-col items-center py-20 text-center opacity-30">
+                            <svg class="mb-4 h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <p class="font-black tracking-widest text-[10px] uppercase">No plans matched criteria</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Health Warning Area -->
+            @if (testPlans.Count(p => p.Status == TestPlanStatus.Draft) > 0)
+            {
+                <div class="space-y-4 rounded-[40px] border border-amber-100 bg-amber-50 p-8">
+                    <div class="flex items-center gap-3">
+                        <svg class="h-5 w-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <h5 class="text-xs font-black tracking-widest text-amber-800 uppercase">Integrity Gaps</h5>
+                    </div>
+                    <p class="leading-relaxed font-medium text-[11px] text-amber-600">
+                        @testPlans.Count(p => p.Status == TestPlanStatus.Draft) strategy instance(s) currently in draft status. Review and activate before deployment window.
+                    </p>
+                </div>
+            }
+        </div>
+
+        <!-- RIGHT: STRATEGY CANVAS -->
+        <div class="xl:col-span-8">
+            @if (SelectedPlan != null)
+            {
+                <div class="animate-in fade-in zoom-in-95 overflow-hidden rounded-[48px] border border-slate-100 bg-white shadow-sm duration-500">
+                    <!-- Preview Header -->
+                    <div class="flex flex-col justify-between gap-8 border-b border-slate-50 bg-slate-50/20 p-10 md:flex-row md:items-center">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3">
+                                <div class="rounded-full px-4 py-1 font-black tracking-widest text-[9px] text-white uppercase @GetStatusBadgeClass(SelectedPlan.Status)">
+                                    @SelectedPlan.Status Strategy
+                                </div>
+                                <span class="font-mono font-bold tracking-widest text-[11px] text-slate-300 uppercase">TP-@SelectedPlan.Id</span>
+                            </div>
+                            <h3 class="text-3xl leading-none font-black tracking-tight text-slate-800">@SelectedPlan.Name</h3>
+                        </div>
+                        <div class="flex gap-2">
+                            <button @onclick="() => OpenEditForm(SelectedPlan)"
+                                    class="p-5 bg-white border border-slate-100 text-slate-400 hover:text-slate-700 hover:shadow-md rounded-3xl transition-all">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button @onclick="() => DeletePlan(SelectedPlan.Id)"
+                                    class="p-5 bg-white border border-slate-100 text-slate-400 hover:text-red-500 hover:shadow-md rounded-3xl transition-all">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-10 p-10 md:grid-cols-2">
+                        <!-- Scope Block -->
+                        <div class="space-y-6">
+                            <div class="space-y-4">
+                                <h5 class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    </svg> Target Integration
+                                </h5>
+                                <div class="group flex items-center justify-between rounded-[32px] border border-slate-100 bg-slate-50 p-6">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
+                                            @GetScopeIcon(SelectedPlan.Scope)
+                                        </div>
+                                        <div>
+                                            <p class="max-w-[200px] truncate text-xs font-black text-slate-800">@GetTargetName(SelectedPlan)</p>
+                                            <p class="font-bold tracking-widest text-[9px] text-slate-400 uppercase">Scope: @SelectedPlan.Scope</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <h5 class="flex items-center gap-2 px-1 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                    </svg> Priority Level
+                                </h5>
+                                <div class="rounded-[32px] border border-slate-100 bg-slate-50 p-6">
+                                    <p class="text-lg leading-none @GetPriorityColorClass(SelectedPlan.Priority) font-black uppercase">@SelectedPlan.Priority</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Intelligence Block -->
+                        <div class="space-y-8">
+                            <div class="group relative overflow-hidden rounded-[40px] bg-[#1C1D2A] p-8 text-white shadow-xl">
+                                <div class="relative z-10 space-y-6">
+                                    <div class="flex items-center justify-between">
+                                        <h5 class="flex items-center gap-2 font-black tracking-widest text-[10px] text-indigo-400 uppercase">
+                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                            </svg> Status Insights
+                                        </h5>
+                                        <svg class="h-5 w-5 animate-pulse text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                        </svg>
+                                    </div>
+                                    <p class="text-xs leading-relaxed font-medium text-slate-400 italic">
+                                        Test plan "<span class="font-bold text-white">@SelectedPlan.Name</span>" is currently in <span class="text-emerald-400">@SelectedPlan.Status</span> status.
+                                        @if (SelectedPlan.StartedAt.HasValue)
+                                        {
+                                            <span> Started on @SelectedPlan.StartedAt.Value.ToString("MMM dd, yyyy").</span>
+                                        }
+                                    </p>
+                                </div>
+                                <div class="absolute -right-10 -bottom-10 h-32 w-32 rounded-full bg-indigo-500/10 blur-3xl"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Execution Bar -->
+                    <div class="flex flex-col justify-between gap-6 border-t border-slate-50 bg-slate-50/50 p-10 md:flex-row md:items-center">
+                        <div class="flex items-center gap-4 text-slate-400">
+                            <svg class="h-6 w-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <p class="font-bold tracking-widest text-[10px] uppercase">Blueprint Integrity Verified • Strategy Ready for Dispatch</p>
+                        </div>
+
+                        @if (SelectedPlan.Status == TestPlanStatus.Draft)
+                        {
+                            <button @onclick="() => StartExecution(SelectedPlan)"
+                                    class="px-12 py-4 bg-indigo-600 text-white rounded-[22px] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl active:scale-95 transition-all flex items-center gap-3">
+                                <svg class="h-4 w-4 fill-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg> Start Execution
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="flex h-full min-h-[600px] flex-col items-center justify-center rounded-[64px] border-2 border-dashed border-slate-200 bg-white/40 p-20 text-center">
+                    <div class="mb-8 flex h-24 w-24 items-center justify-center rounded-[40px] bg-white shadow-sm">
+                        <svg class="h-10 w-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                    </div>
+                    <h3 class="text-3xl font-black tracking-tight text-slate-800">Select Strategy Node</h3>
+                    <p class="mt-4 max-w-sm leading-relaxed font-medium text-slate-400">Select a test plan from the navigator to visualize its architectural depth and execution status.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Form Component -->
+<TestPlanForm ProjectId="@ProjectId"
+              ExistingPlan="@editingPlan"
+              IsVisible="@isFormVisible"
+              OnSave="@HandlePlanSaved"
+              OnCancel="@CloseForm" />
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+
+    private List<TestPlanResponse> testPlans = new();
+    private string searchQuery = "";
+    private string scopeFilter = "All";
+    private List<string> scopeFilters = new() { "All", "Project", "Milestone", "Task" };
+    private int? selectedPlanId;
+    private bool isFormVisible = false;
+    private TestPlanResponse? editingPlan;
+    private bool isLoading = true;
+
+    private TestPlanResponse? SelectedPlan => testPlans.FirstOrDefault(p => p.Id == selectedPlanId);
+
+    private IEnumerable<TestPlanResponse> FilteredPlans
+    {
+        get
+        {
+            var filtered = testPlans.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                filtered = filtered.Where(p =>
+                    p.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                    p.Id.ToString().Contains(searchQuery));
+            }
+
+            if (scopeFilter != "All")
+            {
+                filtered = filtered.Where(p => p.Scope.ToString() == scopeFilter);
+            }
+
+            return filtered.ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTestPlans();
+    }
+
+    private async Task LoadTestPlans()
+    {
+        isLoading = true;
+        try
+        {
+            testPlans = await TestPlanService.GetAllTestPlansAsync(ProjectId);
+            if (testPlans.Any() && !selectedPlanId.HasValue)
+            {
+                selectedPlanId = testPlans.First().Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading test plans: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectPlan(int planId)
+    {
+        selectedPlanId = planId;
+    }
+
+    private void OpenCreateForm()
+    {
+        editingPlan = null;
+        isFormVisible = true;
+    }
+
+    private void OpenEditForm(TestPlanResponse plan)
+    {
+        editingPlan = plan;
+        isFormVisible = true;
+    }
+
+    private void CloseForm()
+    {
+        isFormVisible = false;
+        editingPlan = null;
+    }
+
+    private async Task HandlePlanSaved(TestPlanResponse savedPlan)
+    {
+        await LoadTestPlans();
+        selectedPlanId = savedPlan.Id;
+        CloseForm();
+    }
+
+    private async Task DeletePlan(int planId)
+    {
+        bool confirmed = await ModalService.ShowConfirmation(
+            "Delete Item",
+            "Are you sure you want to delete this plan?"
+        );
+
+        if (confirmed)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/TestPlans/{planId}");
+                response.EnsureSuccessStatusCode();
+                await LoadTestPlans();
+                selectedPlanId = testPlans.FirstOrDefault()?.Id;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting plan: {ex.Message}");
+            }
+        }
+    }
+
+    private void StartExecution(TestPlanResponse plan)
+    {
+        // Navigate to test execution page
+        Navigation.NavigateTo($"/projects/{ProjectId}/test-plans/{plan.Id}/execute");
+    }
+
+    private string GetStatusClass(TestPlanStatus status) => status switch
+    {
+        TestPlanStatus.InProgress => "bg-blue-600 text-white animate-pulse",
+        TestPlanStatus.Completed => "bg-emerald-500 text-white",
+        _ => "bg-white shadow-sm text-slate-300"
+    };
+
+    private string GetStatusBadgeClass(TestPlanStatus status) => status switch
+    {
+        TestPlanStatus.Draft => "bg-slate-400",
+        TestPlanStatus.InProgress => "bg-blue-600",
+        TestPlanStatus.Completed => "bg-emerald-600",
+        _ => "bg-slate-400"
+    };
+
+    private string GetPriorityColorClass(TestPlanPriority priority) => priority switch
+    {
+        // TestPlanPriority.Critical => "text-red-600",
+        TestPlanPriority.High => "text-orange-600",
+        TestPlanPriority.Medium => "text-blue-600",
+        TestPlanPriority.Low => "text-slate-600",
+        _ => "text-slate-400"
+    };
+
+    private RenderFragment GetScopeIcon(TestPlanScope scope) => scope switch
+    {
+        TestPlanScope.Milestone => @<svg class="h-6 w-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>,
+        TestPlanScope.Task => @<svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+        </svg>,
+        _ => @<svg class="h-6 w-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+    };
+
+    private string GetTargetName(TestPlanResponse plan) => plan.Scope switch
+    {
+        TestPlanScope.Milestone => $"Milestone #{plan.MilestoneId}",
+        TestPlanScope.Task => $"Task #{plan.TaskId}",
+        _ => $"Project #{plan.ProjectId}"
+    };
+}
+
+
+
+
+@* 
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+      
+      {/* 1. STRATEGIC HEADER */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div>
+          <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-4">
+            Strategy Center
+            <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+               Operational v4.2
+            </div>
+          </h2>
+          <p className="text-slate-400 mt-2 font-medium max-w-2xl">Provision and orchestrate high-integrity validation blueprints for project deliverables and critical logical paths.</p>
+        </div>
+        
+        <button 
+          onClick={() => { setEditingPlan(null); setIsFormOpen(true); }}
+          className="bg-[#1C1D2A] text-white px-10 py-5 rounded-[28px] flex items-center gap-3 font-black shadow-2xl hover:bg-slate-800 transition-all active:scale-95 text-xs uppercase tracking-widest group"
+        >
+          <Plus className="w-5 h-5 text-indigo-400 group-hover:rotate-90 transition-transform" />
+          <span>Architect New Plan</span>
+        </button>
+      </div>
+
+      {/* 2. SPLIT-PANE HUB */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+        
+        {/* LEFT: PLAN NAVIGATOR (High Density List) */}
+        <div className="xl:col-span-4 space-y-6">
+           <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-slate-50 space-y-4 bg-slate-50/30">
+                 <div className="relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                    <input 
+                      type="text" 
+                      placeholder="Search identifier or title..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-[11px] font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all"
+                    />
+                 </div>
+                 <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1">
+                    {(['All', 'Project', 'Milestone', 'Task'] as const).map(type => (
+                      <button
+                        key={type}
+                        onClick={() => setTypeFilter(type)}
+                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                          typeFilter === type ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-400 border border-slate-100 hover:bg-slate-50'
+                        }`}
+                      >
+                         {type}
+                      </button>
+                    ))}
+                 </div>
+              </div>
+
+              <div className="p-2 space-y-1 max-h-[600px] overflow-y-auto no-scrollbar">
+                 {filteredPlans.map(plan => (
+                   <button
+                     key={plan.id}
+                     onClick={() => setSelectedPlanId(plan.id)}
+                     className={`w-full p-5 rounded-[28px] transition-all text-left flex items-center justify-between group ${
+                       selectedPlanId === plan.id || (!selectedPlanId && filteredPlans[0]?.id === plan.id)
+                         ? 'bg-indigo-50 border border-indigo-100 shadow-sm' 
+                         : 'hover:bg-slate-50'
+                     }`}
+                   >
+                      <div className="flex items-center gap-4 truncate">
+                         <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all ${
+                           plan.status === 'In Progress' ? 'bg-blue-600 text-white animate-pulse' : 
+                           plan.status === 'Completed' ? 'bg-emerald-500 text-white' : 'bg-white shadow-sm text-slate-300'
+                         }`}>
+                            {plan.status === 'Draft' ? <Terminal className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+                         </div>
+                         <div className="truncate">
+                            <p className="text-[10px] font-mono font-bold text-slate-300 uppercase tracking-widest">{plan.id}</p>
+                            <h4 className="text-sm font-black text-slate-800 truncate">{plan.name}</h4>
+                         </div>
+                      </div>
+                      <ChevronRight className={`w-4 h-4 transition-transform ${
+                        selectedPlanId === plan.id ? 'translate-x-1 text-indigo-500' : 'text-slate-200 group-hover:text-slate-400'
+                      }`} />
+                   </button>
+                 ))}
+
+                 {filteredPlans.length === 0 && (
+                   <div className="py-20 text-center opacity-30 flex flex-col items-center">
+                      <Search className="w-10 h-10 mb-4" />
+                      <p className="text-[10px] font-black uppercase tracking-widest">No plans matched criteria</p>
+                   </div>
+                 )}
+              </div>
+           </div>
+
+           {/* Health Warning Area */}
+           <div className="bg-amber-50 border border-amber-100 rounded-[40px] p-8 space-y-4">
+              <div className="flex items-center gap-3">
+                 <AlertTriangle className="w-5 h-5 text-amber-500" />
+                 <h5 className="text-xs font-black text-amber-800 uppercase tracking-widest">Integrity Gaps</h5>
+              </div>
+              <p className="text-[11px] text-amber-600 font-medium leading-relaxed">
+                 {plans.filter(p => p.suiteIds.length === 0).length} strategy instances currently have zero logical coverage. This indicates a high risk for the upcoming deployment window.
+              </p>
+           </div>
+        </div>
+
+        {/* RIGHT: STRATEGY CANVAS (Active Plan Preview) */}
+        <div className="xl:col-span-8">
+           {activePreviewPlan ? (
+             <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-500">
+                {/* Preview Header */}
+                <div className="p-10 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-8 bg-slate-50/20">
+                   <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                         <div className={`px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-white ${
+                           activePreviewPlan.status === 'Draft' ? 'bg-slate-400' : 'bg-blue-50'
+                         }`}>
+                           {activePreviewPlan.status} Strategy
+                         </div>
+                         <span className="text-[11px] font-mono font-bold text-slate-300 uppercase tracking-widest">{activePreviewPlan.id}</span>
+                      </div>
+                      <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none">{activePreviewPlan.name}</h3>
+                   </div>
+                   <div className="flex gap-2">
+                      <button 
+                        onClick={() => setViewingPlanId(activePreviewPlan.id)}
+                        className="p-5 bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 hover:shadow-md rounded-3xl transition-all group"
+                      >
+                         <Maximize2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                      </button>
+                      <button 
+                        onClick={() => { setEditingPlan(activePreviewPlan); setIsFormOpen(true); }}
+                        className="p-5 bg-white border border-slate-100 text-slate-400 hover:text-slate-700 hover:shadow-md rounded-3xl transition-all"
+                      >
+                         <Edit3 className="w-6 h-6" />
+                      </button>
+                   </div>
+                </div>
+
+                <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+                   {/* Scope Block */}
+                   <div className="space-y-6">
+                      <div className="space-y-4">
+                         <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-1">
+                            <Target className="w-3.5 h-3.5" /> Target Integration
+                         </h5>
+                         <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100 flex items-center justify-between group">
+                            <div className="flex items-center gap-4">
+                               <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                                  {activePreviewPlan.targetType === 'Milestone' ? <Clock className="w-6 h-6 text-orange-400" /> : 
+                                   activePreviewPlan.targetType === 'Task' ? <Layout className="w-6 h-6 text-blue-400" /> : 
+                                   <Briefcase className="w-6 h-6 text-emerald-400" />}
+                               </div>
+                               <div>
+                                  <p className="text-xs font-black text-slate-800 truncate max-w-[200px]">{getTargetName(activePreviewPlan)}</p>
+                                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Scope: {activePreviewPlan.targetType}</p>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="space-y-4">
+                         <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-1">
+                            <Layers className="w-3.5 h-3.5" /> Enrolled Logic Suites
+                         </h5>
+                         <div className="space-y-2 max-h-[180px] overflow-y-auto no-scrollbar pr-2">
+                            {activePreviewPlan.suiteIds.map(sid => {
+                               const suite = project.testSuites?.find(s => s.id === sid);
+                               return (
+                                 <div key={sid} className="p-4 bg-white border border-slate-50 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all shadow-sm">
+                                    <div className="flex items-center gap-3">
+                                       <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-all">
+                                          <Layers className="w-4 h-4" />
+                                       </div>
+                                       <span className="text-[11px] font-bold text-slate-600 truncate max-w-[150px]">{suite?.name || sid}</span>
+                                    </div>
+                                    <span className="text-[9px] font-black text-slate-300">{suite?.testCases.length || 0} Cases</span>
+                                 </div>
+                               );
+                            })}
+                            {activePreviewPlan.suiteIds.length === 0 && (
+                               <div className="py-10 text-center opacity-30 border-2 border-dashed border-slate-100 rounded-[32px]">
+                                  <p className="text-[10px] font-black uppercase">No suites enrolled</p>
+                               </div>
+                            )}
+                         </div>
+                      </div>
+                   </div>
+
+                   {/* Intelligence Block */}
+                   <div className="space-y-8">
+                      <div className="bg-[#1C1D2A] rounded-[40px] p-8 text-white relative overflow-hidden group shadow-xl">
+                         <div className="relative z-10 space-y-6">
+                            <div className="flex items-center justify-between">
+                               <h5 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                                  <Zap className="w-3.5 h-3.5" /> Neural Predictor
+                               </h5>
+                               <Cpu className="w-5 h-5 text-indigo-500 animate-pulse" />
+                            </div>
+                            <p className="text-xs font-medium text-slate-400 leading-relaxed italic">
+                               "Validation logic for <span className="text-white font-bold">{activePreviewPlan.id}</span> targets core Auth protocols. Gemini identifies <span className="text-emerald-400">92% stability index</span> for current suite parameters."
+                            </p>
+                         </div>
+                         <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl"></div>
+                      </div>
+
+                      <div className="space-y-4">
+                         <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 px-1">
+                            <Activity className="w-3.5 h-3.5" /> Readiness Matrix
+                         </h5>
+                         <div className="grid grid-cols-2 gap-3">
+                            <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100/50">
+                               <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Complexity</p>
+                               <div className="flex gap-1.5">
+                                  {[1,2,3,4,5].map(lvl => (
+                                    <div key={lvl} className={`h-1.5 w-full rounded-full ${lvl <= 3 ? 'bg-indigo-500' : 'bg-slate-200'}`}></div>
+                                  ))}
+                                </div>
+                            </div>
+                            <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100/50">
+                               <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Risk Vector</p>
+                               <p className="text-lg font-black text-emerald-500 uppercase leading-none">Low</p>
+                            </div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Execution Bar */}
+                <div className="p-10 border-t border-slate-50 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                   <div className="flex items-center gap-4 text-slate-400">
+                      <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest">Blueprint Integrity Verified • Strategy Ready for Dispatch</p>
+                   </div>
+                   
+                   <div className="flex gap-3">
+                      {activePreviewPlan.status === 'Draft' ? (
+                        <button 
+                          onClick={() => setPlanToExecute(activePreviewPlan)}
+                          className="px-12 py-4 bg-indigo-600 text-white rounded-[22px] font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-xl active:scale-95 transition-all flex items-center gap-3"
+                        >
+                           <Play className="w-4 h-4 fill-white" /> Start Execution
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={() => onLaunchExecution(activePreviewPlan)}
+                          className="px-12 py-4 bg-blue-600 text-white rounded-[22px] font-black text-xs uppercase tracking-widest hover:bg-blue-700 shadow-xl active:scale-95 transition-all flex items-center gap-3"
+                        >
+                           <ArrowRight className="w-4 h-4" /> Return to Run
+                        </button>
+                      )}
+                   </div>
+                </div>
+             </div>
+           ) : (
+             <div className="h-full flex flex-col items-center justify-center text-center p-20 bg-white/40 rounded-[64px] border-2 border-dashed border-slate-200">
+                <div className="w-24 h-24 bg-white rounded-[40px] flex items-center justify-center shadow-sm mb-8">
+                   <ClipboardList className="w-10 h-10 text-indigo-400" />
+                </div>
+                <h3 className="text-3xl font-black text-slate-800 tracking-tight">Select Strategy Node</h3>
+                <p className="text-slate-400 max-w-sm mt-4 font-medium leading-relaxed">Select a test plan from the navigator to visualize its architectural depth and execution status.</p>
+             </div>
+           )}
+        </div>
+      </div>
+
+      {/* 3. CONFIRMATION OVERLAY */}
+      {planToExecute && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-[#0F111A]/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={() => setPlanToExecute(null)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-[56px] p-12 text-center animate-in zoom-in-95 duration-300 shadow-2xl overflow-hidden border border-slate-100">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
+            <div className="w-24 h-24 bg-indigo-50 rounded-[40px] flex items-center justify-center mx-auto mb-8 ring-8 ring-indigo-50/50">
+              <AlertCircle className="w-12 h-12 text-indigo-500 animate-pulse" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-800 tracking-tight leading-none uppercase">Deploy Strategy?</h2>
+            <p className="text-slate-400 font-medium mt-6 leading-relaxed">
+               Initializing <span className="text-indigo-600 font-black">"{planToExecute.name}"</span> will freeze the current logical enrollment. All scenarios will be dispatched to the Execution Hub.
+            </p>
+            <div className="mt-12 flex flex-col gap-3">
+              <button 
+                onClick={handleStartExecution}
+                className="w-full py-6 bg-[#1C1D2A] text-white rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-3 group"
+              >
+                Launch Protocol <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button 
+                onClick={() => setPlanToExecute(null)}
+                className="w-full py-5 bg-white text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-800 transition-colors"
+              >
+                Abort Deployment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. FORM OVERLAY */}
+      {isFormOpen && (
+        <TestPlanForm 
+          project={project}
+          globalLibrary={globalLibrary}
+          existingPlan={editingPlan}
+          onSave={handleSavePlan}
+          onClose={() => { setIsFormOpen(false); setEditingPlan(null); }}
+        />
+      )}
+
+      {/* 5. PORTFOLIO INSIGHT FOOTER */}
+      <div className="p-12 bg-white rounded-[64px] border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-10 relative overflow-hidden shadow-sm">
+         <div className="relative z-10 space-y-4">
+            <h4 className="text-2xl font-black text-slate-800 tracking-tight">Portfolio Strategy Traceability</h4>
+            <p className="text-slate-400 font-medium max-w-2xl leading-relaxed">
+               Global strategy tracking provides cross-sprint auditing. Use the Strategy Center to verify that every critical requirement is shadowed by a verifiable logical blueprint.
+            </p>
+            <div className="flex gap-4 pt-2">
+               <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Syncing</span>
+               </div>
+               <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#E85D3F]"></div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Compliance Locked</span>
+               </div>
+            </div>
+         </div>
+         <div className="flex-shrink-0 relative w-40 h-40 flex items-center justify-center group cursor-help">
+            <div className="w-full h-full rounded-full border-4 border-dashed border-indigo-100 group-hover:animate-[spin_10s_linear_infinite] transition-all"></div>
+            <ShieldCheck className="w-20 h-20 text-indigo-100 absolute group-hover:text-indigo-600 transition-colors" />
+         </div>
+      </div>
+    </div>
+  );
+};
+ *@
+
