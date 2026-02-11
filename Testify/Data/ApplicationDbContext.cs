@@ -95,7 +95,7 @@ namespace Testify.Data
             builder.Entity<TestRun>()
                 .HasOne(tr => tr.TestPlan)
                 .WithMany(p => p.TestRuns)
-                .HasForeignKey(tr => tr.PlanId)
+                .HasForeignKey(tr => tr.TestPlanId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // TaskLinkedRunStep - prevent multiple cascade paths

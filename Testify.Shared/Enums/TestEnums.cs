@@ -42,8 +42,8 @@ namespace Testify.Shared.Enums
     public enum TestRunStatus
     {
         Untested,
-        Pass,
-        Fail,
+        Passed,
+        Failed,
         Blocked,
         Skipped
     }

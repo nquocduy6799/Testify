@@ -528,9 +528,10 @@ else
 		menuOpenTaskId = null;
 	}
 
+
 	private async Task HandleDeleteTask(int taskId)
 	{
-		bool confirmed = await ModalService.ShowConfirmation(
+		bool confirmed = await ModalService.ShowDeleteConfirmation(
 			"Delete Item",
 			"Are you sure you want to delete this item?"
 		);
