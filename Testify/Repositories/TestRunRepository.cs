@@ -383,7 +383,6 @@ namespace Testify.Repositories
         #endregion
 
         #region Mapping Methods
-
         private static TestRunResponse MapToResponse(TestRun testRun)
         {
             return new TestRunResponse
@@ -395,8 +394,8 @@ namespace Testify.Repositories
                 ExecutedAt = testRun.ExecutedAt,
                 Status = testRun.Status,
                 Comments = testRun.Comments,
-                CreatedAt = DateTimeHelper.GetVietnamTime(),
-                CreatedBy = "System"
+                CreatedAt = testRun.CreatedAt,  
+                CreatedBy = testRun.CreatedBy    
             };
         }
 

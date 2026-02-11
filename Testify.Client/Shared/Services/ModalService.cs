@@ -107,7 +107,7 @@ namespace Testify.Client.Shared.Services
                 Buttons = ModalButton.YesNo,
                 ConfirmButtonText = "Start Execution",
                 CancelButtonText = "Cancel",
-                Icon = HeroIcons.PlayCircle, // Updated
+                Icon = HeroIcons.PlayCircle, 
                 AllowBackdropClick = false,
                 ShowCloseButton = false
             });

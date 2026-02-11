@@ -221,10 +221,10 @@ namespace Testify.Controllers
 
         #endregion
 
-        #region UC-09: Start Test Plan Execution
+        #region Start Test Plan Execution
 
         /// <summary>
-        /// Start test plan execution (UC-09)
+        /// Start test plan execution 
         /// Creates test runs and snapshots test steps for all test cases in the selected suites
         /// </summary>
         [HttpPost("start-execution")]

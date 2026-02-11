@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Testify.Client.Features.TestPlans.Components
 @using Testify.Client.Interfaces
+@using Testify.Client.Shared.Services
 @using Testify.Shared.DTOs.Milestones
 @using Testify.Shared.DTOs.Projects
 @using Testify.Shared.DTOs.TestCases
@@ -10,6 +11,8 @@
 @inject ITestPlanService TestPlanService
 @inject IProjectService ProjectService
 @inject IMilestoneService MilestoneService
+@inject ITestRunService TestRunService
+@inject ModalService ModalService
 @inject NavigationManager Navigation
 @rendermode InteractiveWebAssembly
 @attribute [Authorize]
@@ -313,7 +316,12 @@
                             <div class="flex gap-3">
                                 @if (plan.Status == TestPlanStatus.Draft)
                                 {
-                                    <button @onclick="() => _planToExecute = plan"
+                                    @* <button @onclick="() => _planToExecute = plan"
+                                            class="flex items-center gap-3 rounded-[22px] bg-indigo-600 px-12 py-4 text-xs font-black uppercase tracking-widest text-white shadow-xl transition-all hover:bg-indigo-700 active:scale-95">
+                                        <svg class="h-4 w-4 fill-white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                        Start Execution
+                                    </button> *@
+                                    <button @onclick="async () => { _planToExecute = plan; await HandleStartExecutionAsync(); }"
                                             class="flex items-center gap-3 rounded-[22px] bg-indigo-600 px-12 py-4 text-xs font-black uppercase tracking-widest text-white shadow-xl transition-all hover:bg-indigo-700 active:scale-95">
                                         <svg class="h-4 w-4 fill-white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                         Start Execution
@@ -336,38 +344,6 @@
             </div>
         </div>
 
-        @* 3. CONFIRMATION OVERLAY *@
-        @if (_planToExecute is not null)
-        {
-            <div class="fixed inset-0 z-[500] flex items-center justify-center p-6">
-                <div class="animate-in fade-in absolute inset-0 bg-[#0F111A]/80 backdrop-blur-xl duration-500" @onclick="CloseExecutionPrompt"></div>
-                <div class="animate-in zoom-in-95 relative w-full max-w-md overflow-hidden rounded-[56px] border border-slate-100 bg-white p-12 text-center shadow-2xl duration-300">
-                    <div class="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
-                    <div class="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-[40px] bg-indigo-50 ring-8 ring-indigo-50/50">
-                        <svg class="h-12 w-12 animate-pulse text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                    </div>
-                    <h2 class="text-3xl leading-none font-black tracking-tight text-slate-800 uppercase">Deploy Strategy?</h2>
-                    <p class="mt-6 leading-relaxed font-medium text-slate-400">
-                        Initializing <span class="font-black text-indigo-600">"@_planToExecute.Name"</span> will freeze the current logical enrollment.
-                    </p>
-                    <div class="mt-12 flex flex-col gap-3">
-                        <button @onclick="HandleStartExecutionAsync"
-                                class="group flex w-full items-center justify-center gap-3 rounded-[24px] bg-[#1C1D2A] py-6 text-xs font-black tracking-[0.2em] text-white uppercase shadow-2xl transition-all hover:bg-slate-800 active:scale-95">
-                            Launch Protocol
-                            <svg class="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7 7 7-7 7" />
-                            </svg>
-                        </button>
-                        <button @onclick="CloseExecutionPrompt"
-                                class="w-full py-5 font-black tracking-widest text-[10px] text-slate-400 uppercase transition-colors hover:text-slate-800">
-                            Abort Deployment
-                        </button>
-                    </div>
-                </div>
-            </div>
-        }
 
         @* 4. FORM OVERLAY *@
         @if (_isFormOpen && _project is not null)
@@ -530,22 +506,34 @@
         if (_planToExecute is null)
             return;
 
-        var update = new UpdateTestPlanRequest
-        {
-            ProjectId = _planToExecute.ProjectId,
-            TaskId = _planToExecute.TaskId,
-            MilestoneId = _planToExecute.MilestoneId,
-            Scope = _planToExecute.Scope,
-            Name = _planToExecute.Name,
-            Description = _planToExecute.Description,
-            Status = TestPlanStatus.InProgress,
-            Priority = _planToExecute.Priority,
-            TestSuites = _planToExecute.TestSuites
-        };
+        bool confirmed = await ModalService.ShowStartExecutionWarningAsync();
 
-        await TestPlanService.UpdateTestPlanAsync(_planToExecute.Id, update);
-        _plans = await TestPlanService.GetAllTestPlansAsync(ProjectId);
-        _planToExecute = null;
+        if (!confirmed)
+        {
+            CloseExecutionPrompt();
+            return;
+        }
+
+        try
+        {
+            var testSuiteIds = _planToExecute.TestSuites.Select(s => s.Id).ToList();
+        
+            var result = await TestRunService.StartExecutionAsync(_planToExecute.Id, testSuiteIds);
+
+            if (result is not null)
+            {
+                // Navigate to the test execution hub
+                Navigation.NavigateTo($"/projects/{ProjectId}/testplans/{_planToExecute.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to start execution: {ex.Message}";
+        }
+        finally
+        {
+            CloseExecutionPrompt();
+        }
     }
 
     private void NavigateToPlan(int planId)
