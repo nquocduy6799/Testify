@@ -1,0 +1,123 @@
+@using Testify.Shared.DTOs.Chat
+@using Testify.Shared.Enums
+
+@if (IsVisible && IncomingCall != null)
+{
+    <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div class="bg-white rounded-[40px] shadow-2xl p-8 w-80 flex flex-col items-center animate-bounce-in">
+            @* Caller avatar *@
+            <div class="relative mb-5">
+                @if (!string.IsNullOrEmpty(IncomingCall.CallerAvatarUrl))
+                {
+                    <img src="@IncomingCall.CallerAvatarUrl" class="w-24 h-24 rounded-[32px] object-cover shadow-lg" alt="" />
+                }
+                else
+                {
+                    <div class="w-24 h-24 rounded-[32px] bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-3xl shadow-lg">
+                        @GetInitials(IncomingCall.CallerName)
+                    </div>
+                }
+                <div class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-emerald-500 border-4 border-white flex items-center justify-center animate-pulse">
+                    @if (IncomingCall.CallType == CallType.Video)
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
+                        </svg>
+                    }
+                </div>
+            </div>
+
+            @* Caller info *@
+            <h3 class="text-xl font-black text-slate-800 mb-1">@IncomingCall.CallerName</h3>
+            <p class="text-sm text-slate-400 font-bold mb-6 flex items-center gap-2">
+                @if (IncomingCall.CallType == CallType.Video)
+                {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                    </svg>
+                    <span>Incoming video call...</span>
+                }
+                else
+                {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
+                    </svg>
+                    <span>Incoming voice call...</span>
+                }
+            </p>
+
+            @* Action buttons *@
+            <div class="flex items-center gap-6">
+                @* Reject *@
+                <button @onclick="Reject" class="group flex flex-col items-center gap-2" disabled="@isProcessing">
+                    <div class="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg shadow-red-500/30 transition-all group-hover:scale-110">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Decline</span>
+                </button>
+
+                @* Accept *@
+                <button @onclick="Accept" class="group flex flex-col items-center gap-2" disabled="@isProcessing">
+                    <div class="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 transition-all group-hover:scale-110 animate-pulse">
+                        @if (IncomingCall.CallType == CallType.Video)
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                            </svg>
+                        }
+                        else
+                        {
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                        }
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Accept</span>
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public IncomingCallResponse? IncomingCall { get; set; }
+    [Parameter] public EventCallback OnAccepted { get; set; }
+    [Parameter] public EventCallback OnRejected { get; set; }
+
+    private bool isProcessing;
+
+    private async Task Accept()
+    {
+        if (isProcessing) return;
+        isProcessing = true;
+        await OnAccepted.InvokeAsync();
+        isProcessing = false;
+    }
+
+    private async Task Reject()
+    {
+        if (isProcessing) return;
+        isProcessing = true;
+        await OnRejected.InvokeAsync();
+        isProcessing = false;
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
+            : (parts.Length == 1 ? parts[0][0].ToString().ToUpper() : "?");
+    }
+}

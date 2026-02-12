@@ -33,5 +33,7 @@ builder.Services.AddScoped<IChatService, Testify.Client.Features.Chat.Services.C
 // Register SignalR for real-time notifications
 builder.Services.AddScoped<NotificationHubService>();
 builder.Services.AddScoped<Testify.Client.Features.Chat.Services.ChatHubService>();
+builder.Services.AddScoped<Testify.Client.Features.Chat.Services.CallHubService>();
+builder.Services.AddScoped<Testify.Client.Features.Chat.Services.WebRtcService>();
 
 await builder.Build().RunAsync();

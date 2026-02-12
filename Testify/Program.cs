@@ -134,6 +134,7 @@ app.MapControllers();
 // Map SignalR Hub
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<CallHub>("/hubs/call");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

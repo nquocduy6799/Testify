@@ -185,16 +185,19 @@ else
                     </div>
 
                     <div class="flex items-center gap-2">
-                        <button class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                            </svg>
-                        </button>
-                        <button class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-                            </svg>
-                        </button>
+                        @if (activeRoom.RoomType == ChatRoomType.Private)
+                        {
+                            <button @onclick="() => StartCall(CallType.Audio)" class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all" title="Voice call" disabled="@isInCall">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                            </button>
+                            <button @onclick="() => StartCall(CallType.Video)" class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all" title="Video call" disabled="@isInCall">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                                </svg>
+                            </button>
+                        }
                         <div class="w-px h-8 bg-slate-100 mx-2"></div>
                         <button @onclick="ToggleMessageSearch" class="@(isMessageSearchOpen ? "p-3 text-[#E85D3F] bg-red-50 rounded-2xl transition-all" : "p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all")" title="Search messages">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -387,6 +390,95 @@ else
                             </div>
                         }
                         var isOwn = IsOwnMessage(message);
+
+                        @* --- Call message special rendering --- *@
+                        @if (message.MessageType == MessageType.Call)
+                        {
+                            var callMeta = ParseCallMetadata(message.Metadata);
+                            var isOutgoing = message.UserId == currentUserId;
+                            var callIcon = callMeta.CallType == "Video" ? "video" : "phone";
+                            var statusColor = callMeta.CallStatus switch
+                            {
+                                "Ended" => "text-green-600",
+                                "Missed" => "text-red-500",
+                                "Rejected" => "text-orange-500",
+                                "Cancelled" => "text-slate-400",
+                                _ => "text-slate-500"
+                            };
+                            var statusBg = callMeta.CallStatus switch
+                            {
+                                "Ended" => "bg-green-50 border-green-200",
+                                "Missed" => "bg-red-50 border-red-200",
+                                "Rejected" => "bg-orange-50 border-orange-200",
+                                "Cancelled" => "bg-slate-50 border-slate-200",
+                                _ => "bg-slate-50 border-slate-200"
+                            };
+
+                            <div @key="message.Id" data-message-id="@message.Id" class="flex justify-center my-3">
+                                <div class="@statusBg border rounded-2xl px-5 py-3 flex items-center gap-4 max-w-sm w-full shadow-sm">
+                                    @* Call icon *@
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 @(callMeta.CallStatus == "Ended" ? "bg-green-100" : callMeta.CallStatus == "Missed" ? "bg-red-100" : callMeta.CallStatus == "Rejected" ? "bg-orange-100" : "bg-slate-100")">
+                                        @if (callIcon == "video")
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@statusColor">
+                                                <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/>
+                                            </svg>
+                                        }
+                                        else
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@statusColor">
+                                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                            </svg>
+                                        }
+                                    </div>
+                                    @* Call info *@
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-slate-800 truncate">@message.Content</p>
+                                        <div class="flex items-center gap-1.5 mt-0.5">
+                                            @if (isOutgoing)
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="@statusColor">
+                                                    <path d="m7 7 10 10"/><path d="M17 7v10H7"/>
+                                                </svg>
+                                            }
+                                            else
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="@statusColor">
+                                                    <path d="M17 17 7 7"/><path d="M7 17V7h10"/>
+                                                </svg>
+                                            }
+                                            <span class="text-[11px] @statusColor font-medium">
+                                                @(isOutgoing ? "Outgoing call" : "Incoming call")
+                                            </span>
+                                            <span class="text-[10px] text-slate-400">@message.CreatedAt.ToString("HH:mm")</span>
+                                        </div>
+                                    </div>
+                                    @* Callback button *@
+                                    @if (activeRoom?.RoomType == ChatRoomType.Private && !isInCall)
+                                    {
+                                        <button type="button"
+                                                @onclick="() => StartCallFromHistory(callMeta.CallType)"
+                                                class="w-9 h-9 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center flex-shrink-0 transition-colors shadow-sm"
+                                                title="Call back">
+                                            @if (callIcon == "video")
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/>
+                                                </svg>
+                                            }
+                                            else
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                                </svg>
+                                            }
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                            continue;
+                        }
+
                         <div @key="message.Id" data-message-id="@message.Id" class="@GetMessageContainerClass(message, isOwn)">
                         @if (isOwn)
                         {
@@ -399,8 +491,8 @@ else
                                     <div class="flex flex-col gap-2 items-end">
                                         <textarea @bind="_editContent" @onkeydown="HandleEditKeyDown" rows="2" class="w-full max-w-md p-3 rounded-2xl border border-slate-200 text-sm text-slate-800 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/30" />
                                         <div class="flex gap-2">
-                                            <button type="button" @onclick="CancelEditing" class="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-xl bg-slate-100">Hủy</button>
-                                            <button type="button" @onclick="() => SaveEdit(message.Id)" class="text-xs font-bold text-white bg-[#E85D3F] hover:opacity-90 px-3 py-1.5 rounded-xl">Lưu</button>
+                                            <button type="button" @onclick="CancelEditing" class="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-xl bg-slate-100">Cancel</button>
+                                            <button type="button" @onclick="() => SaveEdit(message.Id)" class="text-xs font-bold text-white bg-[#E85D3F] hover:opacity-90 px-3 py-1.5 rounded-xl">Save</button>
                                         </div>
                                     </div>
                                 }
@@ -418,7 +510,7 @@ else
                                             @(message.IsDeleted ? "The message has been withdrawn." : message.Content)
                                             @if (message.UpdatedAt.HasValue && !message.IsDeleted)
                                             {
-                                                <span class="text-[10px] opacity-80 block mt-1">(đã chỉnh sửa)</span>
+                                                <span class="text-[10px] opacity-80 block mt-1">(edited)</span>
                                             }
                                         </div>
                                         <span class="text-[9px] font-bold text-slate-300 uppercase mb-2 flex items-center gap-1">
@@ -468,20 +560,20 @@ else
                                     <div class="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
                                         @if (!message.IsDeleted)
                                         {
-                                            <button type="button" @onclick="() => SetReplyTo(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Trả lời</button>
+                                            <button type="button" @onclick="() => SetReplyTo(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Reply</button>
                                             <span class="text-slate-200">·</span>
-                                            <button type="button" @onclick="() => StartEdit(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Sửa</button>
+                                            <button type="button" @onclick="() => StartEdit(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Edit</button>
                                             <span class="text-slate-200">·</span>
                                             @if (message.IsPinned)
                                             {
-                                                <button type="button" @onclick="() => UnpinMessage(activeRoomId!.Value, message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-amber-500 hover:text-amber-600">Bỏ ghim</button>
+                                                <button type="button" @onclick="() => UnpinMessage(activeRoomId!.Value, message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-amber-500 hover:text-amber-600">Unpin</button>
                                             }
                                             else
                                             {
-                                                <button type="button" @onclick="() => PinMessage(message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-slate-400 hover:text-amber-500">Ghim</button>
+                                                <button type="button" @onclick="() => PinMessage(message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-slate-400 hover:text-amber-500">Pin</button>
                                             }
                                             <span class="text-slate-200">·</span>
-                                            <button type="button" @onclick="() => ConfirmDeleteMessage(message.Id)" class="text-[10px] font-bold text-slate-400 hover:text-red-500">Thu hồi</button>
+                                            <button type="button" @onclick="() => ConfirmDeleteMessage(message.Id)" class="text-[10px] font-bold text-slate-400 hover:text-red-500">Unsend</button>
                                         }
                                         @if (message.Reactions.Any())
                                         {
@@ -514,7 +606,7 @@ else
                                         }
                                         @if (message.ReadBy.Any())
                                         {
-                                            <span class="text-[9px] text-slate-400 ml-1">Đã xem</span>
+                                            <span class="text-[9px] text-slate-400 ml-1">Seen</span>
                                         }
                                     </div>
                                 }
@@ -549,7 +641,7 @@ else
                                         @(message.IsDeleted ? "The message has been withdrawn." : message.Content)
                                         @if (message.UpdatedAt.HasValue && !message.IsDeleted)
                                         {
-                                            <span class="text-[10px] text-slate-400 block mt-1">(đã chỉnh sửa)</span>
+                                            <span class="text-[10px] text-slate-400 block mt-1">(edited)</span>
                                         }
                                     </div>
                                     <span class="text-[9px] font-bold text-slate-300 uppercase mb-2 flex items-center gap-1">
@@ -565,15 +657,15 @@ else
                                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
                                     @if (!message.IsDeleted)
                                     {
-                                        <button type="button" @onclick="() => SetReplyTo(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Trả lời</button>
+                                        <button type="button" @onclick="() => SetReplyTo(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Reply</button>
                                         <span class="text-slate-200">·</span>
                                         @if (message.IsPinned)
                                         {
-                                            <button type="button" @onclick="() => UnpinMessage(activeRoomId!.Value, message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-amber-500 hover:text-amber-600">Bỏ ghim</button>
+                                            <button type="button" @onclick="() => UnpinMessage(activeRoomId!.Value, message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-amber-500 hover:text-amber-600">Unpin</button>
                                         }
                                         else
                                         {
-                                            <button type="button" @onclick="() => PinMessage(message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-slate-400 hover:text-amber-500">Ghim</button>
+                                            <button type="button" @onclick="() => PinMessage(message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-slate-400 hover:text-amber-500">Pin</button>
                                         }
                                     }
                                     @if (message.Reactions.Any())
@@ -662,7 +754,7 @@ else
                     {
                         <div class="mb-2 flex items-center justify-between gap-2 rounded-2xl bg-slate-100 border border-slate-200 px-4 py-2">
                             <div class="min-w-0 flex-1">
-                                <p class="text-[10px] font-black text-slate-500 uppercase">Trả lời @(replyToMessage.UserName)</p>
+                                <p class="text-[10px] font-black text-slate-500 uppercase">Reply @(replyToMessage.UserName)</p>
                                 <p class="text-xs text-slate-600 truncate">@replyToMessage.Content</p>
                             </div>
                             <button type="button" @onclick="ClearReplyTo" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-all flex-shrink-0">
@@ -893,6 +985,22 @@ else
     </div>
 }
 
+@* Video Call Components (rendered outside main layout for PiP overlay) *@
+<VideoCallWindow @ref="videoCallWindow"
+                 IsVisible="@isInCall"
+                 CurrentCallType="@currentCallType"
+                 PeerName="@callPeerName"
+                 PeerAvatarUrl="@callPeerAvatarUrl"
+                 CallSessionId="@activeCallSessionId"
+                 WebRtcService="@webRtcService"
+                 CallHubService="@callHubService"
+                 OnCallEnded="HandleCallEndedUI" />
+
+<IncomingCallDialog IsVisible="@hasIncomingCall"
+                    IncomingCall="@incomingCallData"
+                    OnAccepted="AcceptIncomingCall"
+                    OnRejected="RejectIncomingCall" />
+
 @code {
     private List<ChatRoomResponse> rooms = new();
     private List<ChatRoomResponse> filteredRooms = new();
@@ -954,6 +1062,18 @@ else
     // Room settings state
     private bool isRoomSettingsOpen;
 
+    // Call state
+    private CallHubService? callHubService;
+    private VideoCallWindow? videoCallWindow;
+    private bool isInCall;
+    private bool hasIncomingCall;
+    private IncomingCallResponse? incomingCallData;
+    private int? activeCallSessionId;
+    private WebRtcService? webRtcService;
+    private CallType currentCallType;
+    private string callPeerName = string.Empty;
+    private string? callPeerAvatarUrl;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadCurrentUser();
@@ -990,6 +1110,26 @@ else
                     await notificationHubService.StartAsync();
                 notificationHubService.OnUserStatusChanged += HandleUserStatusChanged;
             }
+
+            // Initialize Call Hub
+            callHubService = ServiceProvider.GetService<CallHubService>();
+            if (callHubService != null)
+            {
+                if (!callHubService.IsConnected)
+                    await callHubService.StartAsync();
+                callHubService.OnIncomingCall += HandleIncomingCall;
+                callHubService.OnCallRinging += HandleCallRinging;
+                callHubService.OnCallAnswered += HandleCallAnswered;
+                callHubService.OnIceCandidateReceived += HandleIceCandidateReceived;
+                callHubService.OnCallEnded += HandleCallEndedSignalR;
+                callHubService.OnCallError += HandleCallError;
+                callHubService.OnMediaToggled += HandleMediaToggled;
+            }
+
+            // Initialize WebRTC service
+            webRtcService = ServiceProvider.GetService<WebRtcService>();
+            if (webRtcService != null)
+                webRtcService.IceCandidateGenerated += HandleLocalIceCandidate;
         }
     }
 
@@ -1501,7 +1641,7 @@ else
 
     private async Task ConfirmDeleteMessage(int messageId)
     {
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Thu hồi tin nhắn này?"))
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Unsend this message?"))
             return;
         try
         {
@@ -2367,6 +2507,242 @@ else
         catch { }
     }
 
+    #region Call Methods
+
+    private record CallMetadata(string CallType, string CallStatus, int? DurationSeconds, string CallerUserId, string CalleeUserId);
+
+    private CallMetadata ParseCallMetadata(string? metadata)
+    {
+        if (string.IsNullOrEmpty(metadata))
+            return new CallMetadata("Audio", "Ended", null, "", "");
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(metadata);
+            var root = doc.RootElement;
+            return new CallMetadata(
+                root.TryGetProperty("callType", out var ct) ? ct.GetString() ?? "Audio" : "Audio",
+                root.TryGetProperty("callStatus", out var cs) ? cs.GetString() ?? "Ended" : "Ended",
+                root.TryGetProperty("durationSeconds", out var ds) && ds.ValueKind == System.Text.Json.JsonValueKind.Number ? ds.GetInt32() : null,
+                root.TryGetProperty("callerUserId", out var cu) ? cu.GetString() ?? "" : "",
+                root.TryGetProperty("calleeUserId", out var ceu) ? ceu.GetString() ?? "" : ""
+            );
+        }
+        catch
+        {
+            return new CallMetadata("Audio", "Ended", null, "", "");
+        }
+    }
+
+    private async Task StartCallFromHistory(string callTypeStr)
+    {
+        var callType = callTypeStr == "Video" ? CallType.Video : CallType.Audio;
+        await StartCall(callType);
+    }
+
+    private async Task StartCall(CallType callType)
+    {
+        if (isInCall || activeRoom == null || activeRoom.RoomType != ChatRoomType.Private) return;
+
+        currentCallType = callType;
+        callPeerName = activeRoom.OtherParticipant?.FullName ?? activeRoom.OtherParticipant?.UserName ?? "Unknown";
+        callPeerAvatarUrl = activeRoom.OtherParticipant?.AvatarUrl;
+
+        // Initialize WebRTC and get local media
+        if (webRtcService == null) return;
+        var initialized = await webRtcService.InitializeAsync(callType == CallType.Video);
+        if (!initialized)
+        {
+            // Media access denied or failed
+            return;
+        }
+
+        // Create SDP offer
+        var sdpOffer = await webRtcService.CreateOfferAsync();
+        if (string.IsNullOrEmpty(sdpOffer)) return;
+
+        isInCall = true;
+        videoCallWindow?.SetCallState("ringing");
+        StateHasChanged();
+
+        // Send offer via SignalR
+        if (callHubService != null)
+        {
+            await callHubService.SendOfferAsync(new CallOfferRequest
+            {
+                RoomId = activeRoom.Id,
+                CallType = callType,
+                SdpOffer = sdpOffer
+            });
+        }
+    }
+
+    private void HandleIncomingCall(IncomingCallResponse incomingCall)
+    {
+        if (isInCall)
+        {
+            // Already in a call, auto-reject
+            _ = InvokeAsync(async () =>
+            {
+                if (callHubService != null)
+                    await callHubService.RejectCallAsync(incomingCall.CallSessionId);
+            });
+            return;
+        }
+
+        incomingCallData = incomingCall;
+        hasIncomingCall = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleCallRinging(int callSessionId)
+    {
+        activeCallSessionId = callSessionId;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleCallAnswered(CallAnsweredResponse response)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if (webRtcService == null) return;
+            // Set remote description (answer)
+            await webRtcService.SetRemoteDescriptionAsync(response.SdpAnswer);
+            videoCallWindow?.SetCallState("active");
+            StateHasChanged();
+        });
+    }
+
+    private void HandleIceCandidateReceived(IceCandidateRequest ice)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if (webRtcService != null)
+                await webRtcService.AddIceCandidateAsync(ice.Candidate, ice.SdpMid, ice.SdpMLineIndex);
+        });
+    }
+
+    private void HandleLocalIceCandidate(string candidate, string? sdpMid, int sdpMLineIndex)
+    {
+        if (!activeCallSessionId.HasValue || callHubService == null) return;
+
+        _ = InvokeAsync(async () =>
+        {
+            await callHubService.SendIceCandidateAsync(new IceCandidateRequest
+            {
+                CallSessionId = activeCallSessionId.Value,
+                Candidate = candidate,
+                SdpMid = sdpMid,
+                SdpMLineIndex = sdpMLineIndex
+            });
+        });
+    }
+
+    private void HandleCallEndedSignalR(CallEndedResponse response)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if (webRtcService != null)
+                await webRtcService.DisposeWebRtcAsync();
+            videoCallWindow?.SetCallState("ended");
+            isInCall = false;
+            hasIncomingCall = false;
+            incomingCallData = null;
+            activeCallSessionId = null;
+            StateHasChanged();
+        });
+    }
+
+    private void HandleCallError(string message)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            Console.WriteLine($"Call error: {message}");
+            if (webRtcService != null)
+                await webRtcService.DisposeWebRtcAsync();
+            videoCallWindow?.SetCallState("ended");
+            isInCall = false;
+            activeCallSessionId = null;
+            StateHasChanged();
+        });
+    }
+
+    private void HandleMediaToggled(string userId, bool isAudioEnabled, bool isVideoEnabled)
+    {
+        videoCallWindow?.SetRemoteVideoEnabled(isVideoEnabled);
+    }
+
+    private async Task AcceptIncomingCall()
+    {
+        if (incomingCallData == null || callHubService == null) return;
+
+        hasIncomingCall = false;
+        isInCall = true;
+        activeCallSessionId = incomingCallData.CallSessionId;
+        currentCallType = incomingCallData.CallType;
+        callPeerName = incomingCallData.CallerName;
+        callPeerAvatarUrl = incomingCallData.CallerAvatarUrl;
+        StateHasChanged();
+
+        videoCallWindow?.SetCallState("connecting");
+
+        // Initialize WebRTC
+        if (webRtcService == null) return;
+        var initialized = await webRtcService.InitializeAsync(incomingCallData.CallType == CallType.Video);
+        if (!initialized)
+        {
+            await callHubService.RejectCallAsync(incomingCallData.CallSessionId);
+            isInCall = false;
+            activeCallSessionId = null;
+            StateHasChanged();
+            return;
+        }
+
+        // Set remote description (offer from caller)
+        await webRtcService.SetRemoteDescriptionAsync(incomingCallData.SdpOffer);
+
+        // Create answer
+        var sdpAnswer = await webRtcService.CreateAnswerAsync();
+        if (string.IsNullOrEmpty(sdpAnswer))
+        {
+            await callHubService.RejectCallAsync(incomingCallData.CallSessionId);
+            isInCall = false;
+            activeCallSessionId = null;
+            await webRtcService.DisposeWebRtcAsync();
+            StateHasChanged();
+            return;
+        }
+
+        // Send answer
+        await callHubService.SendAnswerAsync(new CallAnswerRequest
+        {
+            CallSessionId = incomingCallData.CallSessionId,
+            SdpAnswer = sdpAnswer
+        });
+
+        videoCallWindow?.SetCallState("active");
+        incomingCallData = null;
+    }
+
+    private async Task RejectIncomingCall()
+    {
+        if (incomingCallData == null || callHubService == null) return;
+
+        await callHubService.RejectCallAsync(incomingCallData.CallSessionId);
+        hasIncomingCall = false;
+        incomingCallData = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleCallEndedUI()
+    {
+        isInCall = false;
+        activeCallSessionId = null;
+        StateHasChanged();
+    }
+
+    #endregion
+
     public async ValueTask DisposeAsync()
     {
         _typingStopCts?.Cancel();
@@ -2393,5 +2769,23 @@ else
         }
         if (notificationHubService != null)
             notificationHubService.OnUserStatusChanged -= HandleUserStatusChanged;
+
+        // Cleanup call services
+        if (callHubService != null)
+        {
+            callHubService.OnIncomingCall -= HandleIncomingCall;
+            callHubService.OnCallRinging -= HandleCallRinging;
+            callHubService.OnCallAnswered -= HandleCallAnswered;
+            callHubService.OnIceCandidateReceived -= HandleIceCandidateReceived;
+            callHubService.OnCallEnded -= HandleCallEndedSignalR;
+            callHubService.OnCallError -= HandleCallError;
+            callHubService.OnMediaToggled -= HandleMediaToggled;
+        }
+        if (webRtcService != null)
+        {
+            webRtcService.IceCandidateGenerated -= HandleLocalIceCandidate;
+            if (isInCall)
+                await webRtcService.DisposeWebRtcAsync();
+        }
     }
 }

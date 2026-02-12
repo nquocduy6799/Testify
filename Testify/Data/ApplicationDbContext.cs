@@ -47,6 +47,9 @@ namespace Testify.Data
         public DbSet<TaskActivity> TaskActivities { get; set; }
         public DbSet<TaskAttachment> TaskAttachments { get; set; }
 
+        // Call System
+        public DbSet<CallSession> CallSessions { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -139,6 +142,25 @@ namespace Testify.Data
                 .HasOne(n => n.Project)
                 .WithMany()
                 .HasForeignKey(n => n.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Call System - prevent cascade delete conflicts
+            builder.Entity<CallSession>()
+                .HasOne(c => c.Caller)
+                .WithMany()
+                .HasForeignKey(c => c.CallerUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<CallSession>()
+                .HasOne(c => c.Callee)
+                .WithMany()
+                .HasForeignKey(c => c.CalleeUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<CallSession>()
+                .HasOne(c => c.Room)
+                .WithMany()
+                .HasForeignKey(c => c.RoomId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }

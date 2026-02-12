@@ -728,7 +728,8 @@ namespace Testify.Repositories
                     IsDeleted = message.ParentMessage.IsDeleted,
                     CreatedAt = message.ParentMessage.CreatedAt
                 } : null,
-                IsPinned = message.PinnedInRooms?.Any() ?? false
+                IsPinned = message.PinnedInRooms?.Any() ?? false,
+                Metadata = message.Metadata
             };
         }
 

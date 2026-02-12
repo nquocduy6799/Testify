@@ -323,7 +323,7 @@ namespace Testify.Controllers
         }
 
         [HttpGet("rooms/{roomId}/messages/search")]
-        public async Task<ActionResult> SearchMessages(int roomId, [FromQuery] string query, [FromQuery] int skip = 0, [FromQuery] int take = 20)
+        public async Task<ActionResult<SearchMessagesResponse>> SearchMessages(int roomId, [FromQuery] string query, [FromQuery] int skip = 0, [FromQuery] int take = 20)
         {
             try
             {
@@ -338,7 +338,7 @@ namespace Testify.Controllers
                 var clampedTake = Math.Clamp(take, 1, 50);
                 var (messages, totalCount) = await _chatRepository.SearchMessagesAsync(roomId, query.Trim(), skip, clampedTake);
 
-                return Ok(new { messages, totalCount });
+                return Ok(new SearchMessagesResponse { Messages = messages, TotalCount = totalCount });
             }
             catch (Exception ex)
             {

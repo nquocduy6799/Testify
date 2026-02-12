@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json;
-using System.Threading.Tasks;
 using Testify.Client.Interfaces;
 using Testify.Shared.DTOs.Chat;
 
@@ -114,14 +112,15 @@ namespace Testify.Client.Features.Chat.Services
                 var response = await _httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
-                var json = await response.Content.ReadFromJsonAsync<JsonElement>();
-                var messages = json.GetProperty("messages").Deserialize<List<ChatMessageResponse>>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
-                var totalCount = json.GetProperty("totalCount").GetInt32();
+                var result = await response.Content.ReadFromJsonAsync<SearchMessagesResponse>();
+                if (result == null)
+                    return (new List<ChatMessageResponse>(), 0);
 
-                return (messages, totalCount);
+                return (result.Messages, result.TotalCount);
             }
-            catch (HttpRequestException)
+            catch (Exception ex)
             {
+                Console.WriteLine($"[SearchMessages] Error: {ex.GetType().Name}: {ex.Message}");
                 return (new List<ChatMessageResponse>(), 0);
             }
         }

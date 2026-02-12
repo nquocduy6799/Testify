@@ -39,5 +39,8 @@ namespace Testify.Shared.DTOs.Chat
 
         [JsonPropertyName("isPinned")]
         public bool IsPinned { get; set; }
+
+        [JsonPropertyName("metadata")]
+        public string? Metadata { get; set; }
     }
 }
