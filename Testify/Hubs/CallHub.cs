@@ -1,34 +1,29 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Security.Claims;
-using System.Text.Json;
 using System.Threading.Tasks;
-using Testify.Data;
-using Testify.Entities;
+using Testify.Interfaces;
 using Testify.Shared.DTOs.Chat;
 using Testify.Shared.Enums;
-using Testify.Shared.Helpers;
 
 namespace Testify.Hubs
 {
     [Authorize]
     public class CallHub : Hub
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IHubContext<ChatHub> _chatHub;
+        private readonly ICallSessionRepository _callRepo;
 
         // Track active calls per user: UserId -> CallSessionId
         // Prevents a user from being in multiple calls simultaneously
+        // NOTE: Same pattern as ChatHub.RoomConnections — for multi-instance, replace with Redis backplane
         private static readonly ConcurrentDictionary<string, int> ActiveUserCalls = new();
 
-        public CallHub(ApplicationDbContext context, IHubContext<ChatHub> chatHub)
+        public CallHub(ICallSessionRepository callRepo)
         {
-            _context = context;
-            _chatHub = chatHub;
+            _callRepo = callRepo;
         }
 
         private string GetCurrentUserId()
@@ -37,15 +32,9 @@ namespace Testify.Hubs
                 ?? throw new InvalidOperationException("User not authenticated");
         }
 
-        private string GetCurrentUserName()
-        {
-            return Context.User?.Identity?.Name ?? "Unknown";
-        }
-
         public override async Task OnConnectedAsync()
         {
             var userId = GetCurrentUserId();
-            // Add user to their personal group for targeted signaling
             await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
             await base.OnConnectedAsync();
         }
@@ -79,10 +68,7 @@ namespace Testify.Hubs
             }
 
             // Validate room exists and is Private (1-1 only)
-            var room = await _context.ChatRooms
-                .Include(r => r.Participants)
-                .FirstOrDefaultAsync(r => r.Id == request.RoomId && r.RoomType == ChatRoomType.Private && !r.IsDeleted);
-
+            var room = await _callRepo.GetPrivateRoomWithParticipantsAsync(request.RoomId);
             if (room == null)
             {
                 await Clients.Caller.SendAsync("CallError", "Room not found or not a private chat.");
@@ -114,21 +100,10 @@ namespace Testify.Hubs
             }
 
             // Get caller info for incoming call UI
-            var caller = await _context.Users.FindAsync(callerId);
+            var caller = await _callRepo.GetUserAsync(callerId);
 
             // Create call session in DB
-            var callSession = new CallSession
-            {
-                RoomId = request.RoomId,
-                CallerUserId = callerId,
-                CalleeUserId = calleeId,
-                CallType = request.CallType,
-                Status = CallStatus.Ringing,
-                StartedAt = DateTimeHelper.GetVietnamTime()
-            };
-
-            _context.CallSessions.Add(callSession);
-            await _context.SaveChangesAsync();
+            var callSession = await _callRepo.CreateCallSessionAsync(request.RoomId, callerId, calleeId, request.CallType);
 
             // Track both users as in call
             ActiveUserCalls[callerId] = callSession.Id;
@@ -159,19 +134,15 @@ namespace Testify.Hubs
         {
             var calleeId = GetCurrentUserId();
 
-            var callSession = await _context.CallSessions
-                .FirstOrDefaultAsync(c => c.Id == request.CallSessionId && c.CalleeUserId == calleeId && c.Status == CallStatus.Ringing);
-
+            var callSession = await _callRepo.GetCallSessionForCalleeAsync(request.CallSessionId, calleeId, CallStatus.Ringing);
             if (callSession == null)
             {
                 await Clients.Caller.SendAsync("CallError", "Call session not found or already ended.");
                 return;
             }
 
-            // Update call status
-            callSession.Status = CallStatus.Active;
-            callSession.AnsweredAt = DateTimeHelper.GetVietnamTime();
-            await _context.SaveChangesAsync();
+            // Update call status to Active
+            await _callRepo.UpdateCallStatusAsync(callSession, CallStatus.Active);
 
             // Send answer to caller
             var response = new CallAnsweredResponse
@@ -190,11 +161,7 @@ namespace Testify.Hubs
         {
             var userId = GetCurrentUserId();
 
-            var callSession = await _context.CallSessions
-                .FirstOrDefaultAsync(c => c.Id == request.CallSessionId
-                    && (c.CallerUserId == userId || c.CalleeUserId == userId)
-                    && (c.Status == CallStatus.Ringing || c.Status == CallStatus.Active));
-
+            var callSession = await _callRepo.GetCallSessionAsync(request.CallSessionId, userId, CallStatus.Ringing, CallStatus.Active);
             if (callSession == null) return;
 
             // Send ICE candidate to the other peer
@@ -221,20 +188,16 @@ namespace Testify.Hubs
         {
             var userId = GetCurrentUserId();
 
-            var callSession = await _context.CallSessions
-                .FirstOrDefaultAsync(c => c.Id == callSessionId && c.CalleeUserId == userId && c.Status == CallStatus.Ringing);
-
+            var callSession = await _callRepo.GetCallSessionForCalleeAsync(callSessionId, userId, CallStatus.Ringing);
             if (callSession == null) return;
 
-            callSession.Status = CallStatus.Rejected;
-            callSession.EndedAt = DateTimeHelper.GetVietnamTime();
-            await _context.SaveChangesAsync();
+            await _callRepo.UpdateCallStatusAsync(callSession, CallStatus.Rejected);
 
             // Remove from active calls
             ActiveUserCalls.TryRemove(callSession.CallerUserId, out _);
             ActiveUserCalls.TryRemove(callSession.CalleeUserId, out _);
 
-            // Notify caller
+            // Notify both users
             var response = new CallEndedResponse
             {
                 CallSessionId = callSession.Id,
@@ -245,7 +208,7 @@ namespace Testify.Hubs
             await Clients.Group($"user_{callSession.CalleeUserId}").SendAsync("CallEnded", response);
 
             // Save call history message in chat
-            await CreateCallMessageAsync(callSession, CallStatus.Rejected, null);
+            await _callRepo.CreateCallMessageAsync(callSession, CallStatus.Rejected, null);
         }
 
         /// <summary>
@@ -255,20 +218,16 @@ namespace Testify.Hubs
         {
             var userId = GetCurrentUserId();
 
-            var callSession = await _context.CallSessions
-                .FirstOrDefaultAsync(c => c.Id == callSessionId && c.CallerUserId == userId && c.Status == CallStatus.Ringing);
-
+            var callSession = await _callRepo.GetCallSessionForCallerAsync(callSessionId, userId, CallStatus.Ringing);
             if (callSession == null) return;
 
-            callSession.Status = CallStatus.Cancelled;
-            callSession.EndedAt = DateTimeHelper.GetVietnamTime();
-            await _context.SaveChangesAsync();
+            await _callRepo.UpdateCallStatusAsync(callSession, CallStatus.Cancelled);
 
             // Remove from active calls
             ActiveUserCalls.TryRemove(callSession.CallerUserId, out _);
             ActiveUserCalls.TryRemove(callSession.CalleeUserId, out _);
 
-            // Notify callee
+            // Notify both users
             var response = new CallEndedResponse
             {
                 CallSessionId = callSession.Id,
@@ -279,7 +238,7 @@ namespace Testify.Hubs
             await Clients.Group($"user_{callSession.CalleeUserId}").SendAsync("CallEnded", response);
 
             // Save call history message in chat
-            await CreateCallMessageAsync(callSession, CallStatus.Cancelled, null);
+            await _callRepo.CreateCallMessageAsync(callSession, CallStatus.Cancelled, null);
         }
 
         /// <summary>
@@ -289,11 +248,7 @@ namespace Testify.Hubs
         {
             var userId = GetCurrentUserId();
 
-            var callSession = await _context.CallSessions
-                .FirstOrDefaultAsync(c => c.Id == callSessionId
-                    && (c.CallerUserId == userId || c.CalleeUserId == userId)
-                    && c.Status == CallStatus.Active);
-
+            var callSession = await _callRepo.GetCallSessionAsync(callSessionId, userId, CallStatus.Active);
             if (callSession == null) return;
 
             var targetUserId = callSession.CallerUserId == userId
@@ -308,17 +263,13 @@ namespace Testify.Hubs
 
         private async Task EndCallInternal(int callSessionId, string userId, CallStatus reason)
         {
-            var callSession = await _context.CallSessions
-                .FirstOrDefaultAsync(c => c.Id == callSessionId
-                    && (c.CallerUserId == userId || c.CalleeUserId == userId)
-                    && (c.Status == CallStatus.Ringing || c.Status == CallStatus.Active));
-
+            var callSession = await _callRepo.GetCallSessionAsync(callSessionId, userId, CallStatus.Ringing, CallStatus.Active);
             if (callSession == null) return;
 
             var wasRinging = callSession.Status == CallStatus.Ringing;
-            callSession.Status = wasRinging ? CallStatus.Missed : reason;
-            callSession.EndedAt = DateTimeHelper.GetVietnamTime();
-            await _context.SaveChangesAsync();
+            var finalStatus = wasRinging ? CallStatus.Missed : reason;
+
+            await _callRepo.UpdateCallStatusAsync(callSession, finalStatus);
 
             // Remove from active calls
             ActiveUserCalls.TryRemove(callSession.CallerUserId, out _);
@@ -342,99 +293,7 @@ namespace Testify.Hubs
             await Clients.Group($"user_{callSession.CalleeUserId}").SendAsync("CallEnded", response);
 
             // Save call history message in chat
-            await CreateCallMessageAsync(callSession, callSession.Status, durationSeconds);
-        }
-
-        /// <summary>
-        /// Creates a chat message of type Call to record call history in the chat room.
-        /// Broadcasts the message to both participants via ChatHub.
-        /// </summary>
-        private async Task CreateCallMessageAsync(CallSession callSession, CallStatus status, int? durationSeconds)
-        {
-            var now = DateTimeHelper.GetVietnamTime();
-
-            var metadata = JsonSerializer.Serialize(new
-            {
-                callSessionId = callSession.Id,
-                callType = callSession.CallType.ToString(),
-                callStatus = status.ToString(),
-                durationSeconds = durationSeconds,
-                callerUserId = callSession.CallerUserId,
-                calleeUserId = callSession.CalleeUserId
-            });
-
-            // Determine display content based on status
-            var callTypeLabel = callSession.CallType == CallType.Video ? "Video" : "Voice";
-            var content = status switch
-            {
-                CallStatus.Ended => durationSeconds.HasValue
-                    ? $"{callTypeLabel} call - {FormatDuration(durationSeconds.Value)}"
-                    : $"{callTypeLabel} call ended",
-                CallStatus.Missed => $"Missed {callTypeLabel.ToLower()} call",
-                CallStatus.Rejected => $"{callTypeLabel} call declined",
-                CallStatus.Cancelled => $"{callTypeLabel} call cancelled",
-                _ => $"{callTypeLabel} call"
-            };
-
-            var callMessage = new ChatMessage
-            {
-                RoomId = callSession.RoomId,
-                UserId = callSession.CallerUserId,
-                MessageType = MessageType.Call,
-                Content = content,
-                Metadata = metadata,
-                CreatedAt = now,
-                UpdatedAt = now,
-                CreatedBy = callSession.CallerUserId,
-                UpdatedBy = callSession.CallerUserId
-            };
-
-            _context.ChatMessages.Add(callMessage);
-
-            // Update room's last activity
-            var room = await _context.ChatRooms.FindAsync(callSession.RoomId);
-            if (room != null)
-            {
-                room.LastActivityAt = now;
-            }
-
-            await _context.SaveChangesAsync();
-
-            // Reload with User navigation for the response
-            var savedMessage = await _context.ChatMessages
-                .Include(m => m.User)
-                .FirstOrDefaultAsync(m => m.Id == callMessage.Id);
-
-            if (savedMessage == null) return;
-
-            var messageResponse = new ChatMessageResponse
-            {
-                Id = savedMessage.Id,
-                RoomId = savedMessage.RoomId,
-                UserId = savedMessage.UserId,
-                UserName = savedMessage.User?.UserName ?? "",
-                UserAvatarUrl = savedMessage.User?.AvatarUrl,
-                MessageType = MessageType.Call,
-                Content = savedMessage.Content,
-                IsDeleted = false,
-                CreatedAt = savedMessage.CreatedAt,
-                Metadata = savedMessage.Metadata
-            };
-
-            // Broadcast to both participants via ChatHub
-            await _chatHub.Clients.User(callSession.CallerUserId).SendAsync("ReceiveMessage", messageResponse);
-            await _chatHub.Clients.User(callSession.CalleeUserId).SendAsync("ReceiveMessage", messageResponse);
-        }
-
-        private static string FormatDuration(int totalSeconds)
-        {
-            var hours = totalSeconds / 3600;
-            var minutes = (totalSeconds % 3600) / 60;
-            var seconds = totalSeconds % 60;
-
-            if (hours > 0)
-                return $"{hours:D2}:{minutes:D2}:{seconds:D2}";
-            return $"{minutes:D2}:{seconds:D2}";
+            await _callRepo.CreateCallMessageAsync(callSession, callSession.Status, durationSeconds);
         }
 
         #endregion

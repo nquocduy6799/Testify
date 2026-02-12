@@ -7,23 +7,32 @@ window.WebRtcInterop = {
     _peerConnection: null,
     _localStream: null,
     _dotNetRef: null,
+    _remoteDescriptionSet: false,
+    _pendingCandidates: [],
+    _ringtoneContext: null,
+    _ringtoneOscillator: null,
+    _ringtoneInterval: null,
 
     /**
      * Initialize a new WebRTC peer connection
      * @param {object} dotNetRef - .NET object reference for callbacks
      * @param {boolean} isVideo - Whether to include video track
+     * @param {Array|null} iceServers - ICE server config from appsettings (optional)
      */
-    initialize: async function (dotNetRef, isVideo) {
+    initialize: async function (dotNetRef, isVideo, iceServers) {
         this._dotNetRef = dotNetRef;
+        this._remoteDescriptionSet = false;
+        this._pendingCandidates = [];
 
-        // ICE servers - free Google STUN for dev
-        // Add TURN server here for production
-        const config = {
-            iceServers: [
+        // Use provided ICE servers or fall back to free Google STUN
+        const servers = (iceServers && iceServers.length > 0)
+            ? iceServers
+            : [
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
+            ];
+
+        const config = { iceServers: servers };
 
         this._peerConnection = new RTCPeerConnection(config);
 
@@ -124,6 +133,17 @@ window.WebRtcInterop = {
         try {
             const sdp = JSON.parse(sdpJson);
             await this._peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+            this._remoteDescriptionSet = true;
+
+            // Flush any ICE candidates that arrived before remote description was set
+            if (this._pendingCandidates.length > 0) {
+                console.log(`Flushing ${this._pendingCandidates.length} buffered ICE candidates`);
+                for (const c of this._pendingCandidates) {
+                    await this._peerConnection.addIceCandidate(new RTCIceCandidate(c));
+                }
+                this._pendingCandidates = [];
+            }
+
             return true;
         } catch (err) {
             console.error('Failed to set remote description:', err);
@@ -136,12 +156,21 @@ window.WebRtcInterop = {
      */
     addIceCandidate: async function (candidate, sdpMid, sdpMLineIndex) {
         if (!this._peerConnection) return false;
+
+        const iceCandidate = {
+            candidate: candidate,
+            sdpMid: sdpMid,
+            sdpMLineIndex: sdpMLineIndex
+        };
+
+        // Buffer if remote description hasn't been set yet
+        if (!this._remoteDescriptionSet) {
+            this._pendingCandidates.push(iceCandidate);
+            return true;
+        }
+
         try {
-            await this._peerConnection.addIceCandidate(new RTCIceCandidate({
-                candidate: candidate,
-                sdpMid: sdpMid,
-                sdpMLineIndex: sdpMLineIndex
-            }));
+            await this._peerConnection.addIceCandidate(new RTCIceCandidate(iceCandidate));
             return true;
         } catch (err) {
             console.error('Failed to add ICE candidate:', err);
@@ -178,9 +207,76 @@ window.WebRtcInterop = {
     },
 
     /**
+     * Play a ringing tone using Web Audio API (no external file needed)
+     * Pattern: dual-tone beep (440Hz + 480Hz) for 1s, silence for 2s, repeat
+     */
+    playRingtone: function () {
+        this.stopRingtone();
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this._ringtoneContext = ctx;
+
+            // Resume context to handle browser autoplay policy
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+
+            const playBeep = () => {
+                if (ctx.state === 'closed') return;
+
+                // Dual-tone: 440Hz + 480Hz for realistic ring sound
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc1.frequency.value = 440;
+                osc2.frequency.value = 480;
+                gain.gain.value = 0.15;
+
+                const now = ctx.currentTime;
+                osc1.start(now);
+                osc2.start(now);
+                osc1.stop(now + 1.0);
+                osc2.stop(now + 1.0);
+
+                this._ringtoneOscillator = osc1;
+            };
+
+            playBeep();
+            this._ringtoneInterval = setInterval(playBeep, 3000);
+        } catch (err) {
+            console.error('Failed to play ringtone:', err);
+        }
+    },
+
+    /**
+     * Stop the ringing tone
+     */
+    stopRingtone: function () {
+        if (this._ringtoneInterval) {
+            clearInterval(this._ringtoneInterval);
+            this._ringtoneInterval = null;
+        }
+        if (this._ringtoneOscillator) {
+            try { this._ringtoneOscillator.stop(); } catch (_) {}
+            this._ringtoneOscillator = null;
+        }
+        if (this._ringtoneContext) {
+            try { this._ringtoneContext.close(); } catch (_) {}
+            this._ringtoneContext = null;
+        }
+    },
+
+    /**
      * Cleanup everything
      */
     dispose: function () {
+        this.stopRingtone();
+
         // Stop all local tracks
         if (this._localStream) {
             this._localStream.getTracks().forEach(track => track.stop());
@@ -200,5 +296,7 @@ window.WebRtcInterop = {
         if (remoteVideo) remoteVideo.srcObject = null;
 
         this._dotNetRef = null;
+        this._remoteDescriptionSet = false;
+        this._pendingCandidates = [];
     }
 };

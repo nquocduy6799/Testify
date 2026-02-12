@@ -1,6 +1,7 @@
 @using Testify.Client.Features.Chat.Services
 @using Testify.Shared.DTOs.Chat
 @using Testify.Shared.Enums
+@using Testify.Shared.Helpers
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
@@ -27,7 +28,7 @@
                     {
                         <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-800">
                             <div class="w-20 h-20 rounded-full bg-slate-700 flex items-center justify-center text-white text-2xl font-bold mb-3">
-                                @GetPeerInitials()
+                                @StringHelper.GetInitials(PeerName)
                             </div>
                             <span class="text-slate-400 text-sm font-medium">@PeerName</span>
                         </div>
@@ -54,7 +55,7 @@
                     {
                         <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-sm">
                             <div class="w-20 h-20 rounded-full bg-slate-700 flex items-center justify-center text-white text-2xl font-bold mb-4 animate-pulse">
-                                @GetPeerInitials()
+                                @StringHelper.GetInitials(PeerName)
                             </div>
                             <span class="text-white font-bold text-lg mb-1">@PeerName</span>
                             <span class="text-slate-400 text-sm">
@@ -68,7 +69,7 @@
                     {
                         <div class="absolute top-3 left-3 bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-2">
                             <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <span class="text-white text-xs font-bold">@FormatDuration(callDuration)</span>
+                            <span class="text-white text-xs font-bold">@StringHelper.FormatDuration(callDuration)</span>
                         </div>
                     }
                 </div>
@@ -83,7 +84,7 @@
                         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                         <div>
                             <span class="text-white text-sm font-bold block">@PeerName</span>
-                            <span class="text-slate-400 text-[10px]">@FormatDuration(callDuration)</span>
+                            <span class="text-slate-400 text-[10px]">@StringHelper.FormatDuration(callDuration)</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -173,7 +174,7 @@
     [Parameter] public CallHubService? CallHubService { get; set; }
     [Parameter] public EventCallback OnCallEnded { get; set; }
 
-    private enum CallState { Ringing, Connecting, Active, Ended }
+    public enum CallState { Ringing, Connecting, Active, Ended }
     private CallState callState = CallState.Ringing;
 
     private bool isMinimized;
@@ -197,25 +198,13 @@
         }
     }
 
-    public void SetCallState(string state)
+    public void SetCallState(CallState state)
     {
-        switch (state)
-        {
-            case "ringing":
-                callState = CallState.Ringing;
-                break;
-            case "connecting":
-                callState = CallState.Connecting;
-                break;
-            case "active":
-                callState = CallState.Active;
-                StartDurationTimer();
-                break;
-            case "ended":
-                callState = CallState.Ended;
-                StopDurationTimer();
-                break;
-        }
+        callState = state;
+        if (state == CallState.Active)
+            StartDurationTimer();
+        else if (state == CallState.Ended)
+            StopDurationTimer();
         InvokeAsync(StateHasChanged);
     }
 
@@ -286,21 +275,7 @@
             : "width: 320px;";
     }
 
-    private string GetPeerInitials()
-    {
-        if (string.IsNullOrEmpty(PeerName)) return "?";
-        var parts = PeerName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2
-            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
-            : (parts.Length == 1 ? parts[0][0].ToString().ToUpper() : "?");
-    }
-
-    private string FormatDuration(int totalSeconds)
-    {
-        var minutes = totalSeconds / 60;
-        var seconds = totalSeconds % 60;
-        return $"{minutes:D2}:{seconds:D2}";
-    }
+    // GetInitials and FormatDuration moved to Testify.Shared.Helpers.StringHelper
 
     public async ValueTask DisposeAsync()
     {

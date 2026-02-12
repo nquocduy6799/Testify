@@ -36,4 +36,5 @@ builder.Services.AddScoped<Testify.Client.Features.Chat.Services.ChatHubService>
 builder.Services.AddScoped<Testify.Client.Features.Chat.Services.CallHubService>();
 builder.Services.AddScoped<Testify.Client.Features.Chat.Services.WebRtcService>();
 
+
 await builder.Build().RunAsync();

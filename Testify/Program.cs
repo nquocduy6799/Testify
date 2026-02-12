@@ -12,6 +12,7 @@ using Testify.Data;
 using Testify.Interfaces;
 using Testify.Repositories;
 using Testify.Hubs;
+using Testify.Services;
 using Testify.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -69,6 +70,10 @@ builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
 builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<ICallSessionRepository, CallSessionRepository>();
+
+// Hosted services
+builder.Services.AddHostedService<StaleCallCleanupService>();
 
 // File upload settings and storage
 builder.Services.Configure<FileUploadSettings>(
@@ -83,6 +88,7 @@ builder.Services.AddScoped<INotificationService, ServerNotificationRepository>()
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IChatService, Testify.Client.Features.Chat.Services.ChatService>();
 builder.Services.AddScoped<Testify.Client.Features.Chat.Services.ChatHubService>();
+
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();

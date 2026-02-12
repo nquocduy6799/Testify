@@ -1,12 +1,16 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.JSInterop;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Testify.Shared.Settings;
 
 namespace Testify.Client.Features.Chat.Services
 {
     public class WebRtcService : IAsyncDisposable
     {
         private readonly IJSRuntime _jsRuntime;
+        private readonly IConfiguration _configuration;
         private DotNetObjectReference<WebRtcService>? _dotNetRef;
 
         // Events for signaling back to Blazor
@@ -15,9 +19,10 @@ namespace Testify.Client.Features.Chat.Services
         public event Action<string>? IceConnectionStateChanged;
         public event Action<string>? MediaError;
 
-        public WebRtcService(IJSRuntime jsRuntime)
+        public WebRtcService(IJSRuntime jsRuntime, IConfiguration configuration)
         {
             _jsRuntime = jsRuntime;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -26,7 +31,14 @@ namespace Testify.Client.Features.Chat.Services
         public async Task<bool> InitializeAsync(bool isVideo)
         {
             _dotNetRef = DotNetObjectReference.Create(this);
-            return await _jsRuntime.InvokeAsync<bool>("WebRtcInterop.initialize", _dotNetRef, isVideo);
+
+            // Read ICE servers from configuration
+            var iceServers = _configuration.GetSection("WebRtc:IceServers")
+                .Get<List<IceServerConfig>>()?
+                .Select(s => new { urls = s.Urls, username = s.Username, credential = s.Credential })
+                .ToArray();
+
+            return await _jsRuntime.InvokeAsync<bool>("WebRtcInterop.initialize", _dotNetRef, isVideo, iceServers);
         }
 
         /// <summary>
@@ -83,6 +95,22 @@ namespace Testify.Client.Features.Chat.Services
         public async Task<bool> HasVideoTrackAsync()
         {
             return await _jsRuntime.InvokeAsync<bool>("WebRtcInterop.hasVideoTrack");
+        }
+
+        /// <summary>
+        /// Play ringing tone for incoming call
+        /// </summary>
+        public async Task PlayRingtoneAsync()
+        {
+            await _jsRuntime.InvokeVoidAsync("WebRtcInterop.playRingtone");
+        }
+
+        /// <summary>
+        /// Stop ringing tone
+        /// </summary>
+        public async Task StopRingtoneAsync()
+        {
+            await _jsRuntime.InvokeVoidAsync("WebRtcInterop.stopRingtone");
         }
 
         /// <summary>

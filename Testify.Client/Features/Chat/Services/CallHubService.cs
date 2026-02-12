@@ -47,61 +47,78 @@ namespace Testify.Client.Features.Chat.Services
                 _hubConnection.On<string>("CallError", msg => OnCallError?.Invoke(msg));
                 _hubConnection.On<string, bool, bool>("MediaToggled", (uid, audio, video) => OnMediaToggled?.Invoke(uid, audio, video));
 
-                _hubConnection.Closed += async _ =>
+                // WithAutomaticReconnect handles reconnection. Only use Closed for terminal failures.
+                _hubConnection.Closed += _ =>
                 {
-                    _hubConnection = null;
-                    await Task.Delay(5000);
-                    await StartAsync();
+                    Console.WriteLine("[CallHub] Connection closed permanently.");
+                    return Task.CompletedTask;
                 };
 
                 await _hubConnection.StartAsync();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine($"[CallHub] Failed to start: {ex.Message}");
                 _hubConnection = null;
             }
         }
 
         public async Task SendOfferAsync(CallOfferRequest request)
         {
-            if (_hubConnection?.State != HubConnectionState.Connected) return;
-            try { await _hubConnection.InvokeAsync("SendOffer", request); } catch { }
+            await InvokeHubMethodAsync("SendOffer", request);
         }
 
         public async Task SendAnswerAsync(CallAnswerRequest request)
         {
-            if (_hubConnection?.State != HubConnectionState.Connected) return;
-            try { await _hubConnection.InvokeAsync("SendAnswer", request); } catch { }
+            await InvokeHubMethodAsync("SendAnswer", request);
         }
 
         public async Task SendIceCandidateAsync(IceCandidateRequest request)
         {
-            if (_hubConnection?.State != HubConnectionState.Connected) return;
-            try { await _hubConnection.InvokeAsync("SendIceCandidate", request); } catch { }
+            await InvokeHubMethodAsync("SendIceCandidate", request);
         }
 
         public async Task EndCallAsync(int callSessionId)
         {
-            if (_hubConnection?.State != HubConnectionState.Connected) return;
-            try { await _hubConnection.InvokeAsync("EndCall", callSessionId); } catch { }
+            await InvokeHubMethodAsync("EndCall", callSessionId);
         }
 
         public async Task RejectCallAsync(int callSessionId)
         {
-            if (_hubConnection?.State != HubConnectionState.Connected) return;
-            try { await _hubConnection.InvokeAsync("RejectCall", callSessionId); } catch { }
+            await InvokeHubMethodAsync("RejectCall", callSessionId);
         }
 
         public async Task CancelCallAsync(int callSessionId)
         {
-            if (_hubConnection?.State != HubConnectionState.Connected) return;
-            try { await _hubConnection.InvokeAsync("CancelCall", callSessionId); } catch { }
+            await InvokeHubMethodAsync("CancelCall", callSessionId);
         }
 
         public async Task ToggleMediaAsync(int callSessionId, bool isAudioEnabled, bool isVideoEnabled)
         {
-            if (_hubConnection?.State != HubConnectionState.Connected) return;
-            try { await _hubConnection.InvokeAsync("ToggleMedia", callSessionId, isAudioEnabled, isVideoEnabled); } catch { }
+            await InvokeHubMethodAsync("ToggleMedia", callSessionId, isAudioEnabled, isVideoEnabled);
+        }
+
+        /// <summary>
+        /// Central hub invocation with proper error handling.
+        /// Logs and raises OnCallError instead of swallowing exceptions.
+        /// </summary>
+        private async Task InvokeHubMethodAsync(string methodName, params object[] args)
+        {
+            if (_hubConnection?.State != HubConnectionState.Connected)
+            {
+                OnCallError?.Invoke("Not connected to call server.");
+                return;
+            }
+
+            try
+            {
+                await _hubConnection.InvokeCoreAsync(methodName, args);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CallHub] {methodName} failed: {ex.Message}");
+                OnCallError?.Invoke($"Call operation failed: {ex.Message}");
+            }
         }
 
         public async ValueTask DisposeAsync()
