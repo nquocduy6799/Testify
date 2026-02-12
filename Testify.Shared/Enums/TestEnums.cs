@@ -22,7 +22,8 @@ namespace Testify.Shared.Enums
     {
         Draft,
         InProgress,
-        Completed
+        Completed,
+        Cancelled,
     }
 
     public enum TestPlanPriority
@@ -34,9 +35,10 @@ namespace Testify.Shared.Enums
 
     public enum TestPlanOutcome
     {
-        ReleaseReady,
-        Rejected,
-        Conditional
+        Passed,
+        Failed,
+        Blocked,
+        Inconclusive
     }
 
     public enum TestRunStatus

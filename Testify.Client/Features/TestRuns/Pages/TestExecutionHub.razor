@@ -340,7 +340,7 @@
             var request = new UpdateTestRunRequest
             {
                 Status = status,
-				ExecutedAt = DateTimeHelper.GetVietnamTime()
+				// ExecutedAt = DateTimeHelper.GetVietnamTime()
             };
 
             await TestRunService.UpdateAsync(runId, request);
