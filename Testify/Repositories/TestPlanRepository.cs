@@ -4,6 +4,7 @@ using Testify.Entities;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.TestCases;
 using Testify.Shared.DTOs.TestPlans;
+using Testify.Shared.Enums;
 using Testify.Shared.Helpers;
 
 namespace Testify.Repositories
@@ -46,10 +47,14 @@ namespace Testify.Repositories
         {
             var testPlan = await _context.TestPlans.FindAsync(id);
 
-            if (testPlan == null || testPlan.IsDeleted)
+            if (testPlan == null || testPlan.IsDeleted || testPlan.Status != TestPlanStatus.Draft)
                 return false;
 
-            testPlan.MarkAsDeleted(userName);
+            var relatedSuites = _context.TestPlanSuites.Where(tps => tps.TestPlanId == id);
+            _context.TestPlanSuites.RemoveRange(relatedSuites);
+
+            _context.TestPlans.Remove(testPlan);
+
             await _context.SaveChangesAsync();
             return true;
         }

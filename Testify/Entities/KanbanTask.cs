@@ -16,6 +16,7 @@ namespace Testify.Entities
         public DateTime? DueDate { get; set; }
         public KanbanTaskStatus Status { get; set; } = KanbanTaskStatus.ToDo;
         public TaskPriority Priority { get; set; } = TaskPriority.Low;
+        public BugSeverity? BugSeverity { get; set; }
         public string? AssigneeId { get; set; }
         public string? DevelopedById { get; set; }
         public string? TestedById { get; set; }
