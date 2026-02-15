@@ -170,5 +170,17 @@ namespace Testify.Repositories
 
             return messageResponse;
         }
+
+        public async Task<CallSession?> GetActiveCallSessionForUserAsync(string userId)
+        {
+            return await _context.CallSessions
+                .FirstOrDefaultAsync(c => (c.CallerUserId == userId || c.CalleeUserId == userId)
+                    && (c.Status == CallStatus.Ringing || c.Status == CallStatus.Active));
+        }
+
+        public async Task<CallSession?> GetCallSessionByIdAsync(int callSessionId)
+        {
+            return await _context.CallSessions.FindAsync(callSessionId);
+        }
     }
 }

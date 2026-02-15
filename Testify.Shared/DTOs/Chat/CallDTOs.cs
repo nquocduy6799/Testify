@@ -84,4 +84,17 @@ namespace Testify.Shared.DTOs.Chat
         public CallStatus Reason { get; set; }
         public int? DurationSeconds { get; set; }
     }
+
+    /// <summary>
+    /// Response for GetActiveCall — used to restore call UI after reconnect
+    /// </summary>
+    public class ActiveCallInfoResponse
+    {
+        public int CallSessionId { get; set; }
+        public CallType CallType { get; set; }
+        public CallStatus Status { get; set; }
+        public string PeerName { get; set; } = string.Empty;
+        public string? PeerAvatarUrl { get; set; }
+        public DateTime? AnsweredAt { get; set; }
+    }
 }

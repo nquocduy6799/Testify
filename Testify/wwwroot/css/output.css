@@ -296,6 +296,9 @@
   .pointer-events-none {
     pointer-events: none;
   }
+  .visible {
+    visibility: visible;
+  }
   .absolute {
     position: absolute;
   }
@@ -310,6 +313,9 @@
   }
   .sticky {
     position: sticky;
+  }
+  .-inset-2 {
+    inset: calc(var(--spacing) * -2);
   }
   .inset-0 {
     inset: calc(var(--spacing) * 0);
@@ -752,6 +758,9 @@
   .h-\[800px\] {
     height: 800px;
   }
+  .h-\[calc\(100\%\+16px\)\] {
+    height: calc(100% + 16px);
+  }
   .h-\[calc\(100vh-160px\)\] {
     height: calc(100vh - 160px);
   }
@@ -910,6 +919,9 @@
   }
   .w-\[1000px\] {
     width: 1000px;
+  }
+  .w-\[calc\(100\%\+16px\)\] {
+    width: calc(100% + 16px);
   }
   .w-fit {
     width: fit-content;
@@ -2585,6 +2597,11 @@
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
+  .transition-\[stroke-dashoffset\] {
+    transition-property: stroke-dashoffset;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
   .transition-all {
     transition-property: all;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
@@ -2629,6 +2646,10 @@
   .duration-1000 {
     --tw-duration: 1000ms;
     transition-duration: 1000ms;
+  }
+  .ease-linear {
+    --tw-ease: linear;
+    transition-timing-function: linear;
   }
   .ease-out {
     --tw-ease: var(--ease-out);

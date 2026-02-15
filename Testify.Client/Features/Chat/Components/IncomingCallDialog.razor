@@ -1,13 +1,24 @@
 @using Testify.Shared.DTOs.Chat
 @using Testify.Shared.Enums
 @using Testify.Shared.Helpers
+@implements IDisposable
 
 @if (IsVisible && IncomingCall != null)
 {
     <div class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
         <div class="bg-white rounded-[40px] shadow-2xl p-8 w-80 flex flex-col items-center animate-bounce-in">
-            @* Caller avatar *@
+            @* Caller avatar with countdown ring *@
             <div class="relative mb-5">
+                @* Countdown circular ring *@
+                <svg class="absolute -inset-2 w-[calc(100%+16px)] h-[calc(100%+16px)]" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" stroke-width="3" />
+                    <circle cx="60" cy="60" r="54" fill="none" stroke="#10b981" stroke-width="3"
+                            stroke-dasharray="@($"{339.292}")"
+                            stroke-dashoffset="@($"{339.292 * (1 - (double)remainingSeconds / 30.0)}")"
+                            stroke-linecap="round"
+                            transform="rotate(-90 60 60)"
+                            class="transition-[stroke-dashoffset] duration-1000 ease-linear" />
+                </svg>
                 @if (!string.IsNullOrEmpty(IncomingCall.CallerAvatarUrl))
                 {
                     <img src="@IncomingCall.CallerAvatarUrl" class="w-24 h-24 rounded-[32px] object-cover shadow-lg" alt="" />
@@ -42,14 +53,14 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
                     </svg>
-                    <span>Incoming video call...</span>
+                    <span>Incoming video call... @remainingSeconds s</span>
                 }
                 else
                 {
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
                     </svg>
-                    <span>Incoming voice call...</span>
+                    <span>Incoming voice call... @remainingSeconds s</span>
                 }
             </p>
 
@@ -96,11 +107,63 @@
     [Parameter] public EventCallback OnRejected { get; set; }
 
     private bool isProcessing;
+    private int remainingSeconds = 30;
+    private System.Threading.Timer? _countdownTimer;
+    private bool _previousVisible;
+
+    protected override void OnParametersSet()
+    {
+        if (IsVisible && !_previousVisible)
+        {
+            // Dialog just became visible — start countdown
+            remainingSeconds = 30;
+            StartCountdown();
+        }
+        else if (!IsVisible && _previousVisible)
+        {
+            // Dialog hidden — stop countdown
+            StopCountdown();
+        }
+        _previousVisible = IsVisible;
+    }
+
+    private void StartCountdown()
+    {
+        StopCountdown();
+        _countdownTimer = new System.Threading.Timer(_ =>
+        {
+            remainingSeconds--;
+            if (remainingSeconds <= 0)
+            {
+                StopCountdown();
+                _ = InvokeAsync(async () =>
+                {
+                    if (!isProcessing)
+                    {
+                        isProcessing = true;
+                        await OnRejected.InvokeAsync();
+                        isProcessing = false;
+                    }
+                });
+            }
+            else
+            {
+                InvokeAsync(StateHasChanged);
+            }
+        }, null, 1000, 1000);
+    }
+
+    private void StopCountdown()
+    {
+        _countdownTimer?.Dispose();
+        _countdownTimer = null;
+    }
 
     private async Task Accept()
     {
         if (isProcessing) return;
         isProcessing = true;
+        StopCountdown();
         await OnAccepted.InvokeAsync();
         isProcessing = false;
     }
@@ -109,9 +172,13 @@
     {
         if (isProcessing) return;
         isProcessing = true;
+        StopCountdown();
         await OnRejected.InvokeAsync();
         isProcessing = false;
     }
 
-    // GetInitials moved to Testify.Shared.Helpers.StringHelper
+    public void Dispose()
+    {
+        StopCountdown();
+    }
 }

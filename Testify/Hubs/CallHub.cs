@@ -36,14 +36,29 @@ namespace Testify.Hubs
         {
             var userId = GetCurrentUserId();
             await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
+
+            // Sync in-memory state from DB on reconnect
+            if (!ActiveUserCalls.ContainsKey(userId))
+            {
+                var activeSession = await _callRepo.GetActiveCallSessionForUserAsync(userId);
+                if (activeSession != null)
+                {
+                    ActiveUserCalls.TryAdd(userId, activeSession.Id);
+                }
+            }
+
             await base.OnConnectedAsync();
         }
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = GetCurrentUserId();
+            var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                await base.OnDisconnectedAsync(exception);
+                return;
+            }
 
-            // If user was in an active call, end it
             if (ActiveUserCalls.TryRemove(userId, out var callSessionId))
             {
                 await EndCallInternal(callSessionId, userId, CallStatus.Ended);
@@ -60,8 +75,8 @@ namespace Testify.Hubs
         {
             var callerId = GetCurrentUserId();
 
-            // Check caller is not already in a call
-            if (ActiveUserCalls.ContainsKey(callerId))
+            // Check caller is not already in a call (in-memory + DB fallback)
+            if (ActiveUserCalls.ContainsKey(callerId) || await _callRepo.HasActiveCallAsync(callerId))
             {
                 await Clients.Caller.SendAsync("CallError", "You are already in a call.");
                 return;
@@ -92,8 +107,8 @@ namespace Testify.Hubs
 
             var calleeId = calleeParticipant.UserId;
 
-            // Check callee is not already in a call
-            if (ActiveUserCalls.ContainsKey(calleeId))
+            // Check callee is not already in a call (in-memory + DB fallback)
+            if (ActiveUserCalls.ContainsKey(calleeId) || await _callRepo.HasActiveCallAsync(calleeId))
             {
                 await Clients.Caller.SendAsync("CallError", "The other user is currently in another call.");
                 return;
@@ -297,5 +312,42 @@ namespace Testify.Hubs
         }
 
         #endregion
+
+        /// <summary>
+        /// Client can call this after reconnect to check if they have an active call.
+        /// </summary>
+        public async Task<ActiveCallInfoResponse?> GetActiveCall()
+        {
+            var userId = GetCurrentUserId();
+
+            if (!ActiveUserCalls.TryGetValue(userId, out var callSessionId))
+            {
+                // Also check DB as fallback
+                var dbSession = await _callRepo.GetActiveCallSessionForUserAsync(userId);
+                if (dbSession == null) return null;
+                callSessionId = dbSession.Id;
+                ActiveUserCalls.TryAdd(userId, callSessionId);
+            }
+
+            var session = await _callRepo.GetCallSessionByIdAsync(callSessionId);
+            if (session == null || (session.Status != CallStatus.Ringing && session.Status != CallStatus.Active))
+            {
+                ActiveUserCalls.TryRemove(userId, out _);
+                return null;
+            }
+
+            var peerId = session.CallerUserId == userId ? session.CalleeUserId : session.CallerUserId;
+            var peer = await _callRepo.GetUserAsync(peerId);
+
+            return new ActiveCallInfoResponse
+            {
+                CallSessionId = session.Id,
+                CallType = session.CallType,
+                Status = session.Status,
+                PeerName = peer?.FullName ?? peer?.UserName ?? "Unknown",
+                PeerAvatarUrl = peer?.AvatarUrl,
+                AnsweredAt = session.AnsweredAt
+            };
+        }
     }
 }

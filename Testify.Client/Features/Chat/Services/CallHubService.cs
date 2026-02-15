@@ -19,6 +19,7 @@ namespace Testify.Client.Features.Chat.Services
         public event Action<CallEndedResponse>? OnCallEnded;
         public event Action<string>? OnCallError;
         public event Action<string, bool, bool>? OnMediaToggled; // userId, isAudioEnabled, isVideoEnabled
+        public event Func<Task>? OnReconnected;
 
         public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
@@ -52,6 +53,13 @@ namespace Testify.Client.Features.Chat.Services
                 {
                     Console.WriteLine("[CallHub] Connection closed permanently.");
                     return Task.CompletedTask;
+                };
+
+                _hubConnection.Reconnected += async _ =>
+                {
+                    Console.WriteLine("[CallHub] Reconnected.");
+                    if (OnReconnected != null)
+                        await OnReconnected.Invoke();
                 };
 
                 await _hubConnection.StartAsync();
@@ -96,6 +104,22 @@ namespace Testify.Client.Features.Chat.Services
         public async Task ToggleMediaAsync(int callSessionId, bool isAudioEnabled, bool isVideoEnabled)
         {
             await InvokeHubMethodAsync("ToggleMedia", callSessionId, isAudioEnabled, isVideoEnabled);
+        }
+
+        public async Task<ActiveCallInfoResponse?> GetActiveCallAsync()
+        {
+            if (_hubConnection?.State != HubConnectionState.Connected)
+                return null;
+
+            try
+            {
+                return await _hubConnection.InvokeAsync<ActiveCallInfoResponse?>("GetActiveCall");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CallHub] GetActiveCall failed: {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>

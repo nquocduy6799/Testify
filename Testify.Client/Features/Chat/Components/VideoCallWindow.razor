@@ -280,5 +280,7 @@
     public async ValueTask DisposeAsync()
     {
         StopDurationTimer();
+        if (WebRtcService != null && callState != CallState.Ended)
+            await WebRtcService.DisposeWebRtcAsync();
     }
 }

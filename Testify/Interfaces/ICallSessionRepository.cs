@@ -52,5 +52,16 @@ namespace Testify.Interfaces
         /// Returns the message response for broadcasting.
         /// </summary>
         Task<ChatMessageResponse?> CreateCallMessageAsync(CallSession session, CallStatus status, int? durationSeconds);
+
+        /// <summary>
+        /// Get the active or ringing call session for a user (if any).
+        /// Used to sync in-memory state from DB on reconnect.
+        /// </summary>
+        Task<CallSession?> GetActiveCallSessionForUserAsync(string userId);
+
+        /// <summary>
+        /// Get a call session by its ID.
+        /// </summary>
+        Task<CallSession?> GetCallSessionByIdAsync(int callSessionId);
     }
 }

@@ -1075,6 +1075,7 @@ else
     private string callPeerName = string.Empty;
     private string? callPeerAvatarUrl;
     private CancellationTokenSource? _ringingTimeoutCts;
+    private CancellationTokenSource? _connectingTimeoutCts;
 
     protected override async Task OnInitializedAsync()
     {
@@ -1127,6 +1128,7 @@ else
                 callHubService.OnCallEnded += HandleCallEndedSignalR;
                 callHubService.OnCallError += HandleCallError;
                 callHubService.OnMediaToggled += HandleMediaToggled;
+                callHubService.OnReconnected += HandleCallHubReconnected;
             }
 
             // Initialize WebRTC service
@@ -2653,8 +2655,11 @@ else
             await webRtcService.StopRingtoneAsync();
             // Set remote description (answer)
             await webRtcService.SetRemoteDescriptionAsync(response.SdpAnswer);
-            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Connecting);
             StateHasChanged();
+
+            // Start connecting timeout (15s) — auto-end if WebRTC handshake doesn't complete
+            StartConnectingTimeout();
         });
     }
 
@@ -2729,9 +2734,19 @@ else
 
     private void HandleWebRtcStateChanged(string state)
     {
+        if (state == "connected")
+        {
+            // WebRTC handshake complete — cancel connecting timeout and move to Active
+            _connectingTimeoutCts?.Cancel();
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+            InvokeAsync(StateHasChanged);
+            return;
+        }
+
         if (state == "failed" || state == "closed")
         {
             _ringingTimeoutCts?.Cancel();
+            _connectingTimeoutCts?.Cancel();
 
             _ = InvokeAsync(async () =>
             {
@@ -2807,6 +2822,9 @@ else
 
         videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
         incomingCallData = null;
+
+        // Start connecting timeout for callee side
+        StartConnectingTimeout();
     }
 
     private async Task RejectIncomingCall()
@@ -2827,9 +2845,73 @@ else
     {
         _ringingTimeoutCts?.Cancel();
         isInCall = false;
-
+        hasIncomingCall = false;
+        incomingCallData = null;
         activeCallSessionId = null;
         StateHasChanged();
+    }
+
+    private void StartConnectingTimeout()
+    {
+        _connectingTimeoutCts?.Cancel();
+        _connectingTimeoutCts = new CancellationTokenSource();
+        var token = _connectingTimeoutCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(15_000, token);
+                if (!token.IsCancellationRequested && isInCall && activeCallSessionId.HasValue)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        Console.WriteLine("Connecting timeout — auto-ending call");
+                        if (webRtcService != null)
+                            await webRtcService.DisposeWebRtcAsync();
+                        if (callHubService != null)
+                            await callHubService.EndCallAsync(activeCallSessionId.Value);
+                        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ended);
+                        isInCall = false;
+                        activeCallSessionId = null;
+                        StateHasChanged();
+                    });
+                }
+            }
+            catch (TaskCanceledException) { }
+        });
+    }
+
+    private async Task HandleCallHubReconnected()
+    {
+        if (callHubService == null) return;
+
+        var activeCall = await callHubService.GetActiveCallAsync();
+        if (activeCall == null)
+        {
+            if (isInCall)
+            {
+                if (webRtcService != null)
+                    await webRtcService.DisposeWebRtcAsync();
+                videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ended);
+                isInCall = false;
+                activeCallSessionId = null;
+                await InvokeAsync(StateHasChanged);
+            }
+            return;
+        }
+
+        isInCall = true;
+        activeCallSessionId = activeCall.CallSessionId;
+        currentCallType = activeCall.CallType;
+        callPeerName = activeCall.PeerName;
+        callPeerAvatarUrl = activeCall.PeerAvatarUrl;
+
+        if (activeCall.Status == CallStatus.Active)
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+        else
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ringing);
+
+        await InvokeAsync(StateHasChanged);
     }
 
     #endregion
@@ -2864,13 +2946,14 @@ else
         // Cleanup call services
         if (callHubService != null)
         {
-            // OnIncomingCall handled globally
+            callHubService.OnIncomingCall -= HandleIncomingCall;
             callHubService.OnCallRinging -= HandleCallRinging;
             callHubService.OnCallAnswered -= HandleCallAnswered;
             callHubService.OnIceCandidateReceived -= HandleIceCandidateReceived;
             callHubService.OnCallEnded -= HandleCallEndedSignalR;
             callHubService.OnCallError -= HandleCallError;
             callHubService.OnMediaToggled -= HandleMediaToggled;
+            callHubService.OnReconnected -= HandleCallHubReconnected;
         }
         if (webRtcService != null)
         {
@@ -2882,5 +2965,7 @@ else
 
         _ringingTimeoutCts?.Cancel();
         _ringingTimeoutCts?.Dispose();
+        _connectingTimeoutCts?.Cancel();
+        _connectingTimeoutCts?.Dispose();
     }
 }
