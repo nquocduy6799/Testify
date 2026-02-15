@@ -437,13 +437,14 @@
     {
         if (_hubService != null)
         {
-            // Unsubscribe from events
+            // Only unsubscribe from events — do NOT stop the hub service.
+            // The hub service is scoped (shared across the circuit) and must stay
+            // connected for presence tracking even when this component is re-created
+            // during layout/navigation changes.
             _hubService.OnNotificationReceived -= HandleNewNotification;
-            
-            // Stop SignalR connection
-            await _hubService.StopAsync();
-            Console.WriteLine("[NotificationDropdown] SignalR disconnected");
+            Console.WriteLine("[NotificationDropdown] Unsubscribed from hub events (connection kept alive)");
         }
+        await Task.CompletedTask;
     }
 
 }

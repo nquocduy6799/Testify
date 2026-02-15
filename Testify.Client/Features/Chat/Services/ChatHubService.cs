@@ -39,7 +39,15 @@ namespace Testify.Client.Features.Chat.Services
 
         public async Task StartAsync()
         {
-            if (_hubConnection != null) return;
+            // If already connected, do nothing
+            if (_hubConnection?.State == HubConnectionState.Connected) return;
+
+            // If connection exists but is disconnected/stopped, dispose and recreate
+            if (_hubConnection != null)
+            {
+                try { await _hubConnection.DisposeAsync(); } catch { }
+                _hubConnection = null;
+            }
 
             try
             {

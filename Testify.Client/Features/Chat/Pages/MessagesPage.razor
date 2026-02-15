@@ -1112,15 +1112,19 @@ else
                 if (!notificationHubService.IsConnected)
                     await notificationHubService.StartAsync();
                 notificationHubService.OnUserStatusChanged += HandleUserStatusChanged;
+
+                // Sync initial online status from the live presence data.
+                // The API response may be stale if the user's presence changed
+                // between the API call (OnInitializedAsync) and now.
+                SyncOnlineStatusFromPresence();
             }
 
-            // Initialize Call Hub
+            // Initialize Call Hub (may already be started by GlobalCallHandler)
             callHubService = ServiceProvider.GetService<CallHubService>();
             if (callHubService != null)
             {
                 if (!callHubService.IsConnected)
                     await callHubService.StartAsync();
-                // OnIncomingCall is handled locally
                 callHubService.OnIncomingCall += HandleIncomingCall;
                 callHubService.OnCallRinging += HandleCallRinging;
                 callHubService.OnCallAnswered += HandleCallAnswered;
@@ -1129,6 +1133,16 @@ else
                 callHubService.OnCallError += HandleCallError;
                 callHubService.OnMediaToggled += HandleMediaToggled;
                 callHubService.OnReconnected += HandleCallHubReconnected;
+
+                // Check if there's a pending incoming call accepted from another page
+                // (via GlobalCallHandler). If so, process it now.
+                if (callHubService.PendingIncomingCall != null)
+                {
+                    var pendingCall = callHubService.PendingIncomingCall;
+                    callHubService.PendingIncomingCall = null;
+                    // Process the pending call after WebRTC service is initialized
+                    _ = ProcessPendingIncomingCall(pendingCall);
+                }
             }
 
             // Initialize WebRTC service
@@ -1139,6 +1153,97 @@ else
                 webRtcService.ConnectionStateChanged += HandleWebRtcStateChanged;
             }
         }
+    }
+
+    /// <summary>
+    /// Syncs room online status from the live NotificationHubService presence data.
+    /// This ensures the UI reflects the correct status even if the API response was stale.
+    /// </summary>
+    private void SyncOnlineStatusFromPresence()
+    {
+        if (notificationHubService == null) return;
+
+        foreach (var room in rooms)
+        {
+            if (room.OtherParticipant != null)
+            {
+                var isOnline = notificationHubService.IsUserOnline(room.OtherParticipant.UserId);
+                room.OtherParticipant.IsOnline = isOnline;
+                room.OtherParticipant.Status = isOnline ? "Online" : "Offline";
+            }
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Processes a pending incoming call that was accepted from the GlobalCallHandler
+    /// on a different page. This completes the WebRTC handshake.
+    /// </summary>
+    private async Task ProcessPendingIncomingCall(IncomingCallResponse pendingCall)
+    {
+        // Small delay to ensure WebRTC service is fully initialized
+        await Task.Delay(100);
+
+        if (webRtcService == null || callHubService == null)
+        {
+            Console.WriteLine("[MessagesPage] Cannot process pending call — services not ready");
+            return;
+        }
+
+        // Set call state
+        incomingCallData = pendingCall;
+        hasIncomingCall = false;
+        isInCall = true;
+        activeCallSessionId = pendingCall.CallSessionId;
+        currentCallType = pendingCall.CallType;
+        callPeerName = pendingCall.CallerName;
+        callPeerAvatarUrl = pendingCall.CallerAvatarUrl;
+        StateHasChanged();
+
+        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Connecting);
+
+        // Initialize WebRTC
+        var initialized = await webRtcService.InitializeAsync(pendingCall.CallType == CallType.Video);
+        if (!initialized)
+        {
+            await callHubService.RejectCallAsync(pendingCall.CallSessionId);
+            isInCall = false;
+            activeCallSessionId = null;
+            incomingCallData = null;
+            StateHasChanged();
+            return;
+        }
+
+        // Set remote description (offer from caller)
+        await webRtcService.SetRemoteDescriptionAsync(pendingCall.SdpOffer);
+
+        // Create answer
+        var sdpAnswer = await webRtcService.CreateAnswerAsync();
+        if (string.IsNullOrEmpty(sdpAnswer))
+        {
+            await callHubService.RejectCallAsync(pendingCall.CallSessionId);
+            isInCall = false;
+            activeCallSessionId = null;
+            incomingCallData = null;
+            await webRtcService.DisposeWebRtcAsync();
+            StateHasChanged();
+            return;
+        }
+
+        // Send answer
+        await callHubService.SendAnswerAsync(new CallAnswerRequest
+        {
+            CallSessionId = pendingCall.CallSessionId,
+            SdpAnswer = sdpAnswer
+        });
+
+        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+        incomingCallData = null;
+
+        // Start connecting timeout for callee side
+        StartConnectingTimeout();
+
+        Console.WriteLine("[MessagesPage] Pending call processed — WebRTC handshake sent");
     }
 
     private void HandleUserStatusChanged(string userId, bool isOnline)

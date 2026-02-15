@@ -1,0 +1,164 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Testify.Client.Features.Chat.Services
+@using Testify.Client.Features.Chat.Components
+@using Testify.Shared.DTOs.Chat
+@using Testify.Shared.Enums
+@implements IAsyncDisposable
+
+@inject IServiceProvider ServiceProvider
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@* Show IncomingCallDialog when a call comes in and user is NOT on the Messages page *@
+<IncomingCallDialog IsVisible="@_hasIncomingCall"
+                    IncomingCall="@_incomingCallData"
+                    OnAccepted="AcceptCall"
+                    OnRejected="RejectCall" />
+
+@code {
+    private CallHubService? _callHubService;
+    private WebRtcService? _webRtcService;
+    private bool _hasIncomingCall;
+    private IncomingCallResponse? _incomingCallData;
+
+    /// <summary>
+    /// Returns true if the user is currently on the Messages page.
+    /// When on Messages, that page handles its own incoming call UI.
+    /// </summary>
+    private bool IsOnMessagesPage =>
+        NavigationManager.Uri.Contains("/messages", StringComparison.OrdinalIgnoreCase);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated != true)
+                return;
+
+            // Start CallHubService globally so the user can receive calls from any page
+            _callHubService = ServiceProvider.GetService<CallHubService>();
+            if (_callHubService != null)
+            {
+                if (!_callHubService.IsConnected)
+                    await _callHubService.StartAsync();
+
+                _callHubService.OnIncomingCall += HandleIncomingCall;
+                _callHubService.OnCallEnded += HandleCallEnded;
+                Console.WriteLine("[GlobalCallHandler] CallHubService started and listening for incoming calls");
+            }
+
+            // Get WebRtcService for ringtone
+            _webRtcService = ServiceProvider.GetService<WebRtcService>();
+        }
+    }
+
+    private void HandleIncomingCall(IncomingCallResponse incomingCall)
+    {
+        // If user is on the Messages page, let MessagesPage handle it
+        if (IsOnMessagesPage)
+        {
+            Console.WriteLine("[GlobalCallHandler] User is on Messages page — skipping (MessagesPage handles it)");
+            return;
+        }
+
+        Console.WriteLine($"[GlobalCallHandler] Incoming call from {incomingCall.CallerName} (not on Messages page)");
+
+        _incomingCallData = incomingCall;
+        _hasIncomingCall = true;
+
+        // Play ringtone
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                if (_webRtcService != null)
+                    await _webRtcService.PlayRingtoneAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GlobalCallHandler] Ringtone error: {ex.Message}");
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void HandleCallEnded(CallEndedResponse response)
+    {
+        // If we're showing the incoming call dialog (call was cancelled/ended before user answered)
+        if (_hasIncomingCall && _incomingCallData?.CallSessionId == response.CallSessionId)
+        {
+            _ = InvokeAsync(async () =>
+            {
+                try
+                {
+                    if (_webRtcService != null)
+                        await _webRtcService.StopRingtoneAsync();
+                }
+                catch { }
+                _hasIncomingCall = false;
+                _incomingCallData = null;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task AcceptCall()
+    {
+        if (_incomingCallData == null || _callHubService == null) return;
+
+        // Stop ringtone
+        try
+        {
+            if (_webRtcService != null)
+                await _webRtcService.StopRingtoneAsync();
+        }
+        catch { }
+
+        // Store the incoming call data so MessagesPage can pick it up
+        _callHubService.PendingIncomingCall = _incomingCallData;
+
+        _hasIncomingCall = false;
+        _incomingCallData = null;
+
+        Console.WriteLine("[GlobalCallHandler] Call accepted — navigating to Messages page");
+
+        // Navigate to the Messages page where the WebRTC handshake will be completed
+        NavigationManager.NavigateTo("/messages", forceLoad: false);
+    }
+
+    private async Task RejectCall()
+    {
+        if (_incomingCallData == null || _callHubService == null) return;
+
+        // Stop ringtone
+        try
+        {
+            if (_webRtcService != null)
+                await _webRtcService.StopRingtoneAsync();
+        }
+        catch { }
+
+        await _callHubService.RejectCallAsync(_incomingCallData.CallSessionId);
+        Console.WriteLine("[GlobalCallHandler] Call rejected");
+
+        _hasIncomingCall = false;
+        _incomingCallData = null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_callHubService != null)
+        {
+            _callHubService.OnIncomingCall -= HandleIncomingCall;
+            _callHubService.OnCallEnded -= HandleCallEnded;
+        }
+        // Stop ringtone if still playing
+        try
+        {
+            if (_webRtcService != null && _hasIncomingCall)
+                await _webRtcService.StopRingtoneAsync();
+        }
+        catch { }
+    }
+}

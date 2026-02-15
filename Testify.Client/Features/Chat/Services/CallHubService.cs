@@ -23,6 +23,12 @@ namespace Testify.Client.Features.Chat.Services
 
         public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
 
+        /// <summary>
+        /// Stores incoming call data when accepted from a non-Messages page,
+        /// so the Messages page can pick it up and complete the WebRTC handshake.
+        /// </summary>
+        public IncomingCallResponse? PendingIncomingCall { get; set; }
+
         public CallHubService(NavigationManager navigationManager)
         {
             _navigationManager = navigationManager;
@@ -30,7 +36,15 @@ namespace Testify.Client.Features.Chat.Services
 
         public async Task StartAsync()
         {
-            if (_hubConnection != null) return;
+            // If already connected, do nothing
+            if (_hubConnection?.State == HubConnectionState.Connected) return;
+
+            // If connection exists but is disconnected/stopped, dispose and recreate
+            if (_hubConnection != null)
+            {
+                try { await _hubConnection.DisposeAsync(); } catch { }
+                _hubConnection = null;
+            }
 
             try
             {
@@ -49,10 +63,12 @@ namespace Testify.Client.Features.Chat.Services
                 _hubConnection.On<string, bool, bool>("MediaToggled", (uid, audio, video) => OnMediaToggled?.Invoke(uid, audio, video));
 
                 // WithAutomaticReconnect handles reconnection. Only use Closed for terminal failures.
-                _hubConnection.Closed += _ =>
+                _hubConnection.Closed += async _ =>
                 {
-                    Console.WriteLine("[CallHub] Connection closed permanently.");
-                    return Task.CompletedTask;
+                    Console.WriteLine("[CallHub] Connection closed permanently. Will retry in 5s.");
+                    _hubConnection = null;
+                    await Task.Delay(5000);
+                    try { await StartAsync(); } catch { }
                 };
 
                 _hubConnection.Reconnected += async _ =>
