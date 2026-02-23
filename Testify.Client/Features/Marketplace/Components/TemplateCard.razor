@@ -1,0 +1,123 @@
+@using Testify.Shared.DTOs.Marketplace
+
+<div class="group relative bg-white rounded-2xl border border-slate-100 p-5 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(168,85,247,0.12)] hover:border-purple-100 flex flex-col h-full overflow-hidden">
+    
+    @* --- Header Info --- *@
+    <div class="flex justify-between items-start mb-4">
+        <div class="flex flex-wrap gap-2">
+            @if (!string.IsNullOrEmpty(CategoryName))
+            {
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">
+                    @* Icon: LayoutGrid (Lucide) *@
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
+                    </svg>
+                    @CategoryName
+                </span>
+            }
+        </div>
+        <button class="text-slate-300 hover:text-purple-600 transition-colors">
+            @* Icon: Share2 (Lucide) *@
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>
+            </svg>
+        </button>
+    </div>
+
+    @* --- Main Content --- *@
+    <div class="flex-1 space-y-3">
+        <h3 class="text-lg font-bold text-slate-900 group-hover:text-purple-700 transition-colors">
+            @Template.Title
+        </h3>
+        <p class="text-sm text-slate-500 leading-relaxed line-clamp-2">
+            @Template.Description
+        </p>
+        
+        @* Tags List *@
+        <div class="flex flex-wrap gap-1.5 py-2">
+            @foreach (var tag in Template.Tags)
+            {
+                <span class="text-[10px] font-medium text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                    #@tag
+                </span>
+            }
+        </div>
+    </div>
+
+    @* --- Footer (Author & Stats) --- *@
+    <div class="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <img src="@Template.AuthorAvatar" alt="@Template.AuthorName" 
+                 class="w-7 h-7 rounded-full border-2 border-white shadow-sm ring-1 ring-slate-100" />
+            <span class="text-xs font-semibold text-slate-700">@Template.AuthorName</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1 text-[11px] font-bold text-slate-400">
+                @* Icon: Star (Lucide) *@
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-400">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+                @((Template.Stars / 1000.0).ToString("F1"))k
+            </div>
+            <div class="flex items-center gap-1 text-[11px] font-bold text-slate-400">
+                @* Icon: Download (Lucide) *@
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+                </svg>
+                @Template.Clones
+            </div>
+        </div>
+    </div>
+
+    @* --- Actions (Hover Effect) --- *@
+    @* Lưu ý: Tailwind 'group-hover' hoạt động tốt, không cần state isHovered như React *@
+    <div class="mt-4 flex gap-2 transition-all duration-300 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0">
+        @if (Template.PriceType == "Premium" && !Template.IsOwned)
+        {
+            <button @onclick="HandleBuy"
+                    class="flex-1 px-3 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-bold hover:from-amber-600 hover:to-orange-600 transition-all shadow-lg shadow-amber-200 flex items-center justify-center gap-2">
+                @* Icon: CreditCard (Lucide) *@
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>
+                </svg>
+                Buy $@Template.PriceAmount.ToString("F2")
+            </button>
+        }
+        else
+        {
+            <button @onclick="HandleClone"
+                    class="flex-1 px-3 py-2.5 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 flex items-center justify-center gap-2">
+                @* Icon: Download (Lucide) *@
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>
+                </svg>
+                Clone Suite
+            </button>
+        }
+    </div>
+
+    @* Price Badge for Premium *@
+    @if (Template.PriceType == "Premium")
+    {
+        <div class="absolute top-3 right-3 px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider rounded-full shadow-lg">
+            Premium
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public TemplateDto Template { get; set; } = new();
+    [Parameter] public string CategoryName { get; set; } = "";
+    [Parameter] public EventCallback<int> OnClone { get; set; }
+    [Parameter] public EventCallback<int> OnBuy { get; set; }
+
+    private async Task HandleClone()
+    {
+        await OnClone.InvokeAsync(Template.Id);
+    }
+
+    private async Task HandleBuy()
+    {
+        await OnBuy.InvokeAsync(Template.Id);
+    }
+}

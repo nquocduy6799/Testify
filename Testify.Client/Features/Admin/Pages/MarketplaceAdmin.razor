@@ -1,0 +1,458 @@
+@page "/admin/marketplace"
+@using Microsoft.AspNetCore.Authorization
+@using Testify.Shared.DTOs.Marketplace
+@using Testify.Client.Interfaces
+@inject IMarketplaceService MarketplaceService
+@inject NavigationManager Navigation
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveWebAssembly
+
+<PageTitle>Manage Templates - Admin</PageTitle>
+
+<div class="max-w-[1400px] mx-auto px-8 py-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+    @* --- Header Section --- *@
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/60 backdrop-blur-xl p-8 rounded-[32px] border border-white shadow-sm ring-1 ring-slate-100">
+        <div>
+            <div class="flex items-center gap-3 mb-1">
+                <button @onclick='() => Navigation.NavigateTo("/admin")' class="text-slate-400 hover:text-purple-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                </button>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tight">
+                    Manage Templates
+                </h1>
+            </div>
+            <p class="text-slate-500 font-medium">Create, edit, and curate marketplace content.</p>
+        </div>
+        <button @onclick="OpenCreateModal"
+                class="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all hover:scale-[1.02] active:scale-[0.98]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+            Add Template
+        </button>
+    </div>
+
+    @* --- Status Message --- *@
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="px-6 py-4 rounded-2xl text-sm font-bold flex items-center justify-between shadow-sm @(isError ? "bg-red-50 text-red-600 border border-red-100" : "bg-emerald-50 text-emerald-600 border border-emerald-100")">
+            <div class="flex items-center gap-2">
+                @if(isError)
+                {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                }
+                else
+                {
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                }
+                <span>@statusMessage</span>
+            </div>
+            <button @onclick='() => statusMessage = ""' class="hover:bg-white/20 p-1 rounded-full transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+    }
+
+    @* --- Main Content --- *@
+    @if (isLoading)
+    {
+        <div class="flex flex-col items-center justify-center py-20">
+            <div class="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-slate-400 font-medium">Loading data...</p>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-50/50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Template Info</th>
+                            <th class="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Category</th>
+                            <th class="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                            <th class="px-6 py-5 text-center text-[11px] font-black text-slate-400 uppercase tracking-widest">Stats</th>
+                            <th class="px-6 py-5 text-right text-[11px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        @if (templates.Any())
+                        {
+                            @foreach (var t in templates)
+                            {
+                                <tr class="hover:bg-slate-50/80 transition-colors group">
+                                    <td class="px-6 py-4 max-w-sm">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex-shrink-0 flex items-center justify-center text-slate-400">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+                                            </div>
+                                            <div>
+                                                <div class="font-bold text-slate-900 group-hover:text-purple-700 transition-colors">@t.Title</div>
+                                                <div class="text-xs text-slate-500 mt-1 line-clamp-1">@t.Description</div>
+                                                @* Tags Row *@
+                                                <div class="flex flex-wrap gap-1 mt-2">
+                                                    @foreach(var tag in (t.Tags ?? new()).Take(3))
+                                                    {
+                                                        <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">#@tag</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-600 shadow-sm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                                            @t.CategoryName
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        @if (t.PriceType == "Public")
+                                        {
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                Public
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                                Private
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center justify-center gap-4 text-xs font-medium text-slate-500">
+                                            <div class="flex items-center gap-1" title="Stars">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                                @t.Stars
+                                            </div>
+                                            <div class="flex items-center gap-1" title="Clones">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                                @t.Clones
+                                            </div>
+                                            <div class="flex items-center gap-1" title="Views">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                                @t.Views
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right">
+                                        <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button @onclick="() => OpenEditModal(t)"
+                                                    class="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                            </button>
+                                            <button @onclick="() => ConfirmDelete(t)"
+                                                    class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="py-24 text-center">
+                                    <div class="flex flex-col items-center gap-4">
+                                        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-slate-900 font-bold">No templates found</p>
+                                            <p class="text-slate-400 text-xs mt-1">Get started by creating a new template.</p>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@* --- Create/Edit Modal --- *@
+@if (showModal)
+{
+    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-in fade-in duration-200" @onclick="CloseModal">
+        <div class="bg-white rounded-[32px] w-full max-w-2xl p-8 shadow-2xl space-y-8 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300" @onclick:stopPropagation>
+            
+            <div class="flex items-center justify-between border-b border-slate-100 pb-6">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900 tracking-tight">@(isEditing ? "Edit Template" : "New Template")</h2>
+                    <p class="text-sm text-slate-400 font-medium">Fill in the details below.</p>
+                </div>
+                <button @onclick="CloseModal" class="p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                @* Name & Category Row *@
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Template Name</label>
+                        <input type="text" @bind="formModel.Name"
+                               class="w-full px-5 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold focus:outline-none focus:border-purple-300 focus:ring-4 focus:ring-purple-500/10 focus:bg-white transition-all placeholder:font-normal"
+                               placeholder="e.g. E-Commerce Flow" />
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Category</label>
+                        <select @bind="formModel.CategoryId"
+                                class="w-full px-5 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-bold focus:outline-none focus:border-purple-300 focus:ring-4 focus:ring-purple-500/10 focus:bg-white transition-all cursor-pointer">
+                            <option value="">Select Category</option>
+                            @foreach (var cat in categories)
+                            {
+                                <option value="@cat.Id">@cat.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                @* Description *@
+                <div class="space-y-2">
+                    <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Description</label>
+                    <textarea @bind="formModel.Description" rows="4"
+                              class="w-full px-5 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-medium focus:outline-none focus:border-purple-300 focus:ring-4 focus:ring-purple-500/10 focus:bg-white transition-all resize-none"
+                              placeholder="Briefly describe the purpose and scope of this test suite..."></textarea>
+                </div>
+
+                @* Tags *@
+                <div class="space-y-2">
+                    <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Tags</label>
+                    <div class="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+                        <input type="text" @bind="tagsInput"
+                               class="w-full pl-11 pr-5 py-3 rounded-2xl border border-slate-200 bg-slate-50 text-sm font-medium focus:outline-none focus:border-purple-300 focus:ring-4 focus:ring-purple-500/10 focus:bg-white transition-all"
+                               placeholder="Comma separated (e.g. api, security, smoke)" />
+                    </div>
+                </div>
+
+                @* Visibility Toggle *@
+                <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                    <div class="flex-1">
+                        <div class="font-bold text-slate-900 text-sm">Public Visibility</div>
+                        <div class="text-xs text-slate-400">Show this template in the public marketplace</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" @bind="formModel.IsPublic" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-4 border-t border-slate-100">
+                <button @onclick="CloseModal"
+                        class="flex-1 py-4 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all">
+                    Cancel
+                </button>
+                <button @onclick="SaveTemplate"
+                        disabled="@isSaving"
+                        class="flex-[2] py-4 rounded-2xl bg-purple-600 text-white font-bold text-sm hover:bg-purple-700 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 flex items-center justify-center gap-2">
+                    @if (isSaving)
+                    {
+                        <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    }
+                    else
+                    {
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    }
+                    @(isEditing ? "Save Changes" : "Create Template")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* --- Delete Confirmation Modal --- *@
+@if (showDeleteConfirm)
+{
+    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-in fade-in duration-200" @onclick="CancelDelete">
+        <div class="bg-white rounded-[28px] w-full max-w-md p-8 shadow-2xl space-y-6 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300" @onclick:stopPropagation>
+            <div class="flex flex-col items-center text-center gap-4">
+                <div class="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-500"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-slate-900">Delete Template</h3>
+                    <p class="text-sm text-slate-500 mt-2">Are you sure you want to delete <strong class="text-slate-700">"@deletingTemplateName"</strong>? This action cannot be undone.</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button @onclick="CancelDelete"
+                        class="flex-1 py-3.5 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all">
+                    Cancel
+                </button>
+                <button @onclick="ExecuteDelete"
+                        class="flex-1 py-3.5 rounded-2xl bg-rose-500 text-white font-bold text-sm hover:bg-rose-600 transition-all shadow-lg shadow-rose-200 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<TemplateDto> templates = new();
+    private List<CategoryDto> categories = new();
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isEditing = false;
+    private bool isSaving = false;
+    private int editingId = 0;
+    private string statusMessage = "";
+    private bool isError = false;
+    private string tagsInput = "";
+    private bool showDeleteConfirm = false;
+    private int deletingTemplateId = 0;
+    private string deletingTemplateName = "";
+
+    private CreateTemplateDto formModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var t1 = MarketplaceService.GetAllTemplatesAsync();
+            var t2 = MarketplaceService.GetCategoriesAsync();
+            await Task.WhenAll(t1, t2);
+            
+            templates = await t1;
+            categories = await t2;
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditing = false;
+        editingId = 0;
+        formModel = new CreateTemplateDto { IsPublic = true };
+        tagsInput = "";
+        showModal = true;
+    }
+
+    private void OpenEditModal(TemplateDto template)
+    {
+        isEditing = true;
+        editingId = template.Id;
+        formModel = new CreateTemplateDto
+        {
+            Name = template.Title,
+            Description = template.Description,
+            CategoryId = categories.FirstOrDefault(c => c.Name == template.CategoryName)?.Id,
+            IsPublic = template.PriceType == "Public" || template.PriceType == "Free",
+            Tags = template.Tags ?? new()
+        };
+        tagsInput = string.Join(", ", formModel.Tags);
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private async Task SaveTemplate()
+    {
+        if (string.IsNullOrWhiteSpace(formModel.Name))
+        {
+            statusMessage = "Template name is required.";
+            isError = true;
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            formModel.Tags = tagsInput
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrEmpty(t))
+                .ToList();
+
+            if (isEditing)
+            {
+                await MarketplaceService.UpdateTemplateAsync(editingId, formModel);
+                statusMessage = $"Updated: {formModel.Name}";
+            }
+            else
+            {
+                await MarketplaceService.CreateTemplateAsync(formModel);
+                statusMessage = $"Created: {formModel.Name}";
+            }
+
+            isError = false;
+            showModal = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ConfirmDelete(TemplateDto template)
+    {
+        deletingTemplateId = template.Id;
+        deletingTemplateName = template.Title;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+        deletingTemplateId = 0;
+        deletingTemplateName = "";
+    }
+
+    private async Task ExecuteDelete()
+    {
+        showDeleteConfirm = false;
+        try
+        {
+            var success = await MarketplaceService.DeleteTemplateAsync(deletingTemplateId);
+            if (success)
+            {
+                statusMessage = $"Deleted: {deletingTemplateName}";
+                isError = false;
+                await LoadData();
+            }
+            else
+            {
+                statusMessage = "Failed to delete.";
+                isError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error: {ex.Message}";
+            isError = true;
+        }
+        finally
+        {
+            deletingTemplateId = 0;
+            deletingTemplateName = "";
+        }
+    }
+}

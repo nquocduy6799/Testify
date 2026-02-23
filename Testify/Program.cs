@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
+using Testify.Client.Features.Marketplace.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
@@ -81,6 +82,7 @@ builder.Services.AddScoped<INotificationService, ServerNotificationRepository>()
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 
 
 // Add controllers for API endpoints
@@ -91,14 +93,20 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-// Seed users and roles
-using (var scope = app.Services.CreateScope())
+// Seed users and roles (only in Development, skip if already seeded)
+if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
     try
     {
-        await RoleSeeder.SeedRolesAsync(services);
-        await UserSeeder.SeedUsersAsync(services);
+        var db = services.GetRequiredService<ApplicationDbContext>();
+        // Only seed if database is empty (faster check)
+        if (!db.Roles.Any())
+        {
+            await RoleSeeder.SeedRolesAsync(services);
+            await UserSeeder.SeedUsersAsync(services);
+        }
     }
     catch (Exception ex)
     {

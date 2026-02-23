@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
+using Testify.Client.Features.Marketplace.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
@@ -30,6 +31,7 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 
 
 // Register SignalR for real-time notifications

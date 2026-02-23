@@ -260,8 +260,24 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            // Redirect to dashboard if no return URL, otherwise go to return URL
-            RedirectManager.RedirectTo(string.IsNullOrEmpty(ReturnUrl) ? "/dashboard" : ReturnUrl);
+            
+            if (!string.IsNullOrEmpty(ReturnUrl))
+            {
+                RedirectManager.RedirectTo(ReturnUrl);
+            }
+            else
+            {
+                // Check if user is Admin to redirect to admin page
+                var user = await UserManager.FindByEmailAsync(Input.Email);
+                if (user != null && await UserManager.IsInRoleAsync(user, "Admin"))
+                {
+                    RedirectManager.RedirectTo("/admin");
+                }
+                else
+                {
+                    RedirectManager.RedirectTo("/dashboard");
+                }
+            }
         }
         else if (result.RequiresTwoFactor)
         {

@@ -1,0 +1,67 @@
+@page "/admin/categories"
+@using Testify.Shared.DTOs.Marketplace
+@using Testify.Client.Features.Marketplace.Components
+@using Testify.Client.Interfaces
+@inject IMarketplaceService MarketplaceService
+
+<div class="max-w-[1400px] mx-auto px-8 py-12">
+    <CategoryManager Categories="categories"
+                     OnCreateCategory="HandleCreate"
+                     OnUpdateCategory="HandleUpdate"
+                     OnDeleteCategory="HandleDelete" />
+</div>
+
+@code {
+    private List<CategoryDto> categories = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await MarketplaceService.GetCategoriesAsync();
+    }
+
+    private async Task HandleCreate(CategoryDto cat)
+    {
+        try
+        {
+            var created = await MarketplaceService.CreateCategoryAsync(cat);
+            categories.Add(created);
+        }
+        catch
+        {
+            // Handle error
+        }
+    }
+
+    private async Task HandleUpdate(CategoryDto cat)
+    {
+        try
+        {
+            var updated = await MarketplaceService.UpdateCategoryAsync(cat);
+            var index = categories.FindIndex(c => c.Id == updated.Id);
+            if (index >= 0)
+            {
+                categories[index] = updated;
+            }
+        }
+        catch
+        {
+            // Handle error
+        }
+    }
+
+    private async Task HandleDelete(int id)
+    {
+        try
+        {
+            var success = await MarketplaceService.DeleteCategoryAsync(id);
+            if (success)
+            {
+                categories.RemoveAll(c => c.Id == id);
+            }
+        }
+        catch
+        {
+            // Handle error
+        }
+    }
+}
