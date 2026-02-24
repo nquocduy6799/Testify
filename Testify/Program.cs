@@ -16,6 +16,8 @@ using Testify.Client.Features.TestTemplates.Services;
 using Testify.Client.Features.TestSuites.Services;
 using Testify.Configuration;
 using Testify.Services;
+using Testify.Services;
+using Testify.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -82,6 +84,16 @@ builder.Services.AddScoped<ITestCaseRepository, TestCaseRepository>();
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.AddHttpClient<Testify.Interfaces.IAiTestCaseService, GeminiTestCaseService>();
 
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<ICallSessionRepository, CallSessionRepository>();
+
+// Hosted services
+builder.Services.AddHostedService<StaleCallCleanupService>();
+
+// File upload settings and storage
+builder.Services.Configure<FileUploadSettings>(
+    builder.Configuration.GetSection(FileUploadSettings.SectionName));
+builder.Services.AddSingleton<IFileStorageService, Testify.Services.LocalFileStorageService>();
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -96,12 +108,16 @@ builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
 builder.Services.AddScoped<ITestCaseService, TestCaseService>();
 builder.Services.AddScoped<Testify.Client.Interfaces.IAiTestCaseService, Testify.Client.Features.TestSuites.Services.AiTestCaseService>();
 
+builder.Services.AddScoped<IChatService, Testify.Client.Features.Chat.Services.ChatService>();
+builder.Services.AddScoped<Testify.Client.Features.Chat.Services.ChatHubService>();
+
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();
 
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<Testify.Interfaces.IUserPresenceService, Testify.Services.UserPresenceService>();
 
 var app = builder.Build();
 
@@ -145,6 +161,8 @@ app.MapControllers();
 
 // Map SignalR Hub
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<CallHub>("/hubs/call");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

@@ -35,9 +35,14 @@ builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
 builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
 builder.Services.AddScoped<ITestCaseService, TestCaseService>();
 builder.Services.AddScoped<IAiTestCaseService, AiTestCaseService>();
+builder.Services.AddScoped<IChatService, Testify.Client.Features.Chat.Services.ChatService>();
 
 
 // Register SignalR for real-time notifications
 builder.Services.AddScoped<NotificationHubService>();
+builder.Services.AddScoped<Testify.Client.Features.Chat.Services.ChatHubService>();
+builder.Services.AddScoped<Testify.Client.Features.Chat.Services.CallHubService>();
+builder.Services.AddScoped<Testify.Client.Features.Chat.Services.WebRtcService>();
+
 
 await builder.Build().RunAsync();

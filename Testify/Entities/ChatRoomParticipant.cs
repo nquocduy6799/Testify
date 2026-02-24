@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Testify.Data;
+﻿using Testify.Data;
 using Testify.Shared.Enums;
+using Testify.Shared.Helpers;
 
 namespace Testify.Entities
 {
@@ -11,7 +9,7 @@ namespace Testify.Entities
         public int Id { get; set; }
         public int RoomId { get; set; }
         public string UserId { get; set; } = string.Empty;
-        public DateTime JoinedAt { get; set; } = DateTime.Now;
+        public DateTime JoinedAt { get; set; } = DateTimeHelper.GetVietnamTime();
         public ChatParticipantRole Role { get; set; } = ChatParticipantRole.Member;
         public bool IsMuted { get; set; } = false;
         public bool IsPinned { get; set; } = false;
