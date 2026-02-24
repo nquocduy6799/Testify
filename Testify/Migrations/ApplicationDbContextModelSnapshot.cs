@@ -1863,6 +1863,52 @@ namespace Testify.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TestPlan", b =>
+                {
+                    b.HasOne("Testify.Entities.Milestone", "Milestone")
+                        .WithMany("TestPlans")
+                        .HasForeignKey("MilestoneId");
+
+                    b.HasOne("Testify.Entities.Project", "Project")
+                        .WithMany("TestPlans")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Testify.Entities.KanbanTask", "Task")
+                        .WithMany("TestPlans")
+                        .HasForeignKey("TaskId");
+
+                    b.Navigation("Milestone");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("Task");
+                });
+
+            modelBuilder.Entity("Testify.Entities.CallSession", b =>
+                {
+                    b.HasOne("Testify.Data.ApplicationUser", "Callee")
+                        .WithMany()
+                        .HasForeignKey("CalleeId");
+
+                    b.HasOne("Testify.Data.ApplicationUser", "Caller")
+                        .WithMany()
+                        .HasForeignKey("CallerId");
+
+                    b.HasOne("Testify.Entities.ChatRoom", "Room")
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Callee");
+
+                    b.Navigation("Caller");
+
+                    b.Navigation("Room");
+                });
+
             modelBuilder.Entity("Testify.Entities.ChatMessage", b =>
                 {
                     b.HasOne("Testify.Entities.ChatMessage", "ParentMessage")

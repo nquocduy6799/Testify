@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Testify.Entities;
-using Testify.Interfaces.Testify.Interfaces;
+using Testify.Interfaces;
 using Testify.Shared.DTOs.TaskActivity;
 
 namespace Testify.Controllers

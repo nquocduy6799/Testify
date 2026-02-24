@@ -593,8 +593,10 @@ namespace Testify.Migrations
                     MilestoneId = table.Column<int>(type: "int", nullable: false),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     Priority = table.Column<int>(type: "int", nullable: false),
+                    BugSeverity = table.Column<int>(type: "int", nullable: true),
                     AssigneeId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     DevelopedById = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     TestedById = table.Column<string>(type: "nvarchar(450)", nullable: true),
@@ -872,15 +874,15 @@ namespace Testify.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    TaskId = table.Column<int>(type: "int", nullable: false),
+                    KanbanTaskId = table.Column<int>(type: "int", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Action = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     OldValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     NewValue = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    KanbanTaskId = table.Column<int>(type: "int", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -938,14 +940,15 @@ namespace Testify.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProjectId = table.Column<int>(type: "int", nullable: false),
                     TaskId = table.Column<int>(type: "int", nullable: true),
+                    MilestoneId = table.Column<int>(type: "int", nullable: true),
                     Scope = table.Column<int>(type: "int", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     Outcome = table.Column<int>(type: "int", nullable: true),
-                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CompletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Priority = table.Column<int>(type: "int", nullable: false),
-                    MilestoneId = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1061,20 +1064,26 @@ namespace Testify.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    PlanId = table.Column<int>(type: "int", nullable: false),
+                    TestPlanId = table.Column<int>(type: "int", nullable: false),
                     TestCaseId = table.Column<int>(type: "int", nullable: false),
-                    ExecutedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ExecutedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     ExecutedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
                     Comments = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ExecutedById = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TestRuns", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_TestRuns_AspNetUsers_ExecutedById",
-                        column: x => x.ExecutedById,
+                        name: "FK_TestRuns_AspNetUsers_ExecutedByUserId",
+                        column: x => x.ExecutedByUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -1084,8 +1093,8 @@ namespace Testify.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_TestRuns_TestPlans_PlanId",
-                        column: x => x.PlanId,
+                        name: "FK_TestRuns_TestPlans_TestPlanId",
+                        column: x => x.TestPlanId,
                         principalTable: "TestPlans",
                         principalColumn: "Id");
                 });
@@ -1126,7 +1135,14 @@ namespace Testify.Migrations
                     TestData = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ExpectedResult = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
-                    ActualResult = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    ActualResult = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1152,8 +1168,7 @@ namespace Testify.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     TaskId = table.Column<int>(type: "int", nullable: false),
                     RunStepId = table.Column<int>(type: "int", nullable: false),
-                    LinkedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Note = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    LinkedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -1178,10 +1193,17 @@ namespace Testify.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     RunStepId = table.Column<int>(type: "int", nullable: false),
                     FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PublicId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     FileUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FileType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FileSizeInBytes = table.Column<long>(type: "bigint", nullable: true),
-                    UploadedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    FileSize = table.Column<long>(type: "bigint", nullable: false),
+                    ContentType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1477,19 +1499,19 @@ namespace Testify.Migrations
                 column: "TestSuiteId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TestRuns_ExecutedById",
+                name: "IX_TestRuns_ExecutedByUserId",
                 table: "TestRuns",
-                column: "ExecutedById");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TestRuns_PlanId",
-                table: "TestRuns",
-                column: "PlanId");
+                column: "ExecutedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TestRuns_TestCaseId",
                 table: "TestRuns",
                 column: "TestCaseId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TestRuns_TestPlanId",
+                table: "TestRuns",
+                column: "TestPlanId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TestRunStepAttachments_RunStepId",

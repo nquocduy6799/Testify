@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Testify.Data;
 using Testify.Entities;
-using Testify.Interfaces.Testify.Interfaces;
+using Testify.Interfaces;
 using Testify.Shared.DTOs.TaskActivity;
 
 namespace Testify.Repositories

@@ -1,5 +1,6 @@
 ﻿@page "/projects/{Id:int}"
 @using Testify.Client.Features.Kanban.Pages
+@using Testify.Client.Features.TestPlans.Pages
 @using Testify.Shared.DTOs.Projects
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Features.Projects.Components
@@ -103,7 +104,7 @@
                         </svg>
                         TestPlans
                     </button>
-                @* } *@
+                }
 
                 @* Tab Team *@
                 <button @onclick='() => activeTab = "Team"'
@@ -146,7 +147,8 @@
 </div>
 
 @code {
-    [Parameter] public int Id { get; set; }
+    [Parameter] 
+    public int Id { get; set; }
 
     private ProjectResponse? project;
     private bool isLoading = true;

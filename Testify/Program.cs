@@ -1,19 +1,27 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Testify.Client.Features.Chat.Services;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
+using Testify.Client.Features.TestPlans.Services;
+using Testify.Client.Features.TestRuns.Services;
+using Testify.Client.Features.TestSuites.Services;
+using Testify.Client.Features.TestTemplates.Services;
 using Testify.Client.Interfaces;
+using Testify.Client.Shared.Services;
 using Testify.Components;
 using Testify.Components.Account;
+using Testify.Configuration;
 using Testify.Data;
+using Testify.Hubs;
 using Testify.Interfaces;
 using Testify.Repositories;
-using Testify.Hubs;
-using Testify.Client.Features.TestTemplates.Services;
+using Testify.Services;
+using Testify.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,7 +80,25 @@ builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
 builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
+builder.Services.AddScoped<ITestCaseTemplateRepository, TestCaseTemplateRepository>();
+builder.Services.AddScoped<ITestSuiteRepository, TestSuiteRepository>();
+builder.Services.AddScoped<ITestCaseRepository, TestCaseRepository>();
+builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
+builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<ICallSessionRepository, CallSessionRepository>();
 
+// Gemini AI configuration
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.AddHttpClient<Testify.Interfaces.IAiTestCaseService, GeminiTestCaseService>();
+
+// Hosted services
+builder.Services.AddHostedService<StaleCallCleanupService>();
+
+// File upload settings and storage
+builder.Services.Configure<FileUploadSettings>(
+    builder.Configuration.GetSection(FileUploadSettings.SectionName));
+builder.Services.AddSingleton<IFileStorageService, Testify.Services.LocalFileStorageService>();
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -80,9 +106,20 @@ builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
 builder.Services.AddScoped<IMilestoneService, MilestoneService>();
 builder.Services.AddScoped<INotificationService, ServerNotificationRepository>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
+builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
+builder.Services.AddScoped<ITestCaseService, TestCaseService>();
+builder.Services.AddScoped<Testify.Client.Interfaces.IAiTestCaseService, AiTestCaseService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<ITestPlanService, TestPlanService>();
+builder.Services.AddScoped<ITestRunService, TestRunService>();
 
+builder.Services.AddScoped<ChatHubService>();
+builder.Services.AddScoped<ModalService>();
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();
@@ -91,10 +128,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerConfiguration();
 
-
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<Testify.Interfaces.IUserPresenceService, Testify.Services.UserPresenceService>();
+builder.Services.AddSingleton<IUserPresenceService, UserPresenceService>();
 
 var app = builder.Build();
 
@@ -134,6 +170,7 @@ else
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
@@ -144,7 +181,7 @@ app.MapStaticAssets();
 // Map API controllers
 app.MapControllers();
 
-// Map SignalR Hub
+// Map SignalR Hubs
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapHub<CallHub>("/hubs/call");
@@ -164,7 +201,7 @@ app.Run();
 
 
 
-        
+
 
 
 

@@ -2,7 +2,6 @@
 using Testify.Data;
 using Testify.Entities;
 using Testify.Interfaces;
-using Testify.Interfaces.Testify.Interfaces;
 using Testify.Shared.DTOs.Bugs;
 using Testify.Shared.Enums;
 using Testify.Shared.Helpers;

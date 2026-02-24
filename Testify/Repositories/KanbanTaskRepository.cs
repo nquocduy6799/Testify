@@ -2,9 +2,7 @@
 using Testify.Data;
 using Testify.Entities;
 using Testify.Interfaces;
-using Testify.Interfaces.Testify.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
-using Testify.Shared.DTOs.Milestones;
 using Testify.Shared.DTOs.TaskActivity;
 using Testify.Shared.DTOs.TaskAttachments;
 using static Testify.Shared.Enums.MilestoneEnum;
