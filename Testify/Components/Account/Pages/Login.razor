@@ -260,6 +260,9 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
+
+            //
+
             // Redirect to dashboard if no return URL, otherwise go to return URL
             RedirectManager.RedirectTo(string.IsNullOrEmpty(ReturnUrl) ? "/dashboard" : ReturnUrl);
         }

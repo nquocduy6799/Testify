@@ -1,14 +1,17 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Mail;
 using System.Security.Claims;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
+using Testify.Shared.DTOs.TaskActivity;
+using Testify.Shared.DTOs.TaskAttachments;
 
 namespace Testify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
+    [Authorize]
     public class KanbanTasksController : ControllerBase
     {
         private readonly IKanbanTaskRepository _kanbanTaskRepository;
@@ -52,8 +55,9 @@ namespace Testify.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTask(int id, UpdateKanbanTaskRequest request)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System";
             var userName = User.Identity?.Name ?? "System";
-            var updated = await _kanbanTaskRepository.UpdateTaskAsync(id, request, userName);
+            var updated = await _kanbanTaskRepository.UpdateTaskAsync(id, request, userName, userId);
 
             if (!updated)
             {
@@ -64,15 +68,14 @@ namespace Testify.Controllers
         }
 
 
-
-
         // POST: api/KanbanTasks
         [HttpPost]
         public async Task<ActionResult<KanbanTaskResponse>> PostTask(CreateKanbanTaskRequest request)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "System";
             var userName = User.Identity?.Name ?? "System";
 
-            var task = await _kanbanTaskRepository.CreateTaskAsync(request, userName);
+            var task = await _kanbanTaskRepository.CreateTaskAsync(request, userName, userId);
 
             return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
         }
@@ -90,6 +93,33 @@ namespace Testify.Controllers
             }
 
             return NoContent();
+        }
+
+        [HttpGet("{id}/attachments")]
+        public async Task<ActionResult<IEnumerable<TaskAttachmentResponse>>> GetTaskAttachments(int id)
+        {
+            var attachments = await _kanbanTaskRepository.GetTaskAttachmentsAsync(id);
+
+            if (attachments == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(attachments);
+        }
+
+
+        [HttpGet("{id}/activities")]
+        public async Task<ActionResult<IEnumerable<TaskActivityResponse>>> GetTaskActivities(int id)
+        {
+            var activities = await _kanbanTaskRepository.GetTaskActivityResponsesAsync(id);
+
+            if (activities == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(activities);
         }
     }
 }

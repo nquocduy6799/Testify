@@ -1,0 +1,271 @@
+﻿@using Testify.Client.Shared.Services
+@using Testify.Shared.Models
+@inject ModalService ModalService
+
+@if (isVisible)
+{
+    <div class="fixed inset-0 z-[500] flex items-center justify-center p-6">
+        
+        @* Backdrop *@
+        <div class="animate-in fade-in absolute inset-0 bg-[#0F111A]/80 backdrop-blur-xl duration-500"
+             @onclick="HandleBackdropClick">
+        </div>
+
+        @* Modal Card *@
+        <div class="animate-in zoom-in-95 relative w-full max-w-md overflow-hidden rounded-[56px] border border-slate-100 bg-white p-12 text-center shadow-2xl duration-300"
+             @onclick:stopPropagation="true">
+            
+            @* Top Gradient Border *@
+            <div class="absolute top-0 left-0 h-1 w-full bg-gradient-to-r @GetGradientClass()"></div>
+
+            @* Close Button (Styled to fit Code 2 aesthetics - Minimalist) *@
+            @if (options?.ShowCloseButton ?? true)
+            {
+                <button type="button"
+                        class="absolute top-8 right-8 z-20 text-slate-300 transition-colors hover:text-slate-600"
+                        @onclick="() => Cancel()">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            }
+
+            @* Icon Section *@
+            <div class="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-[40px] @GetIconBgClass() ring-8 @GetRingClass()">
+                @if (!string.IsNullOrEmpty(options?.Icon))
+                {
+                    <svg class="h-12 w-12 @GetIconTextClass() animate-pulse"
+                         fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="@options.Icon" />
+                    </svg>
+                }
+                else
+                {
+                    // Default Icon based on Type if none provided
+                    <svg class="h-12 w-12 @GetIconTextClass() animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        @GetDefaultIconPath()
+                    </svg>
+                }
+            </div>
+
+            @* Title *@
+            <h2 class="text-3xl leading-none font-black tracking-tight text-slate-800 uppercase">
+                @title
+            </h2>
+
+            @* Message *@
+            <p class="mt-6 leading-relaxed font-medium text-slate-400">
+                @message
+            </p>
+
+            @* Actions *@
+            <div class="mt-12 flex flex-col gap-3">
+                @RenderButtonsFragment
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isVisible = false;
+    private string title = string.Empty;
+    private string message = string.Empty;
+    private ModalOptions? options;
+    private TaskCompletionSource<ModalResult>? taskCompletionSource;
+
+    protected override void OnInitialized()
+    {
+        ModalService.OnShow += Show;
+    }
+
+    private async Task<ModalResult> Show(ModalOptions opts)
+    {
+        options = opts;
+        title = opts.Title;
+        message = opts.Message;
+        isVisible = true;
+        taskCompletionSource = new TaskCompletionSource<ModalResult>();
+        StateHasChanged();
+
+        return await taskCompletionSource.Task;
+    }
+
+    private void HandleBackdropClick()
+    {
+        if (options?.AllowBackdropClick ?? true)
+        {
+            Cancel();
+        }
+    }
+
+    private void Confirm(ModalResultType resultType = ModalResultType.Yes)
+    {
+        isVisible = false;
+        taskCompletionSource?.SetResult(new ModalResult
+        {
+            Confirmed = true,
+            ResultType = resultType
+        });
+        StateHasChanged();
+    }
+
+    private void Cancel(ModalResultType resultType = ModalResultType.Cancel)
+    {
+        isVisible = false;
+        taskCompletionSource?.SetResult(new ModalResult
+        {
+            Confirmed = false,
+            ResultType = resultType
+        });
+        StateHasChanged();
+    }
+
+    private RenderFragment RenderButtonsFragment => __builder =>
+    {
+        var buttonType = options?.Buttons ?? ModalButton.OK;
+        
+        var primaryBtnClass = "group flex w-full items-center justify-center gap-3 rounded-[24px] py-6 text-xs font-black tracking-[0.2em] text-white uppercase shadow-2xl transition-all active:scale-95";
+
+        var secondaryBtnClass = "w-full py-5 font-black tracking-widest text-[10px] text-slate-400 uppercase transition-colors hover:text-slate-800";
+
+        var primaryBgClass = GetPrimaryButtonBgClass();
+
+        switch (buttonType)
+        {
+            case ModalButton.OK:
+                <button type="button" class="@primaryBtnClass @primaryBgClass" @onclick="() => Confirm(ModalResultType.OK)">
+                    <span>OK</span>
+                    @RenderButtonArrow
+                </button>
+                break;
+
+            case ModalButton.OKCancel:
+            case ModalButton.YesNo:
+                var confirmText = options?.ConfirmButtonText ?? (buttonType == ModalButton.YesNo ? "Yes" : "OK");
+                var cancelText = options?.CancelButtonText ?? (buttonType == ModalButton.YesNo ? "No" : "Cancel");
+                var cancelResult = buttonType == ModalButton.YesNo ? ModalResultType.No : ModalResultType.Cancel;
+                var confirmResult = buttonType == ModalButton.YesNo ? ModalResultType.Yes : ModalResultType.OK;
+
+                <button type="button" class="@primaryBtnClass @primaryBgClass" @onclick="() => Confirm(confirmResult)">
+                    <span>@confirmText</span>
+                    @RenderButtonArrow
+                </button>
+
+                <button type="button" class="@secondaryBtnClass" @onclick="() => Cancel(cancelResult)">
+                    @cancelText
+                </button>
+                break;
+        }
+    };
+
+    private RenderFragment RenderButtonArrow => __builder =>
+    {
+        <svg class="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7 7 7-7 7" />
+        </svg>
+    };
+
+    // --- Dynamic Styling Helpers ---
+
+    private string GetGradientClass() => options?.Type switch
+    {
+        ModalType.Success => "from-transparent via-green-500 to-transparent",
+        ModalType.Warning => "from-transparent via-indigo-500 to-transparent",
+        ModalType.Error => "from-transparent via-red-500 to-transparent",
+        ModalType.Info => "from-transparent via-blue-500 to-transparent",
+        _ => "from-transparent via-slate-500 to-transparent"
+    };
+
+    private string GetIconBgClass() => options?.Type switch
+    {
+        ModalType.Success => "bg-green-50",
+        ModalType.Warning => "bg-indigo-50",
+        ModalType.Error => "bg-red-50",
+        ModalType.Info => "bg-blue-50",
+        _ => "bg-slate-50"
+    };
+
+    private string GetRingClass() => options?.Type switch
+    {
+        ModalType.Success => "ring-green-50/50",
+        ModalType.Warning => "ring-indigo-50/50",
+        ModalType.Error => "ring-red-50/50",
+        ModalType.Info => "ring-blue-50/50",
+        _ => "ring-slate-50/50"
+    };
+
+    private string GetIconTextClass() => options?.Type switch
+    {
+        ModalType.Success => "text-green-500",
+        ModalType.Warning => "text-indigo-500",
+        ModalType.Error => "text-red-500",
+        ModalType.Info => "text-blue-500",
+        _ => "text-slate-500"
+    };
+
+    // Updated to match the "Code 2" button aesthetic (Dark, or deeply saturated)
+    private string GetPrimaryButtonBgClass() => options?.Type switch
+    {
+        ModalType.Success => "bg-green-600 hover:bg-green-700 shadow-green-200",
+        ModalType.Warning => "bg-indigo-500 hover:bg-indigo-600 shadow-indigo-200",
+        ModalType.Error => "bg-red-600 hover:bg-red-700 shadow-red-200",
+        ModalType.Info => "bg-blue-600 hover:bg-blue-700 shadow-blue-200",
+        _ => "bg-[#1C1D2A] hover:bg-slate-800"
+    };
+
+    private RenderFragment GetDefaultIconPath() => __builder =>
+    {
+        // Renders a default path if no icon is supplied, based on type
+        @if (options?.Type == ModalType.Success)
+        {
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        }
+        else if (options?.Type == ModalType.Error)
+        {
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        }
+        else
+        {
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        }
+    };
+
+    public void Dispose()
+    {
+        ModalService.OnShow -= Show;
+    }
+}
+
+
+@* 3. CONFIRMATION OVERLAY *@
+@* @if (_planToExecute is not null)
+        {
+            <div class="fixed inset-0 z-[500] flex items-center justify-center p-6">
+                <div class="animate-in fade-in absolute inset-0 bg-[#0F111A]/80 backdrop-blur-xl duration-500" @onclick="CloseExecutionPrompt"></div>
+                <div class="animate-in zoom-in-95 relative w-full max-w-md overflow-hidden rounded-[56px] border border-slate-100 bg-white p-12 text-center shadow-2xl duration-300">
+                    <div class="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
+                    <div class="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-[40px] bg-indigo-50 ring-8 ring-indigo-50/50">
+                        <svg class="h-12 w-12 animate-pulse text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-3xl leading-none font-black tracking-tight text-slate-800 uppercase">Deploy Strategy?</h2>
+                    <p class="mt-6 leading-relaxed font-medium text-slate-400">
+                        Initializing <span class="font-black text-indigo-600">"@_planToExecute.Name"</span> will freeze the current logical enrollment.
+                    </p>
+                    <div class="mt-12 flex flex-col gap-3">
+                        <button @onclick="HandleStartExecutionAsync"
+                                class="group flex w-full items-center justify-center gap-3 rounded-[24px] bg-[#1C1D2A] py-6 text-xs font-black tracking-[0.2em] text-white uppercase shadow-2xl transition-all hover:bg-slate-800 active:scale-95">
+                            Launch Protocol
+                            <svg class="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7 7 7-7 7" />
+                            </svg>
+                        </button>
+                        <button @onclick="CloseExecutionPrompt"
+                                class="w-full py-5 font-black tracking-widest text-[10px] text-slate-400 uppercase transition-colors hover:text-slate-800">
+                            Abort Deployment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        } *@

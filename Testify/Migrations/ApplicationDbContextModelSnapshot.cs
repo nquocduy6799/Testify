@@ -176,6 +176,81 @@ namespace Testify.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TestPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("MilestoneId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("Outcome")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TaskId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MilestoneId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("TaskId");
+
+                    b.ToTable("TestPlans");
+                });
+
             modelBuilder.Entity("Testify.Data.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -605,6 +680,9 @@ namespace Testify.Migrations
                     b.Property<string>("AssigneeId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("BugSeverity")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -624,6 +702,9 @@ namespace Testify.Migrations
 
                     b.Property<string>("DevelopedById")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -934,6 +1015,10 @@ namespace Testify.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("KanbanTaskId")
                         .HasColumnType("int");
 
@@ -942,9 +1027,6 @@ namespace Testify.Migrations
 
                     b.Property<string>("OldValue")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("TaskId")
-                        .HasColumnType("int");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -1027,9 +1109,6 @@ namespace Testify.Migrations
 
                     b.Property<DateTime>("LinkedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RunStepId")
                         .HasColumnType("int");
@@ -1256,78 +1335,6 @@ namespace Testify.Migrations
                     b.ToTable("TestCaseTemplates");
                 });
 
-            modelBuilder.Entity("Testify.Entities.TestPlan", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("MilestoneId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("Outcome")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Scope")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("StartedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("TaskId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MilestoneId");
-
-                    b.HasIndex("ProjectId");
-
-                    b.HasIndex("TaskId");
-
-                    b.ToTable("TestPlans");
-                });
-
             modelBuilder.Entity("Testify.Entities.TestPlanSuite", b =>
                 {
                     b.Property<int>("Id")
@@ -1365,17 +1372,27 @@ namespace Testify.Migrations
                     b.Property<string>("Comments")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("ExecutedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ExecutedById")
+                    b.Property<string>("ExecutedByUserId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("ExecutedByUserId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("PlanId")
-                        .HasColumnType("int");
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -1383,13 +1400,22 @@ namespace Testify.Migrations
                     b.Property<int>("TestCaseId")
                         .HasColumnType("int");
 
+                    b.Property<int>("TestPlanId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ExecutedById");
-
-                    b.HasIndex("PlanId");
+                    b.HasIndex("ExecutedByUserId");
 
                     b.HasIndex("TestCaseId");
+
+                    b.HasIndex("TestPlanId");
 
                     b.ToTable("TestRuns");
                 });
@@ -1409,9 +1435,25 @@ namespace Testify.Migrations
                     b.Property<string>("ActualResult")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ExpectedResult")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
 
                     b.Property<int>("RunId")
                         .HasColumnType("int");
@@ -1426,6 +1468,12 @@ namespace Testify.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("TestData")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -1445,25 +1493,49 @@ namespace Testify.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<long?>("FileSizeInBytes")
+                    b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("FileType")
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FileUrl")
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PublicId")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RunStepId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("UploadedAt")
+                    b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -1791,29 +1863,6 @@ namespace Testify.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Testify.Entities.CallSession", b =>
-                {
-                    b.HasOne("Testify.Data.ApplicationUser", "Callee")
-                        .WithMany()
-                        .HasForeignKey("CalleeId");
-
-                    b.HasOne("Testify.Data.ApplicationUser", "Caller")
-                        .WithMany()
-                        .HasForeignKey("CallerId");
-
-                    b.HasOne("Testify.Entities.ChatRoom", "Room")
-                        .WithMany()
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Callee");
-
-                    b.Navigation("Caller");
-
-                    b.Navigation("Room");
-                });
-
             modelBuilder.Entity("Testify.Entities.ChatMessage", b =>
                 {
                     b.HasOne("Testify.Entities.ChatMessage", "ParentMessage")
@@ -2053,7 +2102,7 @@ namespace Testify.Migrations
             modelBuilder.Entity("Testify.Entities.TaskActivity", b =>
                 {
                     b.HasOne("Testify.Entities.KanbanTask", "KanbanTask")
-                        .WithMany()
+                        .WithMany("Activities")
                         .HasForeignKey("KanbanTaskId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2166,30 +2215,9 @@ namespace Testify.Migrations
                     b.Navigation("SuiteTemplate");
                 });
 
-            modelBuilder.Entity("Testify.Entities.TestPlan", b =>
-                {
-                    b.HasOne("Testify.Entities.Milestone", null)
-                        .WithMany("TestPlans")
-                        .HasForeignKey("MilestoneId");
-
-                    b.HasOne("Testify.Entities.Project", "Project")
-                        .WithMany("TestPlans")
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Testify.Entities.KanbanTask", "Task")
-                        .WithMany("TestPlans")
-                        .HasForeignKey("TaskId");
-
-                    b.Navigation("Project");
-
-                    b.Navigation("Task");
-                });
-
             modelBuilder.Entity("Testify.Entities.TestPlanSuite", b =>
                 {
-                    b.HasOne("Testify.Entities.TestPlan", "TestPlan")
+                    b.HasOne("TestPlan", "TestPlan")
                         .WithMany("TestPlanSuites")
                         .HasForeignKey("TestPlanId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -2210,18 +2238,18 @@ namespace Testify.Migrations
                 {
                     b.HasOne("Testify.Data.ApplicationUser", "ExecutedBy")
                         .WithMany()
-                        .HasForeignKey("ExecutedById");
-
-                    b.HasOne("Testify.Entities.TestPlan", "TestPlan")
-                        .WithMany("TestRuns")
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .HasForeignKey("ExecutedByUserId");
 
                     b.HasOne("Testify.Entities.TestCase", "TestCase")
                         .WithMany("TestRuns")
                         .HasForeignKey("TestCaseId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TestPlan", "TestPlan")
+                        .WithMany("TestRuns")
+                        .HasForeignKey("TestPlanId")
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("ExecutedBy");
@@ -2346,6 +2374,13 @@ namespace Testify.Migrations
                     b.Navigation("Template");
                 });
 
+            modelBuilder.Entity("TestPlan", b =>
+                {
+                    b.Navigation("TestPlanSuites");
+
+                    b.Navigation("TestRuns");
+                });
+
             modelBuilder.Entity("Testify.Entities.ChatMessage", b =>
                 {
                     b.Navigation("Attachments");
@@ -2370,6 +2405,8 @@ namespace Testify.Migrations
 
             modelBuilder.Entity("Testify.Entities.KanbanTask", b =>
                 {
+                    b.Navigation("Activities");
+
                     b.Navigation("Attachments");
 
                     b.Navigation("LinkedRunSteps");
@@ -2431,13 +2468,6 @@ namespace Testify.Migrations
             modelBuilder.Entity("Testify.Entities.TestCaseTemplate", b =>
                 {
                     b.Navigation("TestStepTemplates");
-                });
-
-            modelBuilder.Entity("Testify.Entities.TestPlan", b =>
-                {
-                    b.Navigation("TestPlanSuites");
-
-                    b.Navigation("TestRuns");
                 });
 
             modelBuilder.Entity("Testify.Entities.TestRun", b =>

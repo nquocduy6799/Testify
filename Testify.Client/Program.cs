@@ -4,6 +4,8 @@ using Testify.Client.Features.Kanban.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
+using Testify.Client.Features.TestPlans.Services;
+using Testify.Client.Features.TestRuns.Services;
 using Testify.Client.Features.TestTemplates.Services;
 using Testify.Client.Features.TestSuites.Services;
 using Testify.Client.Interfaces;
@@ -36,6 +38,8 @@ builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
 builder.Services.AddScoped<ITestCaseService, TestCaseService>();
 builder.Services.AddScoped<IAiTestCaseService, AiTestCaseService>();
 builder.Services.AddScoped<IChatService, Testify.Client.Features.Chat.Services.ChatService>();
+builder.Services.AddScoped<ITestPlanService, TestPlanService>();
+builder.Services.AddScoped<ITestRunService, TestRunService>();
 
 
 // Register SignalR for real-time notifications
@@ -44,5 +48,6 @@ builder.Services.AddScoped<Testify.Client.Features.Chat.Services.ChatHubService>
 builder.Services.AddScoped<Testify.Client.Features.Chat.Services.CallHubService>();
 builder.Services.AddScoped<Testify.Client.Features.Chat.Services.WebRtcService>();
 
+builder.Services.AddScoped<ModalService>();
 
 await builder.Build().RunAsync();

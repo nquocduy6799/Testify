@@ -10,7 +10,6 @@ namespace Testify.Entities
         public int TaskId { get; set; }
         public int RunStepId { get; set; }
         public DateTime LinkedAt { get; set; } = DateTime.Now;
-        public string? Note { get; set; }
 
         // Navigation properties
         public virtual KanbanTask Task { get; set; } = null!;

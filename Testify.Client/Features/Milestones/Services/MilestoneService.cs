@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using Testify.Client.Interfaces;
 using Testify.Shared.DTOs.Milestones;
+using Testify.Shared.Enums;
 
 namespace Testify.Client.Features.Milestones.Services
 {
@@ -32,6 +33,15 @@ namespace Testify.Client.Features.Milestones.Services
         public async Task DeleteMilestoneAsync(int id)
         {
             await _httpClient.DeleteAsync($"api/Milestones/{id}");
+        }
+
+        public async Task<MilestoneResponse> GetActiveMilestoneByProjectIdAsync(int projectId)
+        {
+            var milestones = await _httpClient.GetFromJsonAsync<List<MilestoneResponse>>($"api/Milestones/project/{projectId}") ?? [];
+
+            var activeMilestone = milestones.FirstOrDefault(m => m.Status == MilestoneEnum.MilestoneStatus.Active);
+
+            return activeMilestone ?? throw new Exception("Active milestone not found");
         }
     }
 }

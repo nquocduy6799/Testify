@@ -13,12 +13,13 @@ namespace Testify.Entities
         public int MilestoneId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public DateTime? DueDate { get; set; }
         public KanbanTaskStatus Status { get; set; } = KanbanTaskStatus.ToDo;
         public TaskPriority Priority { get; set; } = TaskPriority.Low;
+        public BugSeverity? BugSeverity { get; set; }
         public string? AssigneeId { get; set; }
         public string? DevelopedById { get; set; }
         public string? TestedById { get; set; }
-
         public TaskType Type { get; set; } = TaskType.Feature;
 
         // Navigation properties
@@ -29,7 +30,9 @@ namespace Testify.Entities
         public virtual ICollection<TestPlan> TestPlans { get; set; } = new List<TestPlan>();
         public virtual ICollection<TaskLinkedRunStep> LinkedRunSteps { get; set; } = new List<TaskLinkedRunStep>();
         public virtual ICollection<TaskAttachment> Attachments { get; set; } = new List<TaskAttachment>();
+        public virtual ICollection<TaskActivity> Activities { get; set; } = new List<TaskActivity>();
     }
 }
+
 
 

@@ -6,6 +6,21 @@ using Testify.Shared.Enums;
 
 namespace Testify.Shared.DTOs.TestCases
 {
+    public class TestSuiteResponse
+    {
+        public int Id { get; set; }
+        public int ProjectId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int? FolderId { get; set; }
+        public int? SourceTemplateId { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime? UpdatedAt { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+
     public class TestCaseTemplateResponse
     {
         public int Id { get; set; }
