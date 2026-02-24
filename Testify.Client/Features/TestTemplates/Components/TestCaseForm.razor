@@ -1,0 +1,376 @@
+@using Testify.Shared.DTOs
+@using Testify.Shared.DTOs.TestCases
+@using Testify.Shared.Enums
+
+<div class="fixed inset-0 z-[250] flex items-center justify-center p-6">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" @onclick="OnClose"></div>
+    
+    <div class="relative bg-white w-full max-w-5xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 max-h-[90vh]">
+        <div class="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+            <div class="flex items-center gap-4">
+                <div class="w-11 h-11 bg-[#1C1D2A] rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <svg class="w-5 h-5 text-[#7E96E1]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black text-slate-800">Scenario Architect</h2>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Structured Grid Protocol</p>
+                </div>
+            </div>
+            <button @onclick="OnClose" class="p-3 hover:bg-white rounded-xl text-slate-400 transition-all shadow-sm cursor-pointer">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <EditForm Model="@_formData" OnValidSubmit="HandleSubmit" class="flex-1 overflow-hidden flex flex-col">
+            <div class="flex-1 overflow-y-auto p-8 space-y-8">
+                <!-- Meta Section -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="md:col-span-3 space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5 text-[#7E96E1]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                            </svg>
+                            Case Title
+                        </label>
+                        <InputText 
+                            @bind-Value="_formData.Title"
+                            placeholder="e.g. Verify multi-factor authentication bypass protection"
+                            class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-xl outline-none transition-all font-bold text-slate-800" />
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                            </svg>
+                            Priority
+                        </label>
+                        <InputSelect @bind-Value="_formData.Priority"
+                            class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-xl outline-none font-bold text-slate-800 cursor-pointer">
+                            <option value="@TestCasePriority.High">High Priority</option>
+                            <option value="@TestCasePriority.Medium">Medium Priority</option>
+                            <option value="@TestCasePriority.Low">Low Priority</option>
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 8.25h15m-16.5 7.5h15m-1.8-13.5l-3.9 19.5m-2.1-19.5l-3.9 19.5" />
+                            </svg>
+                            Preconditions
+                        </label>
+                        <textarea 
+                            rows="2"
+                            @bind="_formData.Preconditions"
+                            placeholder="User must be logged out; Session cache cleared..."
+                            class="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-blue-400 rounded-xl outline-none text-xs font-medium text-slate-600 resize-none"></textarea>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Postconditions
+                        </label>
+                        <textarea 
+                            rows="2"
+                            @bind="_formData.Postconditions"
+                            placeholder="System state after test execution..."
+                            class="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-emerald-400 rounded-xl outline-none text-xs font-medium text-slate-600 resize-none"></textarea>
+                    </div>
+                </div>
+
+                <!-- Steps Grid -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <h4 class="text-[11px] font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-4 h-4 text-[#7E96E1]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                            </svg>
+                            Execution Grid
+                        </h4>
+                        <span class="text-[10px] font-black text-slate-400 uppercase">
+                            @(_steps.Count(s => !string.IsNullOrWhiteSpace(s.Action))) Logical Steps Defined
+                        </span>
+                    </div>
+
+                    <div class="bg-white border border-slate-100 rounded-[24px] shadow-sm overflow-hidden">
+                        <div class="grid grid-cols-[50px_1fr_1fr_1fr_50px] gap-0 bg-slate-50/80 border-b border-slate-100">
+                            <div class="p-3 text-[9px] font-black text-slate-400 uppercase text-center border-r border-slate-100">#</div>
+                            <div class="p-3 text-[9px] font-black text-slate-400 uppercase border-r border-slate-100">Action / Instruction</div>
+                            <div class="p-3 text-[9px] font-black text-slate-400 uppercase border-r border-slate-100 flex items-center gap-2">
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                                </svg>
+                                Input Data
+                            </div>
+                            <div class="p-3 text-[9px] font-black text-slate-400 uppercase border-r border-slate-100">Expected Result</div>
+                            <div class="p-3"></div>
+                        </div>
+
+                        <div class="divide-y divide-slate-50">
+                            @for (int i = 0; i < _steps.Count; i++)
+                            {
+                                var index = i;
+                                var step = _steps[index];
+                                <div 
+                                    @ondragover="() => OnDragOver(index)"
+                                    @ondragover:preventDefault
+                                    class="grid grid-cols-[50px_1fr_1fr_1fr_50px] gap-0 group transition-all @(_draggedIndex == index ? "bg-blue-50/50" : "hover:bg-slate-50/30")">
+                                    <div 
+                                        draggable="true"
+                                        @ondragstart="() => OnDragStart(index)"
+                                        @ondragend="OnDragEnd"
+                                        class="flex items-center justify-center border-r border-slate-50 cursor-grab active:cursor-grabbing text-slate-300 group-hover:text-slate-500">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                                        </svg>
+                                    </div>
+                                    <div class="border-r border-slate-50">
+                                        <textarea
+                                            rows="1"
+                                            value="@step.Action"
+                                            @oninput="(e) => UpdateStepAction(index, e.Value?.ToString() ?? string.Empty)"
+                                            @onfocus="() => OnStepFocus(index)"
+                                            placeholder="Describe action..."
+                                            class="w-full p-4 bg-transparent outline-none text-xs font-bold text-slate-800 resize-none min-h-[50px]"></textarea>
+                                    </div>
+                                    <div class="border-r border-slate-50">
+                                        <textarea
+                                            rows="1"
+                                            value="@step.TestData"
+                                            @oninput="(e) => UpdateStepTestData(index, e.Value?.ToString() ?? string.Empty)"
+                                            placeholder="Payload / Keys..."
+                                            class="w-full p-4 bg-transparent outline-none text-xs font-mono text-[#E85D3F] resize-none min-h-[50px]"></textarea>
+                                    </div>
+                                    <div class="border-r border-slate-50">
+                                        <textarea
+                                            rows="1"
+                                            value="@step.ExpectedResult"
+                                            @oninput="(e) => UpdateStepExpectedResult(index, e.Value?.ToString() ?? string.Empty)"
+                                            placeholder="Outcome..."
+                                            class="w-full p-4 bg-transparent outline-none text-xs font-medium text-emerald-600 resize-none min-h-[50px]"></textarea>
+                                    </div>
+                                    <div class="flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        @if (_steps.Count > 1)
+                                        {
+                                            <button 
+                                                type="button"
+                                                @onclick="() => RemoveStep(index)"
+                                                class="p-2 text-slate-300 hover:text-red-500 transition-colors cursor-pointer">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                                </svg>
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 px-2 text-[10px] text-slate-400 font-bold uppercase">
+                        <svg class="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                        </svg>
+                        Drag the grip handle to reorder steps. New rows auto-provision on typing.
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-slate-50 bg-slate-50/50 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                        <svg class="w-4 h-4 text-[#7E96E1]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                        </svg>
+                    </div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Logic is synchronized with project root.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button 
+                        type="button"
+                        @onclick="OnClose"
+                        class="px-6 py-3 bg-white border border-slate-200 text-slate-400 font-black text-[10px] uppercase tracking-widest rounded-xl hover:text-slate-800 transition-all cursor-pointer">
+                        Discard
+                    </button>
+                    <button 
+                        type="submit"
+                        disabled="@_isSubmitting"
+                        class="px-8 py-3 bg-[#1C1D2A] text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-800 shadow-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50">
+                        @if (_isSubmitting)
+                        {
+                            <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        }
+                        else
+                        {
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                            </svg>
+                        }
+                        Finalize Scenario
+                    </button>
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int ParentSuiteId { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<TestCaseFormResult> OnSave { get; set; }
+
+    /// <summary>
+    /// Optional: pre-populate the form for editing.
+    /// </summary>
+    [Parameter]
+    public TestCaseFormResult? InitialData { get; set; }
+
+    private TestCaseFormData _formData = new();
+    private List<StepData> _steps = new() { new StepData() };
+    private bool _isSubmitting;
+    private int? _draggedIndex;
+
+    protected override void OnParametersSet()
+    {
+        if (InitialData is not null && string.IsNullOrEmpty(_formData.Title))
+        {
+            _formData.Title = InitialData.Title;
+            _formData.Priority = InitialData.Priority;
+            _formData.Preconditions = InitialData.Preconditions;
+            _formData.Postconditions = InitialData.Postconditions;
+            _steps = InitialData.Steps.Select(s => new StepData
+            {
+                Action = s.Action,
+                TestData = s.TestData,
+                ExpectedResult = s.ExpectedResult
+            }).ToList();
+            if (_steps.Count == 0) _steps.Add(new StepData());
+        }
+    }
+
+    private void OnDragStart(int index)
+    {
+        _draggedIndex = index;
+    }
+
+    private void OnDragOver(int index)
+    {
+        if (!_draggedIndex.HasValue || _draggedIndex.Value == index) return;
+        
+        // Immediately reorder like React pattern
+        var draggedStep = _steps[_draggedIndex.Value];
+        _steps.RemoveAt(_draggedIndex.Value);
+        _steps.Insert(index, draggedStep);
+        
+        // Update draggedIndex to new position (key for bidirectional drag)
+        _draggedIndex = index;
+    }
+
+    private void OnDragEnd()
+    {
+        _draggedIndex = null;
+    }
+
+    private void OnStepFocus(int index)
+    {
+        // Auto-add new row when focusing the last row
+        if (index == _steps.Count - 1 && !string.IsNullOrWhiteSpace(_steps[index].Action))
+        {
+            _steps.Add(new StepData());
+        }
+    }
+
+    private void UpdateStepAction(int index, string value)
+    {
+        _steps[index].Action = value;
+        // Auto-add new row when typing in last row
+        if (index == _steps.Count - 1 && !string.IsNullOrWhiteSpace(value))
+        {
+            _steps.Add(new StepData());
+        }
+    }
+
+    private void UpdateStepTestData(int index, string value)
+    {
+        _steps[index].TestData = value;
+    }
+
+    private void UpdateStepExpectedResult(int index, string value)
+    {
+        _steps[index].ExpectedResult = value;
+    }
+
+    private void RemoveStep(int index)
+    {
+        if (_steps.Count > 1)
+        {
+            _steps.RemoveAt(index);
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(_formData.Title))
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+
+        try
+        {
+            var validSteps = _steps
+                .Where(s => !string.IsNullOrWhiteSpace(s.Action))
+                .Select((s, i) => new TestStepFormResult
+                {
+                    StepNumber = i + 1,
+                    Action = s.Action,
+                    TestData = s.TestData,
+                    ExpectedResult = s.ExpectedResult ?? string.Empty
+                })
+                .ToList();
+
+            var result = new TestCaseFormResult
+            {
+                Title = _formData.Title,
+                Preconditions = _formData.Preconditions,
+                Postconditions = _formData.Postconditions,
+                Priority = _formData.Priority,
+                Steps = validSteps
+            };
+
+            await OnSave.InvokeAsync(result);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private class TestCaseFormData
+    {
+        public string Title { get; set; } = string.Empty;
+        public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
+        public string? Preconditions { get; set; }
+        public string? Postconditions { get; set; }
+    }
+
+    private class StepData
+    {
+        public string Action { get; set; } = string.Empty;
+        public string? TestData { get; set; }
+        public string? ExpectedResult { get; set; }
+    }
+}

@@ -21,8 +21,7 @@ namespace Testify.Controllers
         public async Task<ActionResult<IEnumerable<NotificationResponse>>> GetNotifications()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            System.Console.WriteLine($"[Controller] GetNotifications - UserId Claim: {userId ?? "NULL"}");
-
+          
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized();

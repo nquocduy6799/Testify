@@ -12,8 +12,8 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260131133444_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260204181348_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -797,6 +797,9 @@ namespace Testify.Migrations
                     b.Property<string>("Client")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Color")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1030,6 +1033,102 @@ namespace Testify.Migrations
                     b.ToTable("TaskLinkedRunSteps");
                 });
 
+            modelBuilder.Entity("Testify.Entities.TemplateCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TemplateCategories");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TemplateFolder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TemplateFolders");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TemplateReview", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsStarred")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TemplateReviews");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TemplateTag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("TagName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TemplateTags");
+                });
+
             modelBuilder.Entity("Testify.Entities.TestCase", b =>
                 {
                     b.Property<int>("Id")
@@ -1094,6 +1193,28 @@ namespace Testify.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Postconditions")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Preconditions")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("Priority")
                         .HasColumnType("int");
 
@@ -1102,6 +1223,12 @@ namespace Testify.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -1456,13 +1583,16 @@ namespace Testify.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CloneCount")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("CreatedById")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CreatedByUserId")
+                    b.Property<string>("CreatedBy")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -1475,12 +1605,24 @@ namespace Testify.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("FolderId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPublic")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ShareCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TotalStarred")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1488,11 +1630,45 @@ namespace Testify.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("ViewCount")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedById");
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("FolderId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("TestSuiteTemplates");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TestSuiteTemplateTag", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("TagId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TagId");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("TestSuiteTemplateTags");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1905,6 +2081,42 @@ namespace Testify.Migrations
                     b.Navigation("Task");
                 });
 
+            modelBuilder.Entity("Testify.Entities.TemplateFolder", b =>
+                {
+                    b.HasOne("Testify.Entities.TemplateFolder", "Parent")
+                        .WithMany("SubFolders")
+                        .HasForeignKey("ParentId");
+
+                    b.HasOne("Testify.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Parent");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TemplateReview", b =>
+                {
+                    b.HasOne("Testify.Entities.TestSuiteTemplate", "Template")
+                        .WithMany("Reviews")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Testify.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Template");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Testify.Entities.TestCase", b =>
                 {
                     b.HasOne("Testify.Entities.TestSuite", "Suite")
@@ -2055,7 +2267,7 @@ namespace Testify.Migrations
                         .IsRequired();
 
                     b.HasOne("Testify.Entities.TestSuiteTemplate", "SourceTemplate")
-                        .WithMany("SourceTestSuites")
+                        .WithMany()
                         .HasForeignKey("SourceTemplateId");
 
                     b.Navigation("Folder");
@@ -2067,11 +2279,45 @@ namespace Testify.Migrations
 
             modelBuilder.Entity("Testify.Entities.TestSuiteTemplate", b =>
                 {
-                    b.HasOne("Testify.Data.ApplicationUser", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedById");
+                    b.HasOne("Testify.Entities.TemplateCategory", "Category")
+                        .WithMany("TestSuiteTemplates")
+                        .HasForeignKey("CategoryId");
 
-                    b.Navigation("CreatedBy");
+                    b.HasOne("Testify.Entities.TemplateFolder", "Folder")
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("Testify.Data.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Folder");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TestSuiteTemplateTag", b =>
+                {
+                    b.HasOne("Testify.Entities.TemplateTag", "Tag")
+                        .WithMany("TestSuiteTemplateTags")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Testify.Entities.TestSuiteTemplate", "Template")
+                        .WithMany("Tags")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tag");
+
+                    b.Navigation("Template");
                 });
 
             modelBuilder.Entity("Testify.Entities.ChatMessage", b =>
@@ -2132,6 +2378,21 @@ namespace Testify.Migrations
                     b.Navigation("TestSuites");
                 });
 
+            modelBuilder.Entity("Testify.Entities.TemplateCategory", b =>
+                {
+                    b.Navigation("TestSuiteTemplates");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TemplateFolder", b =>
+                {
+                    b.Navigation("SubFolders");
+                });
+
+            modelBuilder.Entity("Testify.Entities.TemplateTag", b =>
+                {
+                    b.Navigation("TestSuiteTemplateTags");
+                });
+
             modelBuilder.Entity("Testify.Entities.TestCase", b =>
                 {
                     b.Navigation("TestRuns");
@@ -2177,7 +2438,9 @@ namespace Testify.Migrations
 
             modelBuilder.Entity("Testify.Entities.TestSuiteTemplate", b =>
                 {
-                    b.Navigation("SourceTestSuites");
+                    b.Navigation("Reviews");
+
+                    b.Navigation("Tags");
 
                     b.Navigation("TestCaseTemplates");
                 });

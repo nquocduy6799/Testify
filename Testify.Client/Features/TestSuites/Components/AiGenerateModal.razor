@@ -1,0 +1,371 @@
+@using Testify.Client.Interfaces
+@using Testify.Shared.DTOs
+@using Testify.Shared.DTOs.AI
+@using Testify.Shared.Enums
+
+<div class="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @onclick="OnClose"></div>
+    <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+
+        @* ── Header ── *@
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-800">AI Generate Test Cases</h3>
+                    <p class="text-xs text-slate-400 font-medium">Powered by Google Gemini</p>
+                </div>
+            </div>
+            <button @onclick="OnClose" class="p-2 text-slate-300 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        @* ── Body ── *@
+        <div class="p-6 overflow-y-auto flex-1 space-y-5">
+            @* ── Usage Quota Banner ── *@
+            @if (_usage != null)
+            {
+                <div class="flex items-center justify-between px-4 py-3 rounded-2xl @(_usage.CanGenerate ? "bg-violet-50" : "bg-red-50")">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 @(_usage.CanGenerate ? "text-violet-500" : "text-red-500")" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                        </svg>
+                        <span class="text-xs font-bold @(_usage.CanGenerate ? "text-violet-700" : "text-red-700")">
+                            @if (_usage.CanGenerate)
+                            {
+                                @($"Free tier: {_usage.RemainingUses} of {_usage.MaxCount} generation(s) remaining")
+                            }
+                            else
+                            {
+                                @("You've used all free AI generations")
+                            }
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        @for (int d = 0; d < _usage.MaxCount; d++)
+                        {
+                            <div class="w-2.5 h-2.5 rounded-full @(d < _usage.UsedCount ? (_usage.CanGenerate ? "bg-violet-400" : "bg-red-400") : "bg-slate-200")"></div>
+                        }
+                    </div>
+                </div>
+
+                @if (!_usage.CanGenerate)
+                {
+                    <div class="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-2xl text-sm font-medium flex items-center gap-3">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                        <div>
+                            <p class="font-black text-sm">Upgrade to continue</p>
+                            <p class="text-xs mt-0.5">Upgrade your account to unlock unlimited AI test case generation. Coming soon in Phase 2.</p>
+                        </div>
+                    </div>
+                }
+            }
+
+            @if (!_hasResults)
+            {
+                @* ── Input Form ── *@
+                <div>
+                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                        Describe the feature / module to test
+                    </label>
+                    <textarea @bind="_prompt" @bind:event="oninput"
+                              rows="4"
+                              placeholder="E.g: User login feature with email and password, including forgot password, remember me, account lockout after 5 failed attempts..."
+                              class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 resize-none transition-all placeholder:text-slate-300"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                            Number of test cases
+                        </label>
+                        <select @bind="_count"
+                                class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 bg-white cursor-pointer">
+                            @for (int i = 1; i <= 20; i++)
+                            {
+                                <option value="@i">@i test case@(i > 1 ? "s" : "")</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                            Default priority
+                        </label>
+                        <select @bind="_defaultPriority"
+                                class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 bg-white cursor-pointer">
+                            <option value="@TestCasePriority.High">High</option>
+                            <option value="@TestCasePriority.Medium">Medium</option>
+                            <option value="@TestCasePriority.Low">Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <div class="bg-red-50 text-red-600 px-4 py-3 rounded-2xl text-sm font-medium flex items-center gap-2">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        </svg>
+                        @_error
+                    </div>
+                }
+            }
+            else
+            {
+                @* ── Results Preview ── *@
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="text-sm font-black text-slate-700">Generated @_generatedCases.Count test case(s)</h4>
+                        <p class="text-xs text-slate-400 font-medium mt-0.5">Select the ones you want to import</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @onclick="SelectAll"
+                                class="px-3 py-1.5 text-[10px] font-black text-violet-600 bg-violet-50 rounded-xl uppercase tracking-widest hover:bg-violet-100 transition-all cursor-pointer">
+                            Select All
+                        </button>
+                        <button @onclick="DeselectAll"
+                                class="px-3 py-1.5 text-[10px] font-black text-slate-500 bg-slate-50 rounded-xl uppercase tracking-widest hover:bg-slate-100 transition-all cursor-pointer">
+                            Deselect All
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    @for (int i = 0; i < _generatedCases.Count; i++)
+                    {
+                        var index = i;
+                        var tc = _generatedCases[index];
+                        var isSelected = _selectedIndices.Contains(index);
+                        <div @onclick="() => ToggleSelection(index)"
+                             class="p-4 rounded-2xl border-2 transition-all cursor-pointer @(isSelected ? "border-violet-400 bg-violet-50/50" : "border-slate-100 bg-white hover:border-slate-200")">
+                            <div class="flex items-start gap-3">
+                                <div class="w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all @(isSelected ? "border-violet-500 bg-violet-500" : "border-slate-200")">
+                                    @if (isSelected)
+                                    {
+                                        <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    }
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <h5 class="text-sm font-black text-slate-800 truncate">@tc.Title</h5>
+                                        <span class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg @GetPriorityClass(tc.Priority)">
+                                            @tc.Priority
+                                        </span>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(tc.Preconditions))
+                                    {
+                                        <p class="text-xs text-slate-400 mb-1">
+                                            <span class="font-bold">Pre:</span> @tc.Preconditions
+                                        </p>
+                                    }
+                                    <div class="text-xs text-slate-500 font-medium">
+                                        @tc.Steps.Count step(s):
+                                        @foreach (var step in tc.Steps.Take(3))
+                                        {
+                                            <span class="inline-block bg-slate-100 px-2 py-0.5 rounded-lg mr-1 mt-1">@step.StepNumber. @Truncate(step.Action, 40)</span>
+                                        }
+                                        @if (tc.Steps.Count > 3)
+                                        {
+                                            <span class="text-slate-300 font-bold">+@(tc.Steps.Count - 3) more</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @* ── Footer ── *@
+        <div class="p-6 border-t border-slate-100 flex items-center justify-between flex-shrink-0">
+            @if (!_hasResults)
+            {
+                <button @onclick="OnClose"
+                        class="px-6 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all cursor-pointer">
+                    Cancel
+                </button>
+                <button @onclick="HandleGenerate" disabled="@(_isGenerating || string.IsNullOrWhiteSpace(_prompt) || (_usage != null && !_usage.CanGenerate))"
+                        class="px-8 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2 cursor-pointer">
+                    @if (_isGenerating)
+                    {
+                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span>Generating...</span>
+                    }
+                    else
+                    {
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                        </svg>
+                        <span>Generate</span>
+                    }
+                </button>
+            }
+            else
+            {
+                <button @onclick="ResetForm"
+                        class="px-6 py-3 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all cursor-pointer flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                    </svg>
+                    Regenerate
+                </button>
+                <button @onclick="HandleImportSelected" disabled="@(!_selectedIndices.Any() || _isImporting)"
+                        class="px-8 py-3 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-2 cursor-pointer">
+                    @if (_isImporting)
+                    {
+                        <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                        </svg>
+                        <span>Importing...</span>
+                    }
+                    else
+                    {
+                        <span>Import @_selectedIndices.Count Selected</span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int SuiteId { get; set; }
+    [Parameter] public string? SuiteName { get; set; }
+    [Parameter] public string? SuiteDescription { get; set; }
+    [Parameter] public List<string>? ExistingTestCaseTitles { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<List<TestCaseFormResult>> OnImport { get; set; }
+
+    [Inject] private IAiTestCaseService AiService { get; set; } = default!;
+
+    private string _prompt = string.Empty;
+    private int _count = 5;
+    private TestCasePriority _defaultPriority = TestCasePriority.Medium;
+    private bool _isGenerating;
+    private bool _isImporting;
+    private string? _error;
+
+    private bool _hasResults;
+    private List<TestCaseFormResult> _generatedCases = new();
+    private HashSet<int> _selectedIndices = new();
+
+    private AiUsageResponse? _usage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _usage = await AiService.GetUsageAsync();
+    }
+
+    private async Task HandleGenerate()
+    {
+        if (string.IsNullOrWhiteSpace(_prompt)) return;
+        _isGenerating = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            var request = new AiGenerateTestCasesRequest
+            {
+                Prompt = _prompt,
+                Count = _count,
+                DefaultPriority = _defaultPriority,
+                SuiteName = SuiteName,
+                SuiteDescription = SuiteDescription,
+                ExistingTestCaseTitles = ExistingTestCaseTitles
+            };
+
+            var response = await AiService.GenerateAsync(request);
+
+            if (response.Success && response.TestCases.Count > 0)
+            {
+                _generatedCases = response.TestCases;
+                _selectedIndices = new HashSet<int>(Enumerable.Range(0, _generatedCases.Count));
+                _hasResults = true;
+
+                // Update usage info after successful generation
+                if (_usage != null)
+                {
+                    _usage.UsedCount++;
+                }
+            }
+            else
+            {
+                _error = response.Error ?? "No test cases were generated. Try a more detailed description.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Generation failed: {ex.Message}";
+        }
+        finally
+        {
+            _isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSelection(int index)
+    {
+        if (!_selectedIndices.Remove(index))
+            _selectedIndices.Add(index);
+    }
+
+    private void SelectAll() => _selectedIndices = new HashSet<int>(Enumerable.Range(0, _generatedCases.Count));
+    private void DeselectAll() => _selectedIndices.Clear();
+
+    private void ResetForm()
+    {
+        _hasResults = false;
+        _generatedCases.Clear();
+        _selectedIndices.Clear();
+        _error = null;
+    }
+
+    private async Task HandleImportSelected()
+    {
+        if (!_selectedIndices.Any()) return;
+        _isImporting = true;
+        StateHasChanged();
+
+        try
+        {
+            var selectedCases = _selectedIndices
+                .OrderBy(i => i)
+                .Select(i => _generatedCases[i])
+                .ToList();
+
+            await OnImport.InvokeAsync(selectedCases);
+        }
+        finally
+        {
+            _isImporting = false;
+        }
+    }
+
+    private string GetPriorityClass(TestCasePriority p) => p switch
+    {
+        TestCasePriority.High => "bg-red-50 text-red-500",
+        TestCasePriority.Medium => "bg-amber-50 text-amber-500",
+        _ => "bg-emerald-50 text-emerald-500"
+    };
+
+    private static string Truncate(string text, int max)
+        => text.Length <= max ? text : text[..max] + "...";
+}

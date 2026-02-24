@@ -18,6 +18,8 @@ namespace Testify.Data
         public DbSet<KanbanTask> KanbanTasks { get; set; }
 
         // Templates
+        public DbSet<TemplateCategory> TemplateCategories { get; set; }
+        public DbSet<TemplateFolder> TemplateFolders { get; set; }
         public DbSet<TestSuiteTemplate> TestSuiteTemplates { get; set; }
         public DbSet<TestCaseTemplate> TestCaseTemplates { get; set; }
         public DbSet<TestStepTemplate> TestStepTemplates { get; set; }
@@ -46,6 +48,11 @@ namespace Testify.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<TaskActivity> TaskActivities { get; set; }
         public DbSet<TaskAttachment> TaskAttachments { get; set; }
+
+        // Template Tags & Reviews
+        public DbSet<TemplateTag> TemplateTags { get; set; }
+        public DbSet<TestSuiteTemplateTag> TestSuiteTemplateTags { get; set; }
+        public DbSet<TemplateReview> TemplateReviews { get; set; }
 
         // Call System
         public DbSet<CallSession> CallSessions { get; set; }
@@ -142,25 +149,6 @@ namespace Testify.Data
                 .HasOne(n => n.Project)
                 .WithMany()
                 .HasForeignKey(n => n.ProjectId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            // Call System - prevent cascade delete conflicts
-            builder.Entity<CallSession>()
-                .HasOne(c => c.Caller)
-                .WithMany()
-                .HasForeignKey(c => c.CallerUserId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            builder.Entity<CallSession>()
-                .HasOne(c => c.Callee)
-                .WithMany()
-                .HasForeignKey(c => c.CalleeUserId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            builder.Entity<CallSession>()
-                .HasOne(c => c.Room)
-                .WithMany()
-                .HasForeignKey(c => c.RoomId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }
