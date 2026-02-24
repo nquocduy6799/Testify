@@ -14,14 +14,6 @@ using Testify.Interfaces;
 using Testify.Repositories;
 using Testify.Hubs;
 using Testify.Client.Features.TestTemplates.Services;
-using Testify.Configuration;
-using Testify.Client.Shared.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using Testify.Interfaces.Testify.Interfaces;
-using Testify.Client.Features.TestPlans.Services;
-using Testify.Client.Features.TestRuns.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,11 +72,6 @@ builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
 builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
-builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
-builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
-builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>();
-builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();
-builder.Services.AddScoped<ITestRunRepository, TestRunRepository>();
 
 
 // Register services for server-side
@@ -95,11 +82,6 @@ builder.Services.AddScoped<INotificationService, ServerNotificationRepository>()
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
-builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
-builder.Services.AddScoped<ITestPlanService, TestPlanService>();
-builder.Services.AddScoped<ITestRunService, TestRunService>();
-builder.Services.AddScoped<IBugService, BugService>();
-builder.Services.AddScoped<ModalService>();
 
 
 // Add controllers for API endpoints
@@ -112,6 +94,7 @@ builder.Services.AddSwaggerConfiguration();
 
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<Testify.Interfaces.IUserPresenceService, Testify.Services.UserPresenceService>();
 
 var app = builder.Build();
 
@@ -163,6 +146,8 @@ app.MapControllers();
 
 // Map SignalR Hub
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<CallHub>("/hubs/call");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
@@ -178,6 +163,8 @@ app.Run();
 
 
 
+
+        
 
 
 

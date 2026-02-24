@@ -1,6 +1,5 @@
 ﻿@page "/projects/{Id:int}"
 @using Testify.Client.Features.Kanban.Pages
-@using Testify.Client.Features.TestPlans.Pages
 @using Testify.Shared.DTOs.Projects
 @using Testify.Client.Features.Milestones.Components
 @using Testify.Client.Features.Projects.Components
@@ -82,10 +81,10 @@
                 </button>
 
                 @* Tab Strategy (Test Plans) *@
-                @* @if (currentUserRole == ProjectRole.Tester || currentUserRole == ProjectRole.PM)
-                { *@
-                    <button @onclick='() => activeTab = "TestPlans"'
-                            class="@(activeTab == "TestPlans" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
+                @if (currentUserRole == ProjectRole.Tester || currentUserRole == ProjectRole.PM)
+                {
+                    <button @onclick='() => activeTab = "Strategy"'
+                            class="@(activeTab == "Strategy" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" />
                             <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
@@ -133,7 +132,7 @@
                 {
                     <MilestoneManager ProjectId="@Id" />
                 }
-                else if (activeTab == "TestPlans")
+                else if (activeTab == "Strategy")
                 {
 					<TestPlanManager ProjectId="@Id" />
                 }

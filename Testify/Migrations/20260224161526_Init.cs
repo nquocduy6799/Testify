@@ -32,6 +32,7 @@ namespace Testify.Migrations
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AvatarUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AiGenerationCount = table.Column<int>(type: "int", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -86,11 +87,17 @@ namespace Testify.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ParentCategoryId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_TemplateCategories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TemplateCategories_TemplateCategories_ParentCategoryId",
+                        column: x => x.ParentCategoryId,
+                        principalTable: "TemplateCategories",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -468,6 +475,44 @@ namespace Testify.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CallSessions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoomId = table.Column<int>(type: "int", nullable: false),
+                    CallerUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CalleeUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CallType = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AnsweredAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EndedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CallerId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    CalleeId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CallSessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CallSessions_AspNetUsers_CalleeId",
+                        column: x => x.CalleeId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_CallSessions_AspNetUsers_CallerId",
+                        column: x => x.CallerId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_CallSessions_ChatRooms_RoomId",
+                        column: x => x.RoomId,
+                        principalTable: "ChatRooms",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ChatMessages",
                 columns: table => new
                 {
@@ -611,8 +656,7 @@ namespace Testify.Migrations
                         name: "FK_TemplateReviews_TestSuiteTemplates_TemplateId",
                         column: x => x.TemplateId,
                         principalTable: "TestSuiteTemplates",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -744,7 +788,7 @@ namespace Testify.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MessageId = table.Column<int>(type: "int", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Reaction = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Reaction = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -790,41 +834,6 @@ namespace Testify.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ChatNotifications",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RoomId = table.Column<int>(type: "int", nullable: false),
-                    MessageId = table.Column<int>(type: "int", nullable: true),
-                    NotificationType = table.Column<int>(type: "int", nullable: false),
-                    IsRead = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ChatNotifications", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ChatNotifications_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ChatNotifications_ChatMessages_MessageId",
-                        column: x => x.MessageId,
-                        principalTable: "ChatMessages",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_ChatNotifications_ChatRooms_RoomId",
-                        column: x => x.RoomId,
-                        principalTable: "ChatRooms",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ChatPinnedMessages",
                 columns: table => new
                 {
@@ -832,17 +841,16 @@ namespace Testify.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     RoomId = table.Column<int>(type: "int", nullable: false),
                     MessageId = table.Column<int>(type: "int", nullable: false),
-                    PinnedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PinnedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     PinnedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Note = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PinnedById = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    Note = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ChatPinnedMessages", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ChatPinnedMessages_AspNetUsers_PinnedById",
-                        column: x => x.PinnedById,
+                        name: "FK_ChatPinnedMessages_AspNetUsers_PinnedByUserId",
+                        column: x => x.PinnedByUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -1231,14 +1239,30 @@ namespace Testify.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CallSessions_CalleeId",
+                table: "CallSessions",
+                column: "CalleeId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CallSessions_CallerId",
+                table: "CallSessions",
+                column: "CallerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CallSessions_RoomId",
+                table: "CallSessions",
+                column: "RoomId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ChatMessageAttachments_MessageId",
                 table: "ChatMessageAttachments",
                 column: "MessageId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatMessageReactions_MessageId",
+                name: "IX_ChatMessageReactions_MessageId_UserId_Reaction",
                 table: "ChatMessageReactions",
-                column: "MessageId");
+                columns: new[] { "MessageId", "UserId", "Reaction" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChatMessageReactions_UserId",
@@ -1246,9 +1270,10 @@ namespace Testify.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatMessageReads_MessageId",
+                name: "IX_ChatMessageReads_MessageId_UserId",
                 table: "ChatMessageReads",
-                column: "MessageId");
+                columns: new[] { "MessageId", "UserId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChatMessageReads_UserId",
@@ -1271,29 +1296,14 @@ namespace Testify.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatNotifications_MessageId",
-                table: "ChatNotifications",
-                column: "MessageId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ChatNotifications_RoomId",
-                table: "ChatNotifications",
-                column: "RoomId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ChatNotifications_UserId",
-                table: "ChatNotifications",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ChatPinnedMessages_MessageId",
                 table: "ChatPinnedMessages",
                 column: "MessageId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatPinnedMessages_PinnedById",
+                name: "IX_ChatPinnedMessages_PinnedByUserId",
                 table: "ChatPinnedMessages",
-                column: "PinnedById");
+                column: "PinnedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChatPinnedMessages_RoomId",
@@ -1301,9 +1311,10 @@ namespace Testify.Migrations
                 column: "RoomId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ChatRoomParticipants_RoomId",
+                name: "IX_ChatRoomParticipants_RoomId_UserId",
                 table: "ChatRoomParticipants",
-                column: "RoomId");
+                columns: new[] { "RoomId", "UserId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ChatRoomParticipants_UserId",
@@ -1404,6 +1415,11 @@ namespace Testify.Migrations
                 name: "IX_TaskLinkedRunSteps_TaskId",
                 table: "TaskLinkedRunSteps",
                 column: "TaskId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TemplateCategories_ParentCategoryId",
+                table: "TemplateCategories",
+                column: "ParentCategoryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TemplateFolders_ParentId",
@@ -1563,6 +1579,9 @@ namespace Testify.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "CallSessions");
+
+            migrationBuilder.DropTable(
                 name: "ChatMessageAttachments");
 
             migrationBuilder.DropTable(
@@ -1570,9 +1589,6 @@ namespace Testify.Migrations
 
             migrationBuilder.DropTable(
                 name: "ChatMessageReads");
-
-            migrationBuilder.DropTable(
-                name: "ChatNotifications");
 
             migrationBuilder.DropTable(
                 name: "ChatPinnedMessages");

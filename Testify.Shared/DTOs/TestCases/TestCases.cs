@@ -26,6 +26,8 @@ namespace Testify.Shared.DTOs.TestCases
         public int Id { get; set; }
         public int SuiteTemplateId { get; set; }
         public string Title { get; set; } = string.Empty;
+        public string? Preconditions { get; set; }
+        public string? Postconditions { get; set; }
         public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
 
         public List<TestStepTemplateResponse> TestStepTemplates { get; set; } = new();
@@ -37,6 +39,12 @@ namespace Testify.Shared.DTOs.TestCases
         [StringLength(200)]
         public string Title { get; set; } = string.Empty;
 
+        [StringLength(2000)]
+        public string? Preconditions { get; set; }
+
+        [StringLength(2000)]
+        public string? Postconditions { get; set; }
+
         public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
 
         public List<CreateTestStepTemplateRequest> TestStepTemplates { get; set; } = new();
@@ -47,6 +55,12 @@ namespace Testify.Shared.DTOs.TestCases
         [Required]
         [StringLength(200)]
         public string Title { get; set; } = string.Empty;
+
+        [StringLength(2000)]
+        public string? Preconditions { get; set; }
+
+        [StringLength(2000)]
+        public string? Postconditions { get; set; }
 
         public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
 

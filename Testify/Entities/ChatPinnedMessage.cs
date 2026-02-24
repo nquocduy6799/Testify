@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using Testify.Data;
+using Testify.Shared.Helpers;
 
 namespace Testify.Entities
 {
@@ -11,7 +10,7 @@ namespace Testify.Entities
         public int RoomId { get; set; }
         public int MessageId { get; set; }
         public string PinnedByUserId { get; set; } = string.Empty;
-        public DateTime PinnedAt { get; set; } = DateTime.Now;
+        public DateTime PinnedAt { get; set; } = DateTimeHelper.GetVietnamTime();
         public string? Note { get; set; }
 
         // Navigation properties

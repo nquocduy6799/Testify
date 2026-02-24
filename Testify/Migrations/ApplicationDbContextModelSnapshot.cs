@@ -259,6 +259,9 @@ namespace Testify.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<int>("AiGenerationCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("AvatarUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -321,6 +324,57 @@ namespace Testify.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Testify.Entities.CallSession", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("AnsweredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CallType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CalleeId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CalleeUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CallerId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CallerUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("RoomId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CalleeId");
+
+                    b.HasIndex("CallerId");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("CallSessions");
                 });
 
             modelBuilder.Entity("Testify.Entities.ChatMessage", b =>
@@ -439,7 +493,7 @@ namespace Testify.Migrations
 
                     b.Property<string>("Reaction")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -447,9 +501,10 @@ namespace Testify.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MessageId");
-
                     b.HasIndex("UserId");
+
+                    b.HasIndex("MessageId", "UserId", "Reaction")
+                        .IsUnique();
 
                     b.ToTable("ChatMessageReactions");
                 });
@@ -474,49 +529,12 @@ namespace Testify.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MessageId");
-
                     b.HasIndex("UserId");
+
+                    b.HasIndex("MessageId", "UserId")
+                        .IsUnique();
 
                     b.ToTable("ChatMessageReads");
-                });
-
-            modelBuilder.Entity("Testify.Entities.ChatNotification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("MessageId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("NotificationType")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RoomId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MessageId");
-
-                    b.HasIndex("RoomId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ChatNotifications");
                 });
 
             modelBuilder.Entity("Testify.Entities.ChatPinnedMessage", b =>
@@ -536,12 +554,9 @@ namespace Testify.Migrations
                     b.Property<DateTime>("PinnedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("PinnedById")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("PinnedByUserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("RoomId")
                         .HasColumnType("int");
@@ -550,7 +565,7 @@ namespace Testify.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.HasIndex("PinnedById");
+                    b.HasIndex("PinnedByUserId");
 
                     b.HasIndex("RoomId");
 
@@ -646,9 +661,10 @@ namespace Testify.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RoomId");
-
                     b.HasIndex("UserId");
+
+                    b.HasIndex("RoomId", "UserId")
+                        .IsUnique();
 
                     b.ToTable("ChatRoomParticipants");
                 });
@@ -1847,29 +1863,6 @@ namespace Testify.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("TestPlan", b =>
-                {
-                    b.HasOne("Testify.Entities.Milestone", "Milestone")
-                        .WithMany("TestPlans")
-                        .HasForeignKey("MilestoneId");
-
-                    b.HasOne("Testify.Entities.Project", "Project")
-                        .WithMany("TestPlans")
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Testify.Entities.KanbanTask", "Task")
-                        .WithMany("TestPlans")
-                        .HasForeignKey("TaskId");
-
-                    b.Navigation("Milestone");
-
-                    b.Navigation("Project");
-
-                    b.Navigation("Task");
-                });
-
             modelBuilder.Entity("Testify.Entities.ChatMessage", b =>
                 {
                     b.HasOne("Testify.Entities.ChatMessage", "ParentMessage")
@@ -1944,31 +1937,6 @@ namespace Testify.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Testify.Entities.ChatNotification", b =>
-                {
-                    b.HasOne("Testify.Entities.ChatMessage", "Message")
-                        .WithMany()
-                        .HasForeignKey("MessageId");
-
-                    b.HasOne("Testify.Entities.ChatRoom", "Room")
-                        .WithMany()
-                        .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Testify.Data.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Message");
-
-                    b.Navigation("Room");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Testify.Entities.ChatPinnedMessage", b =>
                 {
                     b.HasOne("Testify.Entities.ChatMessage", "Message")
@@ -1979,7 +1947,9 @@ namespace Testify.Migrations
 
                     b.HasOne("Testify.Data.ApplicationUser", "PinnedBy")
                         .WithMany()
-                        .HasForeignKey("PinnedById");
+                        .HasForeignKey("PinnedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("Testify.Entities.ChatRoom", "Room")
                         .WithMany("PinnedMessages")
@@ -2209,7 +2179,7 @@ namespace Testify.Migrations
                     b.HasOne("Testify.Entities.TestSuiteTemplate", "Template")
                         .WithMany("Reviews")
                         .HasForeignKey("TemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Testify.Data.ApplicationUser", "User")
@@ -2370,8 +2340,7 @@ namespace Testify.Migrations
 
                     b.HasOne("Testify.Entities.TemplateFolder", "Folder")
                         .WithMany()
-                        .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .HasForeignKey("FolderId");
 
                     b.HasOne("Testify.Data.ApplicationUser", "User")
                         .WithMany()

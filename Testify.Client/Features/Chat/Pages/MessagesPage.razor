@@ -1,0 +1,3076 @@
+@page "/messages"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Testify.Client.Interfaces
+@using Testify.Client.Features.Chat.Components
+@using Testify.Client.Features.Chat.Services
+@using Testify.Client.Shared.Services
+@using Testify.Shared.DTOs.Chat
+@using Testify.Shared.Enums
+@using System.Threading
+@inject IChatService ChatService
+@inject IServiceProvider ServiceProvider
+@inject IJSRuntime JSRuntime
+
+@rendermode InteractiveWebAssembly
+@attribute [Authorize]
+@implements IAsyncDisposable
+
+<PageTitle>Messages - Testify</PageTitle>
+
+@if (isLoading)
+{
+    <div class="flex items-center justify-center min-h-screen">
+        <div class="h-12 w-12 animate-spin rounded-full border-b-2 border-[#E85D3F]"></div>
+    </div>
+}
+else
+{
+    <div @onclick="CloseEmojiPickers" class="max-w-[1400px] mx-auto px-6 h-[calc(100vh-160px)] flex gap-8">
+        @* Sidebar *@
+        <div class="w-80 flex flex-col gap-6 h-full">
+            <div class="bg-white rounded-[40px] p-6 border border-slate-100 shadow-sm flex flex-col h-full overflow-hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-black text-slate-800">Messages</h2>
+                    <div class="flex gap-1">
+                        <button @onclick="OpenCreateGroupModal" class="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all text-slate-600" title="Create group">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </button>
+                        <button @onclick="OpenNewChatDialog" class="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all text-[#E85D3F]" title="Chat mới">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12h14"/><path d="M12 5v14"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="relative mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <input 
+                        type="text" 
+                        value="@searchQuery"
+                        @oninput="OnSearchQueryInput"
+                        placeholder="Find people or channels"
+                        class="w-full pl-11 pr-4 py-3 bg-slate-50 rounded-2xl text-xs font-bold focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-100 transition-all"
+                    />
+                </div>
+
+                <div class="flex-1 overflow-y-auto no-scrollbar space-y-2">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-2">Recent Chats</p>
+                    
+                    @if (filteredRooms.Any())
+                    {
+                        @foreach (var room in filteredRooms)
+                        {
+                            <button
+                                @onclick="() => SelectRoom(room.Id)"
+                                class="@GetRoomButtonClass(room.Id) w-full flex items-center gap-3 p-3 rounded-3xl transition-all relative group text-left"
+                            >
+                                <div class="relative flex-shrink-0">
+                                    @if (room.RoomType == ChatRoomType.Private && room.OtherParticipant != null)
+                                    {
+                                        @if (!string.IsNullOrEmpty(room.OtherParticipant.AvatarUrl))
+                                        {
+                                            <img src="@room.OtherParticipant.AvatarUrl" class="w-12 h-12 rounded-2xl object-cover" alt="" />
+                                        }
+                                        else
+                                        {
+                                            <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center font-bold text-slate-600">
+                                                @GetInitials(room.OtherParticipant.FullName ?? room.OtherParticipant.UserName)
+                                            </div>
+                                        }
+                                        <div class="@GetStatusDotClass(room.OtherParticipant.IsOnline, activeRoomId == room.Id) absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"></div>
+                                    }
+                                    else
+                                    {
+                                        <div class="@(activeRoomId == room.Id ? "bg-slate-700" : "bg-slate-100 text-slate-400") w-12 h-12 rounded-2xl flex items-center justify-center font-bold">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M4 21V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v17"/>
+                                            </svg>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                <div class="flex-1 min-w-0 text-left overflow-hidden">
+                                    <div class="flex justify-between items-center gap-2">
+                                        <span class="@(room.UnreadCount > 0 && room.Id != activeRoomId ? "font-black text-xs truncate text-slate-900" : "font-bold text-xs truncate") ">@GetRoomDisplayName(room)</span>
+                                        <span class="@(activeRoomId == room.Id ? "text-slate-400" : room.UnreadCount > 0 ? "text-[#E85D3F] font-black" : "text-slate-300") text-[9px] font-bold flex-shrink-0">
+                                            @FormatTime(room.LastMessageTime)
+                                        </span>
+                                    </div>
+                                    <p class="@(activeRoomId == room.Id ? "text-slate-300" : room.UnreadCount > 0 ? "text-slate-700 font-bold" : "text-slate-400") text-[10px] truncate mt-0.5">
+                                        @(room.LastMessage ?? "No messages yet")
+                                    </p>
+                                </div>
+
+                                @if (room.UnreadCount > 0 && room.Id != activeRoomId)
+                                {
+                                    <div class="absolute right-3 bottom-4 bg-[#E85D3F] text-white text-[9px] font-black min-w-5 h-5 flex items-center justify-center rounded-full px-1">
+                                        @(room.UnreadCount > 9 ? "9+" : room.UnreadCount.ToString())
+                                    </div>
+                                }
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-12">
+                            <p class="text-sm text-slate-400">No conversations yet</p>
+                            <button @onclick="OpenNewChatDialog" class="mt-4 text-xs font-black text-[#E85D3F] hover:underline">
+                                Start New Chat
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @* Chat Area *@
+        @if (activeRoom != null)
+        {
+            <div class="flex-1 bg-white rounded-[48px] border border-slate-100 shadow-sm flex flex-col overflow-hidden relative">
+                @* Chat Header *@
+                <div class="p-8 border-b border-slate-50 flex items-center justify-between bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            @if (activeRoom.RoomType == ChatRoomType.Private && activeRoom.OtherParticipant != null)
+                            {
+                                @if (!string.IsNullOrEmpty(activeRoom.OtherParticipant.AvatarUrl))
+                                {
+                                    <img src="@activeRoom.OtherParticipant.AvatarUrl" class="w-14 h-14 rounded-[22px] object-cover shadow-sm" alt="" />
+                                }
+                                else
+                                {
+                                    <div class="w-14 h-14 rounded-[22px] bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-xl shadow-sm">
+                                        @GetInitials(activeRoom.OtherParticipant.FullName ?? activeRoom.OtherParticipant.UserName)
+                                    </div>
+                                }
+                                <div class="@GetStatusDotClass(activeRoom.OtherParticipant.IsOnline, false) absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white"></div>
+                            }
+                            else
+                            {
+                                <div class="w-14 h-14 bg-slate-100 rounded-[22px] flex items-center justify-center text-slate-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 21V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v17"/>
+                                    </svg>
+                                </div>
+                            }
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                                @GetRoomDisplayName(activeRoom)
+                                @if (activeRoom.RoomType != ChatRoomType.Private)
+                                {
+                                    <span class="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                        @(activeRoom.RoomType == ChatRoomType.Group ? "Group" : "Project")
+                                    </span>
+                                }
+                            </h3>
+                            <p class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5 mt-0.5 uppercase tracking-widest">
+                                @if (activeRoom.RoomType == ChatRoomType.Private && activeRoom.OtherParticipant != null)
+                                {
+                                    <span class="w-2 h-2 rounded-full @(activeRoom.OtherParticipant.IsOnline ? "bg-emerald-500" : "bg-slate-300")"></span>
+                                    <span>@(activeRoom.OtherParticipant.IsOnline ? "Online" : "Offline")</span>
+                                }
+                                else
+                                {
+                                    <span class="opacity-30">•</span>
+                                    <span>@activeRoom.Participants.Count Members</span>
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        @if (activeRoom.RoomType == ChatRoomType.Private)
+                        {
+                            <button @onclick="() => StartCall(CallType.Audio)" class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all" title="Voice call" disabled="@isInCall">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                            </button>
+                            <button @onclick="() => StartCall(CallType.Video)" class="p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all" title="Video call" disabled="@isInCall">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                                </svg>
+                            </button>
+                        }
+                        <div class="w-px h-8 bg-slate-100 mx-2"></div>
+                        <button @onclick="ToggleMessageSearch" class="@(isMessageSearchOpen ? "p-3 text-[#E85D3F] bg-red-50 rounded-2xl transition-all" : "p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all")" title="Search messages">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                            </svg>
+                        </button>
+                        <button @onclick="TogglePinnedPanel" class="@(isPinnedPanelOpen ? "p-3 text-[#E85D3F] bg-red-50 rounded-2xl transition-all" : "p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all") relative" title="Pinned messages">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+                            </svg>
+                            @if (pinnedMessages.Any())
+                            {
+                                <span class="absolute -top-0.5 -right-0.5 w-5 h-5 bg-[#E85D3F] text-white text-[9px] font-black rounded-full flex items-center justify-center">@pinnedMessages.Count</span>
+                            }
+                        </button>
+                        <button @onclick="ToggleRoomSettings" class="@(isRoomSettingsOpen ? "p-3 text-[#E85D3F] bg-red-50 rounded-2xl transition-all" : "p-3 text-slate-400 hover:bg-slate-50 rounded-2xl transition-all")" title="Room settings">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                @* Message Search Bar *@
+                @if (isMessageSearchOpen)
+                {
+                    <div class="px-8 py-3 bg-slate-50/80 border-b border-slate-100 flex items-center gap-3">
+                        <div class="relative flex-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                            </svg>
+                            <input type="text"
+                                   @bind="messageSearchQuery"
+                                   @bind:event="oninput"
+                                   @bind:after="OnMessageSearchInput"
+                                   placeholder="Search in this conversation..."
+                                   class="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20 border border-slate-200 transition-all" />
+                        </div>
+                        @if (isSearching)
+                        {
+                            <div class="h-5 w-5 animate-spin rounded-full border-2 border-[#E85D3F] border-t-transparent"></div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(messageSearchQuery))
+                        {
+                            <span class="text-xs font-bold text-slate-400 whitespace-nowrap">@searchTotalCount result@(searchTotalCount != 1 ? "s" : "")</span>
+                        }
+                        <button @onclick="CloseMessageSearch" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all" title="Close">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    @* Search Results Dropdown *@
+                    @if (searchResults.Any())
+                    {
+                        <div class="max-h-64 overflow-y-auto border-b border-slate-100 bg-white shadow-inner">
+                            @foreach (var result in searchResults)
+                            {
+                                <button @onclick="() => NavigateToSearchResult(result)"
+                                        class="@(highlightedMessageId == result.Id ? "bg-amber-50 border-l-2 border-[#E85D3F]" : "border-l-2 border-transparent hover:bg-slate-50") w-full text-left px-8 py-3 transition-all">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 flex-shrink-0">
+                                            @GetInitials(result.UserName)
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-xs font-bold text-slate-700">@result.UserName</span>
+                                                <span class="text-[10px] text-slate-400">@result.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                            </div>
+                                            <p class="text-xs text-slate-500 truncate mt-0.5">@HighlightSearchMatch(result.Content)</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            }
+                            @if (hasMoreSearchResults)
+                            {
+                                <div class="flex justify-center py-2">
+                                    <button @onclick="LoadMoreSearchResults" disabled="@isSearching"
+                                            class="text-xs font-bold text-[#E85D3F] hover:underline disabled:opacity-50">
+                                        Load more results
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else if (!isSearching && !string.IsNullOrWhiteSpace(messageSearchQuery) && messageSearchQuery.Length >= 2)
+                    {
+                        <div class="px-8 py-4 border-b border-slate-100 bg-white">
+                            <p class="text-xs text-slate-400 text-center">No messages found for "@messageSearchQuery"</p>
+                        </div>
+                    }
+                }
+
+                @* Pinned Messages Panel *@
+                @if (isPinnedPanelOpen)
+                {
+                    <div class="border-b border-slate-100 bg-amber-50/50">
+                        <div class="px-8 py-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500">
+                                    <path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+                                </svg>
+                                <span class="text-xs font-bold text-amber-700">Pinned Messages (@pinnedMessages.Count)</span>
+                            </div>
+                            <button @onclick="TogglePinnedPanel" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all" title="Close">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        @if (isLoadingPinned)
+                        {
+                            <div class="px-8 py-4 flex justify-center">
+                                <div class="h-5 w-5 animate-spin rounded-full border-2 border-amber-500 border-t-transparent"></div>
+                            </div>
+                        }
+                        else if (pinnedMessages.Any())
+                        {
+                            <div class="max-h-64 overflow-y-auto">
+                                @foreach (var pin in pinnedMessages)
+                                {
+                                    <div class="px-8 py-3 hover:bg-amber-50 transition-all border-t border-amber-100/50 group/pin">
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 flex-shrink-0 mt-0.5">
+                                                @GetInitials(pin.Message.UserName)
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-xs font-bold text-slate-700">@pin.Message.UserName</span>
+                                                        <span class="text-[10px] text-slate-400">@pin.Message.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1 opacity-0 group-hover/pin:opacity-100 transition-opacity">
+                                                        <button @onclick="() => NavigateToPinnedMessage(pin.MessageId)" class="text-[10px] font-bold text-[#7E96E1] hover:text-[#5A78D0] px-2 py-1 rounded-lg hover:bg-blue-50 transition-all" title="Jump to message">
+                                                            Jump
+                                                        </button>
+                                                        <button @onclick="() => UnpinMessage(pin.RoomId, pin.MessageId)" class="text-[10px] font-bold text-slate-400 hover:text-red-500 px-2 py-1 rounded-lg hover:bg-red-50 transition-all" title="Unpin">
+                                                            Unpin
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <p class="text-xs text-slate-600 mt-0.5 line-clamp-2">
+                                                    @(pin.Message.IsDeleted ? "[Message withdrawn]" : pin.Message.Content)
+                                                </p>
+                                                @if (!string.IsNullOrWhiteSpace(pin.Note))
+                                                {
+                                                    <p class="text-[10px] text-amber-600 mt-1 italic">Note: @pin.Note</p>
+                                                }
+                                                <p class="text-[10px] text-slate-400 mt-1">Pinned by @pin.PinnedByUserName · @pin.PinnedAt.ToString("dd/MM HH:mm")</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="px-8 py-4">
+                                <p class="text-xs text-slate-400 text-center">No pinned messages in this conversation</p>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @* Message List *@
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-10 space-y-8 no-scrollbar">
+                    @if (hasMoreMessages)
+                    {
+                        <div class="flex justify-center mb-4">
+                            <button @onclick="LoadMoreMessages" disabled="@isLoadingMore"
+                                    class="px-4 py-2 text-xs font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-full transition-all disabled:opacity-50">
+                                @(isLoadingMore ? "Loading..." : "Load older messages")
+                            </button>
+                        </div>
+                    }
+                    @{
+                        DateTime? _lastMsgDate = null;
+                    }
+                    @foreach (var message in messages)
+                    {
+                        var msgDate = message.CreatedAt.Date;
+                        if (_lastMsgDate == null || msgDate != _lastMsgDate.Value)
+                        {
+                            _lastMsgDate = msgDate;
+                            <div class="flex flex-col items-center my-6">
+                                <div class="bg-slate-50 px-4 py-1.5 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    @FormatDateSeparator(msgDate)
+                                </div>
+                            </div>
+                        }
+                        var isOwn = IsOwnMessage(message);
+
+                        @* --- Call message special rendering --- *@
+                        @if (message.MessageType == MessageType.Call)
+                        {
+                            var callMeta = ParseCallMetadata(message.Metadata);
+                            var isOutgoing = message.UserId == currentUserId;
+                            var callIcon = callMeta.CallType == "Video" ? "video" : "phone";
+                            var statusColor = callMeta.CallStatus switch
+                            {
+                                "Ended" => "text-green-600",
+                                "Missed" => "text-red-500",
+                                "Rejected" => "text-orange-500",
+                                "Cancelled" => "text-slate-400",
+                                _ => "text-slate-500"
+                            };
+                            var statusBg = callMeta.CallStatus switch
+                            {
+                                "Ended" => "bg-green-50 border-green-200",
+                                "Missed" => "bg-red-50 border-red-200",
+                                "Rejected" => "bg-orange-50 border-orange-200",
+                                "Cancelled" => "bg-slate-50 border-slate-200",
+                                _ => "bg-slate-50 border-slate-200"
+                            };
+
+                            <div @key="message.Id" data-message-id="@message.Id" class="flex justify-center my-3">
+                                <div class="@statusBg border rounded-2xl px-5 py-3 flex items-center gap-4 max-w-sm w-full shadow-sm">
+                                    @* Call icon *@
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 @(callMeta.CallStatus == "Ended" ? "bg-green-100" : callMeta.CallStatus == "Missed" ? "bg-red-100" : callMeta.CallStatus == "Rejected" ? "bg-orange-100" : "bg-slate-100")">
+                                        @if (callIcon == "video")
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@statusColor">
+                                                <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/>
+                                            </svg>
+                                        }
+                                        else
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@statusColor">
+                                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                            </svg>
+                                        }
+                                    </div>
+                                    @* Call info *@
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-slate-800 truncate">@message.Content</p>
+                                        <div class="flex items-center gap-1.5 mt-0.5">
+                                            @if (isOutgoing)
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="@statusColor">
+                                                    <path d="m7 7 10 10"/><path d="M17 7v10H7"/>
+                                                </svg>
+                                            }
+                                            else
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="@statusColor">
+                                                    <path d="M17 17 7 7"/><path d="M7 17V7h10"/>
+                                                </svg>
+                                            }
+                                            <span class="text-[11px] @statusColor font-medium">
+                                                @(isOutgoing ? "Outgoing call" : "Incoming call")
+                                            </span>
+                                            <span class="text-[10px] text-slate-400">@message.CreatedAt.ToString("HH:mm")</span>
+                                        </div>
+                                    </div>
+                                    @* Callback button *@
+                                    @if (activeRoom?.RoomType == ChatRoomType.Private && !isInCall)
+                                    {
+                                        <button type="button"
+                                                @onclick="() => StartCallFromHistory(callMeta.CallType)"
+                                                class="w-9 h-9 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center flex-shrink-0 transition-colors shadow-sm"
+                                                title="Call back">
+                                            @if (callIcon == "video")
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.934a.5.5 0 0 0-.777-.416L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/>
+                                                </svg>
+                                            }
+                                            else
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                                </svg>
+                                            }
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                            continue;
+                        }
+
+                        <div @key="message.Id" data-message-id="@message.Id" class="@GetMessageContainerClass(message, isOwn)">
+                        @if (isOwn)
+                        {
+                            <div class="w-10 h-10 bg-[#E85D3F] rounded-2xl mt-1 flex items-center justify-center font-black text-white text-xs flex-shrink-0">
+                                @GetInitials(message.UserName)
+                            </div>
+                            <div class="space-y-1.5 min-w-0 flex-1">
+                                @if (_editingMessageId == message.Id)
+                                {
+                                    <div class="flex flex-col gap-2 items-end">
+                                        <textarea @bind="_editContent" @onkeydown="HandleEditKeyDown" rows="2" class="w-full max-w-md p-3 rounded-2xl border border-slate-200 text-sm text-slate-800 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/30" />
+                                        <div class="flex gap-2">
+                                            <button type="button" @onclick="CancelEditing" class="text-xs font-bold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-xl bg-slate-100">Cancel</button>
+                                            <button type="button" @onclick="() => SaveEdit(message.Id)" class="text-xs font-bold text-white bg-[#E85D3F] hover:opacity-90 px-3 py-1.5 rounded-xl">Save</button>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="flex flex-row-reverse items-end gap-2">
+                                        <div class="@(message.IsDeleted ? "bg-slate-200 text-slate-500 italic" : "bg-[#1C1D2A] text-white") p-5 rounded-3xl rounded-tr-none text-sm font-medium leading-relaxed shadow-lg shadow-slate-200">
+                                            @if (message.ParentMessage != null)
+                                            {
+                                                <div class="mb-2 pl-3 border-l-2 border-white/50 text-[11px] opacity-90">
+                                                    <span class="font-bold">@message.ParentMessage.UserName</span>
+                                                    <p class="truncate max-w-[200px] @(message.ParentMessage.IsDeleted ? "italic" : "")">@(message.ParentMessage.IsDeleted ? "The message has been withdrawn." : message.ParentMessage.Content)</p>
+                                                </div>
+                                            }
+                                            @(message.IsDeleted ? "The message has been withdrawn." : message.Content)
+                                            @if (message.UpdatedAt.HasValue && !message.IsDeleted)
+                                            {
+                                                <span class="text-[10px] opacity-80 block mt-1">(edited)</span>
+                                            }
+                                        </div>
+                                        <span class="text-[9px] font-bold text-slate-300 uppercase mb-2 flex items-center gap-1">
+                                            @if (message.IsPinned)
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-amber-400">
+                                                    <path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+                                                </svg>
+                                            }
+                                            @message.CreatedAt.ToString("HH:mm")
+                                        </span>
+                                    </div>
+                                    @if (message.Attachments.Any() && !message.IsDeleted)
+                                    {
+                                        <div class="flex flex-col gap-2 items-end mt-2">
+                                            @foreach (var attachment in message.Attachments)
+                                            {
+                                                @if (IsImageAttachment(attachment.FileType))
+                                                {
+                                                    <div class="max-w-xs rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+                                                        <a href="@attachment.FileUrl" target="_blank">
+                                                            <img src="@attachment.FileUrl" alt="@attachment.FileName" class="max-w-full max-h-64 object-cover" loading="lazy" />
+                                                        </a>
+                                                        <div class="bg-slate-50 px-3 py-1.5 flex items-center justify-between">
+                                                            <span class="text-[10px] text-slate-500 truncate">@attachment.FileName</span>
+                                                            <a href="api/chat/attachments/@attachment.Id/download" class="text-[10px] font-bold text-[#7E96E1] hover:underline ml-2 flex-shrink-0" download>Download</a>
+                                                        </div>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <a href="api/chat/attachments/@attachment.Id/download" download class="bg-slate-50 p-4 rounded-3xl border border-slate-200 flex items-center gap-4 hover:bg-slate-100 transition-colors cursor-pointer max-w-xs">
+                                                        <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@GetFileIconColor(attachment.FileType)">
+                                                                @((MarkupString)GetFileIconPath(attachment.FileType))
+                                                            </svg>
+                                                        </div>
+                                                        <div class="min-w-0">
+                                                            <p class="text-xs font-black text-slate-800 truncate">@attachment.FileName</p>
+                                                            <p class="text-[10px] font-bold text-slate-400">@FormatFileSize(attachment.FileSize) • @GetFriendlyFileType(attachment.FileType)</p>
+                                                        </div>
+                                                    </a>
+                                                }
+                                            }
+                                        </div>
+                                    }
+                                    <div class="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                                        @if (!message.IsDeleted)
+                                        {
+                                            <button type="button" @onclick="() => SetReplyTo(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Reply</button>
+                                            <span class="text-slate-200">·</span>
+                                            <button type="button" @onclick="() => StartEdit(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Edit</button>
+                                            <span class="text-slate-200">·</span>
+                                            @if (message.IsPinned)
+                                            {
+                                                <button type="button" @onclick="() => UnpinMessage(activeRoomId!.Value, message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-amber-500 hover:text-amber-600">Unpin</button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" @onclick="() => PinMessage(message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-slate-400 hover:text-amber-500">Pin</button>
+                                            }
+                                            <span class="text-slate-200">·</span>
+                                            <button type="button" @onclick="() => ConfirmDeleteMessage(message.Id)" class="text-[10px] font-bold text-slate-400 hover:text-red-500">Unsend</button>
+                                        }
+                                        @if (message.Reactions.Any())
+                                        {
+                                            <span class="text-slate-200">·</span>
+                                            @foreach (var r in message.Reactions.GroupBy(x => x.Emoji).Select(g => new { Emoji = g.Key, Count = g.Count() }))
+                                            {
+                                                <span class="text-xs bg-slate-100/80 rounded-full px-2 py-0.5">@r.Emoji @(r.Count > 1 ? r.Count.ToString() : "")</span>
+                                            }
+                                        }
+                                        @if (!message.IsDeleted)
+                                        {
+                                            @foreach (var emoji in new[] { "👍", "❤️", "😂", "😮", "😢" })
+                                            {
+                                                var hasReacted = message.Reactions.Any(r => r.UserId == currentUserId && r.Emoji == emoji);
+                                                <button type="button" @onclick="() => ToggleReaction(message.Id, emoji, hasReacted)"
+                                                        class="p-0.5 rounded hover:bg-slate-200/80 text-base leading-none @(hasReacted ? "ring-1 ring-[#E85D3F]" : "")">@emoji</button>
+                                            }
+                                            <div class="relative">
+                                                <button type="button" @onclick="() => ToggleReactionEmojiPicker(message.Id)" @onclick:stopPropagation="true"
+                                                        class="p-0.5 rounded hover:bg-slate-200/80 text-base leading-none @(reactionEmojiPickerMessageId == message.Id ? "ring-1 ring-[#E85D3F]" : "")" title="More emojis">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                                                </button>
+                                                @if (reactionEmojiPickerMessageId == message.Id)
+                                                {
+                                                    <Testify.Client.Features.Chat.Components.EmojiPicker
+                                                        OnEmojiSelected="(emoji) => SelectReactionEmoji(message.Id, emoji)"
+                                                        AlignRight="true" />
+                                                }
+                                            </div>
+                                        }
+                                        @if (message.ReadBy.Any())
+                                        {
+                                            <span class="text-[9px] text-slate-400 ml-1">Seen</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            @if (!string.IsNullOrEmpty(message.UserAvatarUrl))
+                            {
+                                <img src="@message.UserAvatarUrl" class="w-10 h-10 rounded-2xl mt-1 object-cover flex-shrink-0" alt="" />
+                            }
+                            else
+                            {
+                                <div class="w-10 h-10 rounded-2xl bg-slate-100 mt-1 flex items-center justify-center font-bold text-slate-600 text-xs flex-shrink-0">
+                                    @GetInitials(message.UserName)
+                                </div>
+                            }
+                            <div class="space-y-1.5 min-w-0 flex-1">
+                                @if (activeRoom?.RoomType != ChatRoomType.Private)
+                                {
+                                    <p class="text-[10px] font-bold text-slate-500 ml-1 mb-0.5">@message.UserName</p>
+                                }
+                                <div class="flex items-end gap-2">
+                                    <div class="@(message.IsDeleted ? "bg-slate-100 text-slate-400 italic" : "bg-slate-100 text-slate-700") p-5 rounded-3xl rounded-tl-none text-sm font-medium leading-relaxed">
+                                        @if (message.ParentMessage != null)
+                                        {
+                                            <div class="mb-2 pl-3 border-l-2 border-slate-300 text-[11px] text-slate-500">
+                                                <span class="font-bold">@message.ParentMessage.UserName</span>
+                                                <p class="truncate max-w-[200px] @(message.ParentMessage.IsDeleted ? "italic" : "")">@(message.ParentMessage.IsDeleted ? "The message has been withdrawn." : message.ParentMessage.Content)</p>
+                                            </div>
+                                        }
+                                        @(message.IsDeleted ? "The message has been withdrawn." : message.Content)
+                                        @if (message.UpdatedAt.HasValue && !message.IsDeleted)
+                                        {
+                                            <span class="text-[10px] text-slate-400 block mt-1">(edited)</span>
+                                        }
+                                    </div>
+                                    <span class="text-[9px] font-bold text-slate-300 uppercase mb-2 flex items-center gap-1">
+                                        @message.CreatedAt.ToString("HH:mm")
+                                        @if (message.IsPinned)
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-amber-400">
+                                                <path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>
+                                            </svg>
+                                        }
+                                    </span>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                                    @if (!message.IsDeleted)
+                                    {
+                                        <button type="button" @onclick="() => SetReplyTo(message)" class="text-[10px] font-bold text-slate-400 hover:text-slate-600">Reply</button>
+                                        <span class="text-slate-200">·</span>
+                                        @if (message.IsPinned)
+                                        {
+                                            <button type="button" @onclick="() => UnpinMessage(activeRoomId!.Value, message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-amber-500 hover:text-amber-600">Unpin</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" @onclick="() => PinMessage(message.Id)" disabled="@isPinning" class="text-[10px] font-bold text-slate-400 hover:text-amber-500">Pin</button>
+                                        }
+                                    }
+                                    @if (message.Reactions.Any())
+                                    {
+                                        @foreach (var r in message.Reactions.GroupBy(x => x.Emoji).Select(g => new { Emoji = g.Key, Count = g.Count() }))
+                                        {
+                                            <span class="text-xs bg-slate-100 rounded-full px-2 py-0.5">@r.Emoji @(r.Count > 1 ? r.Count.ToString() : "")</span>
+                                        }
+                                    }
+                                    @if (!message.IsDeleted)
+                                    {
+                                        @foreach (var emoji in new[] { "👍", "❤️", "😂", "😮", "😢" })
+                                        {
+                                            var hasReactedOther = message.Reactions.Any(r => r.UserId == currentUserId && r.Emoji == emoji);
+                                            <button type="button" @onclick="() => ToggleReaction(message.Id, emoji, hasReactedOther)"
+                                                    class="p-0.5 rounded hover:bg-slate-200/80 text-base leading-none @(hasReactedOther ? "ring-1 ring-[#E85D3F]" : "")">@emoji</button>
+                                        }
+                                        <div class="relative">
+                                            <button type="button" @onclick="() => ToggleReactionEmojiPicker(message.Id)" @onclick:stopPropagation="true"
+                                                    class="p-0.5 rounded hover:bg-slate-200/80 text-base leading-none @(reactionEmojiPickerMessageId == message.Id ? "ring-1 ring-[#E85D3F]" : "")" title="More emojis">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                                            </button>
+                                            @if (reactionEmojiPickerMessageId == message.Id)
+                                            {
+                                                <Testify.Client.Features.Chat.Components.EmojiPicker
+                                                    OnEmojiSelected="(emoji) => SelectReactionEmoji(message.Id, emoji)" />
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                @if (message.Attachments.Any() && !message.IsDeleted)
+                                {
+                                    <div class="flex flex-col gap-2 mt-2">
+                                        @foreach (var attachment in message.Attachments)
+                                        {
+                                            @if (IsImageAttachment(attachment.FileType))
+                                            {
+                                                <div class="max-w-xs rounded-2xl overflow-hidden shadow-sm border border-slate-100">
+                                                    <a href="@attachment.FileUrl" target="_blank">
+                                                        <img src="@attachment.FileUrl" alt="@attachment.FileName" class="max-w-full max-h-64 object-cover" loading="lazy" />
+                                                    </a>
+                                                    <div class="bg-slate-50 px-3 py-1.5 flex items-center justify-between">
+                                                        <span class="text-[10px] text-slate-500 truncate">@attachment.FileName</span>
+                                                        <a href="api/chat/attachments/@attachment.Id/download" class="text-[10px] font-bold text-[#7E96E1] hover:underline ml-2 flex-shrink-0" download>Download</a>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <a href="api/chat/attachments/@attachment.Id/download" download class="bg-slate-50 p-4 rounded-3xl border border-slate-100 flex items-center gap-4 hover:bg-slate-100 transition-colors cursor-pointer max-w-xs">
+                                                    <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@GetFileIconColor(attachment.FileType)">
+                                                            @((MarkupString)GetFileIconPath(attachment.FileType))
+                                                        </svg>
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        <p class="text-xs font-black text-slate-800 truncate">@attachment.FileName</p>
+                                                        <p class="text-[10px] font-bold text-slate-400">@FormatFileSize(attachment.FileSize) • @GetFriendlyFileType(attachment.FileType)</p>
+                                                    </div>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        </div>
+                    }
+
+                    @if (typingUsers.Any())
+                    {
+                        <div class="flex items-center gap-2 text-slate-400 text-xs">
+                            <div class="flex gap-1">
+                                <div class="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                                <div class="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                                <div class="w-2 h-2 bg-slate-300 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                            </div>
+                            <span class="font-bold">@string.Join(", ", typingUsers) is typing...</span>
+                        </div>
+                    }
+                </div>
+
+                @* Message Input *@
+                <div class="p-8 pt-4">
+                    @if (replyToMessage != null)
+                    {
+                        <div class="mb-2 flex items-center justify-between gap-2 rounded-2xl bg-slate-100 border border-slate-200 px-4 py-2">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] font-black text-slate-500 uppercase">Reply @(replyToMessage.UserName)</p>
+                                <p class="text-xs text-slate-600 truncate">@replyToMessage.Content</p>
+                            </div>
+                            <button type="button" @onclick="ClearReplyTo" class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-xl transition-all flex-shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                        </div>
+                    }
+
+                    @* Selected Files Preview *@
+                    @if (selectedFiles.Any())
+                    {
+                        <div class="mb-2 rounded-2xl bg-slate-50 border border-slate-200 p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-[10px] font-black text-slate-500 uppercase">
+                                    @selectedFiles.Count file(s) selected • @FormatFileSize(selectedFiles.Sum(f => f.Size))
+                                </p>
+                                <button type="button" @onclick="ClearSelectedFiles" class="text-[10px] font-bold text-red-400 hover:text-red-600">
+                                    Clear all
+                                </button>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                @for (var i = 0; i < selectedFiles.Count; i++)
+                                {
+                                    var idx = i;
+                                    var file = selectedFiles[i];
+                                    <div class="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-slate-100 group/file">
+                                        @if (IsImageAttachment(file.ContentType))
+                                        {
+                                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+                                                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                                                </svg>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400">
+                                                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                                                </svg>
+                                            </div>
+                                        }
+                                        <div class="min-w-0">
+                                            <p class="text-[11px] font-bold text-slate-700 truncate max-w-[120px]">@file.FileName</p>
+                                            <p class="text-[9px] text-slate-400">@FormatFileSize(file.Size)</p>
+                                        </div>
+                                        <button type="button" @onclick="() => RemoveSelectedFile(idx)"
+                                                class="p-1 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/file:opacity-100 flex-shrink-0">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @* Upload error message *@
+                    @if (!string.IsNullOrEmpty(uploadError))
+                    {
+                        <div class="mb-2 rounded-xl bg-red-50 border border-red-200 px-4 py-2 flex items-center justify-between">
+                            <p class="text-xs text-red-600 font-medium">@uploadError</p>
+                            <button type="button" @onclick="() => uploadError = string.Empty" class="text-red-400 hover:text-red-600 p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                        </div>
+                    }
+
+                    <div class="bg-slate-50 rounded-[32px] p-2 border border-slate-100 focus-within:ring-2 focus-within:ring-[#7E96E1]/20 transition-all">
+                        <div class="flex items-center gap-2">
+                            @* Hidden file input *@
+                            <InputFile @ref="fileInput" OnChange="OnFilesSelected" multiple
+                                       style="display:none"
+                                       accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.svg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.mp4,.mp3" />
+
+                            <button @onclick="TriggerFileInput" class="p-3 text-slate-400 hover:text-[#7E96E1] hover:bg-white rounded-2xl transition-all" title="Attach files">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                </svg>
+                            </button>
+                            
+                            <input 
+                                type="text" 
+                                value="@messageInput"
+                                @oninput="OnMessageInput"
+                                @onkeydown="HandleKeyDown"
+                                placeholder="@(selectedFiles.Any() ? "Add a message (optional)..." : $"Message {GetRoomDisplayName(activeRoom)}...")"
+                                class="flex-1 bg-transparent py-4 px-2 text-sm font-bold text-slate-700 placeholder:text-slate-300 outline-none"
+                            />
+
+                            <div class="flex items-center gap-1 pr-2">
+                                <div class="relative">
+                                    <button @onclick="ToggleEmojiPicker" @onclick:stopPropagation="true"
+                                            class="p-3 @(isEmojiPickerOpen ? "text-[#E85D3F] bg-[#E85D3F]/10" : "text-slate-400 hover:text-slate-600 hover:bg-white") rounded-2xl transition-all">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/>
+                                        </svg>
+                                    </button>
+                                    @if (isEmojiPickerOpen)
+                                    {
+                                        <Testify.Client.Features.Chat.Components.EmojiPicker
+                                            OnEmojiSelected="InsertEmoji"
+                                            AlignRight="true" />
+                                    }
+                                </div>
+                                <button 
+                                    @onclick="SendMessage"
+                                    disabled="@(isSending || (string.IsNullOrWhiteSpace(messageInput) && !selectedFiles.Any()))"
+                                    class="@(isSending || (string.IsNullOrWhiteSpace(messageInput) && !selectedFiles.Any()) ? "bg-slate-200 text-slate-400" : "bg-[#E85D3F] text-white shadow-lg") p-4 rounded-2xl transition-all active:scale-90 disabled:cursor-not-allowed"
+                                >
+                                    @if (isSending)
+                                    {
+                                        <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    }
+                                    else
+                                    {
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>
+                                        </svg>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-[9px] text-center mt-3 text-slate-300 font-bold uppercase tracking-widest">
+                        @(selectedFiles.Any() ? $"Press Enter to send with {selectedFiles.Count} file(s)" : "Press Enter to send message")
+                    </p>
+                </div>
+
+                @* Room Settings Panel *@
+                @if (isRoomSettingsOpen && activeRoom != null)
+                {
+                    <Testify.Client.Features.Chat.Components.RoomSettingsPanel
+                        Room="activeRoom"
+                        CurrentUserId="currentUserId"
+                        OnClose="() => { isRoomSettingsOpen = false; StateHasChanged(); }"
+                        OnRoomLeft="HandleRoomLeft"
+                        OnRoomUpdated="HandleRoomUpdated"
+                        OnMembersAdded="HandleMembersAdded"
+                        OnMemberRemoved="HandleMemberRemoved" />
+                }
+            </div>
+        }
+        else
+        {
+            @* No Room Selected *@
+            <div class="flex-1 bg-white rounded-[48px] border border-slate-100 shadow-sm flex items-center justify-center">
+                <div class="text-center space-y-4">
+                    <div class="w-20 h-20 bg-slate-50 rounded-[32px] flex items-center justify-center mx-auto">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-300">
+                            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-slate-800">Select a conversation</h3>
+                        <p class="text-slate-400 text-sm mt-2">Choose a chat from the sidebar to start messaging</p>
+                    </div>
+                </div>
+            </div>
+        }
+        <NewChatModal IsVisible="showNewChatModal"
+                     OnCloseRequested="CloseNewChatModal"
+                     OnUserSelected="HandleNewChatUserSelected" />
+
+        @* Create Group Modal *@
+        @if (showCreateGroupModal)
+        {
+            <div class="fixed inset-0 z-[200] flex items-center justify-center p-6">
+                <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" @onclick="CloseCreateGroupModal"></div>
+                <div class="relative flex w-full max-w-md max-h-[85vh] flex-col overflow-hidden rounded-[48px] bg-white shadow-2xl" @onclick:stopPropagation="true">
+                    <div class="flex items-start justify-between border-b border-slate-50 bg-slate-50/50 p-6 flex-shrink-0">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800">Create group chat</h2>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">Name the group and add members</p>
+                        </div>
+                        <button type="button" @onclick="CloseCreateGroupModal" class="rounded-2xl p-2 text-slate-400 hover:bg-slate-100 transition-all">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="p-4 space-y-4 flex-shrink-0">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Group name</label>
+                            <input type="text" @bind="newGroupRoomName" placeholder="e.g. Team Dev"
+                                   class="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Add members</label>
+                            @if (isLoadingUsersForGroup)
+                            {
+                                <div class="flex justify-center py-6"><div class="h-8 w-8 animate-spin rounded-full border-2 border-[#E85D3F] border-t-transparent"></div></div>
+                            }
+                            else
+                            {
+                                <div class="max-h-48 overflow-y-auto space-y-1 rounded-2xl border border-slate-100 p-2">
+                                    @foreach (var u in usersForGroup)
+                                    {
+                                        var isSelected = selectedUserIdsForGroup.Contains(u.Id);
+                                        <button type="button" @onclick="() => ToggleGroupUser(u.Id)"
+                                                class="w-full flex items-center gap-3 p-2.5 rounded-xl text-left transition-all @(isSelected ? "bg-[#E85D3F]/10 ring-1 ring-[#E85D3F]/30" : "hover:bg-slate-50")">
+                                            @if (!string.IsNullOrEmpty(u.AvatarUrl))
+                                            {
+                                                <img src="@u.AvatarUrl" class="w-9 h-9 rounded-xl object-cover flex-shrink-0" alt="" />
+                                            }
+                                            else
+                                            {
+                                                <div class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-xs flex-shrink-0">@GetInitials(u.FullName ?? u.UserName)</div>
+                                            }
+                                            <span class="flex-1 font-bold text-slate-800 text-sm truncate">@(u.FullName ?? u.UserName)</span>
+                                            @if (isSelected)
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#E85D3F] flex-shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
+                                            }
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-slate-50 flex-shrink-0">
+                        <button type="button" @onclick="CreateGroup"
+                                disabled="@(string.IsNullOrWhiteSpace(newGroupRoomName) || !selectedUserIdsForGroup.Any())"
+                                class="w-full py-3.5 rounded-2xl font-black text-sm text-white bg-[#E85D3F] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                            Create group
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* Video Call Components (rendered outside main layout for PiP overlay) *@
+<VideoCallWindow @ref="videoCallWindow"
+                 IsVisible="@isInCall"
+                 CurrentCallType="@currentCallType"
+                 PeerName="@callPeerName"
+                 PeerAvatarUrl="@callPeerAvatarUrl"
+                 CallSessionId="@activeCallSessionId"
+                 WebRtcService="@webRtcService"
+                 CallHubService="@callHubService"
+                 OnCallEnded="HandleCallEndedUI" />
+
+<IncomingCallDialog IsVisible="@hasIncomingCall"
+                    IncomingCall="@incomingCallData"
+                    OnAccepted="AcceptIncomingCall"
+                    OnRejected="RejectIncomingCall" />
+
+@code {
+    private List<ChatRoomResponse> rooms = new();
+    private List<ChatRoomResponse> filteredRooms = new();
+    private List<ChatMessageResponse> messages = new();
+    private List<string> typingUsers = new();
+    
+    private bool isLoading = true;
+    private int? activeRoomId;
+    private ChatRoomResponse? activeRoom;
+    private string messageInput = string.Empty;
+    private string searchQuery = string.Empty;
+    private string? currentUserId;
+    private ChatHubService? hubService;
+    private NotificationHubService? notificationHubService;
+    private bool showNewChatModal;
+    private CancellationTokenSource? _typingStopCts;
+    private CancellationTokenSource? _typingStartCts;
+    private bool _hasSentTyping;
+    private int? _editingMessageId;
+    private string _editContent = string.Empty;
+    private ChatMessageResponse? replyToMessage;
+    private int messageSkip;
+    private bool hasMoreMessages = true;
+    private bool isLoadingMore;
+    private bool showCreateGroupModal;
+    private string newGroupRoomName = string.Empty;
+    private List<string> selectedUserIdsForGroup = new();
+    private List<ChatUserItemResponse> usersForGroup = new();
+    private bool isLoadingUsersForGroup;
+
+    // File upload state
+    private List<FileUploadItem> selectedFiles = new();
+    private InputFile? fileInput;
+    private bool isSending;
+    private string uploadError = string.Empty;
+    private const long MaxFileSizeBytes = 25 * 1024 * 1024; // 25 MB
+
+    // Message search state
+    private bool isMessageSearchOpen;
+    private string messageSearchQuery = string.Empty;
+    private List<ChatMessageResponse> searchResults = new();
+    private int searchTotalCount;
+    private int searchSkip;
+    private bool isSearching;
+    private bool hasMoreSearchResults;
+    private int? highlightedMessageId;
+    private CancellationTokenSource? _searchDebounceCts;
+
+    // Pinned messages state
+    private bool isPinnedPanelOpen;
+    private List<ChatPinnedMessageResponse> pinnedMessages = new();
+    private bool isLoadingPinned;
+    private bool isPinning;
+
+    // Emoji picker state
+    private bool isEmojiPickerOpen;
+    private int? reactionEmojiPickerMessageId;
+
+    // Room settings state
+    private bool isRoomSettingsOpen;
+
+    // Call state
+    private CallHubService? callHubService;
+    private VideoCallWindow? videoCallWindow;
+    private bool isInCall;
+    private bool hasIncomingCall;
+    private IncomingCallResponse? incomingCallData;
+    private int? activeCallSessionId;
+    private WebRtcService? webRtcService;
+    private CallType currentCallType;
+    private string callPeerName = string.Empty;
+    private string? callPeerAvatarUrl;
+    private CancellationTokenSource? _ringingTimeoutCts;
+    private CancellationTokenSource? _connectingTimeoutCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrentUser();
+        await LoadRooms();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            hubService = ServiceProvider.GetService<ChatHubService>();
+            if (hubService != null)
+            {
+                if (!hubService.IsConnected)
+                    await hubService.StartAsync();
+                hubService.OnMessageReceived += HandleMessageReceived;
+                hubService.OnUserTyping += HandleUserTyping;
+                hubService.OnMessageDeleted += HandleMessageDeleted;
+                hubService.OnMessageUpdated += HandleMessageUpdated;
+                hubService.OnReactionAdded += HandleReactionAdded;
+                hubService.OnReactionRemoved += HandleReactionRemoved;
+                hubService.OnMessageRead += HandleMessageRead;
+                hubService.OnMessagePinned += HandleMessagePinned;
+                hubService.OnMessageUnpinned += HandleMessageUnpinned;
+                hubService.OnRoomUpdated += HandleRoomUpdatedSignalR;
+                hubService.OnParticipantsAdded += HandleParticipantsAddedSignalR;
+                hubService.OnParticipantRemoved += HandleParticipantRemovedSignalR;
+            }
+
+            notificationHubService = ServiceProvider.GetService<NotificationHubService>();
+            if (notificationHubService != null)
+            {
+                if (!notificationHubService.IsConnected)
+                    await notificationHubService.StartAsync();
+                notificationHubService.OnUserStatusChanged += HandleUserStatusChanged;
+
+                // Sync initial online status from the live presence data.
+                // The API response may be stale if the user's presence changed
+                // between the API call (OnInitializedAsync) and now.
+                SyncOnlineStatusFromPresence();
+            }
+
+            // Initialize Call Hub (may already be started by GlobalCallHandler)
+            callHubService = ServiceProvider.GetService<CallHubService>();
+            if (callHubService != null)
+            {
+                if (!callHubService.IsConnected)
+                    await callHubService.StartAsync();
+                callHubService.OnIncomingCall += HandleIncomingCall;
+                callHubService.OnCallRinging += HandleCallRinging;
+                callHubService.OnCallAnswered += HandleCallAnswered;
+                callHubService.OnIceCandidateReceived += HandleIceCandidateReceived;
+                callHubService.OnCallEnded += HandleCallEndedSignalR;
+                callHubService.OnCallError += HandleCallError;
+                callHubService.OnMediaToggled += HandleMediaToggled;
+                callHubService.OnReconnected += HandleCallHubReconnected;
+
+                // Check if there's a pending incoming call accepted from another page
+                // (via GlobalCallHandler). If so, process it now.
+                if (callHubService.PendingIncomingCall != null)
+                {
+                    var pendingCall = callHubService.PendingIncomingCall;
+                    callHubService.PendingIncomingCall = null;
+                    // Process the pending call after WebRTC service is initialized
+                    _ = ProcessPendingIncomingCall(pendingCall);
+                }
+            }
+
+            // Initialize WebRTC service
+            webRtcService = ServiceProvider.GetService<WebRtcService>();
+            if (webRtcService != null)
+            {
+                webRtcService.IceCandidateGenerated += HandleLocalIceCandidate;
+                webRtcService.ConnectionStateChanged += HandleWebRtcStateChanged;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Syncs room online status from the live NotificationHubService presence data.
+    /// This ensures the UI reflects the correct status even if the API response was stale.
+    /// </summary>
+    private void SyncOnlineStatusFromPresence()
+    {
+        if (notificationHubService == null) return;
+
+        foreach (var room in rooms)
+        {
+            if (room.OtherParticipant != null)
+            {
+                var isOnline = notificationHubService.IsUserOnline(room.OtherParticipant.UserId);
+                room.OtherParticipant.IsOnline = isOnline;
+                room.OtherParticipant.Status = isOnline ? "Online" : "Offline";
+            }
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Processes a pending incoming call that was accepted from the GlobalCallHandler
+    /// on a different page. This completes the WebRTC handshake.
+    /// </summary>
+    private async Task ProcessPendingIncomingCall(IncomingCallResponse pendingCall)
+    {
+        // Small delay to ensure WebRTC service is fully initialized
+        await Task.Delay(100);
+
+        if (webRtcService == null || callHubService == null)
+        {
+            Console.WriteLine("[MessagesPage] Cannot process pending call — services not ready");
+            return;
+        }
+
+        // Set call state
+        incomingCallData = pendingCall;
+        hasIncomingCall = false;
+        isInCall = true;
+        activeCallSessionId = pendingCall.CallSessionId;
+        currentCallType = pendingCall.CallType;
+        callPeerName = pendingCall.CallerName;
+        callPeerAvatarUrl = pendingCall.CallerAvatarUrl;
+        StateHasChanged();
+
+        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Connecting);
+
+        // Initialize WebRTC
+        var initialized = await webRtcService.InitializeAsync(pendingCall.CallType == CallType.Video);
+        if (!initialized)
+        {
+            await callHubService.RejectCallAsync(pendingCall.CallSessionId);
+            isInCall = false;
+            activeCallSessionId = null;
+            incomingCallData = null;
+            StateHasChanged();
+            return;
+        }
+
+        // Set remote description (offer from caller)
+        await webRtcService.SetRemoteDescriptionAsync(pendingCall.SdpOffer);
+
+        // Create answer
+        var sdpAnswer = await webRtcService.CreateAnswerAsync();
+        if (string.IsNullOrEmpty(sdpAnswer))
+        {
+            await callHubService.RejectCallAsync(pendingCall.CallSessionId);
+            isInCall = false;
+            activeCallSessionId = null;
+            incomingCallData = null;
+            await webRtcService.DisposeWebRtcAsync();
+            StateHasChanged();
+            return;
+        }
+
+        // Send answer
+        await callHubService.SendAnswerAsync(new CallAnswerRequest
+        {
+            CallSessionId = pendingCall.CallSessionId,
+            SdpAnswer = sdpAnswer
+        });
+
+        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+        incomingCallData = null;
+
+        // Start connecting timeout for callee side
+        StartConnectingTimeout();
+
+        Console.WriteLine("[MessagesPage] Pending call processed — WebRTC handshake sent");
+    }
+
+    private void HandleUserStatusChanged(string userId, bool isOnline)
+    {
+        foreach (var room in rooms.Where(r => r.OtherParticipant?.UserId == userId))
+        {
+            room.OtherParticipant!.IsOnline = isOnline;
+            room.OtherParticipant.Status = isOnline ? "Online" : "Offline";
+        }
+        if (activeRoom?.OtherParticipant?.UserId == userId)
+        {
+            activeRoom.OtherParticipant.IsOnline = isOnline;
+            activeRoom.OtherParticipant.Status = isOnline ? "Online" : "Offline";
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadCurrentUser()
+    {
+        currentUserId = await ChatService.GetCurrentUserIdAsync();
+    }
+
+    private async Task LoadRooms()
+    {
+        try
+        {
+            isLoading = true;
+            rooms = await ChatService.GetChatRoomsAsync();
+            FilterRooms();
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnSearchQueryInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? string.Empty;
+        FilterRooms();
+    }
+
+    private void FilterRooms()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredRooms = rooms;
+        }
+        else
+        {
+            filteredRooms = rooms.Where(r => 
+                GetRoomDisplayName(r).Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                (r.LastMessage?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false)
+            ).ToList();
+        }
+    }
+
+    private async Task SelectRoom(int roomId)
+    {
+        activeRoomId = roomId;
+        activeRoom = rooms.FirstOrDefault(r => r.Id == roomId);
+        messages.Clear();
+        typingUsers.Clear();
+        replyToMessage = null;
+        _editingMessageId = null;
+        messageSkip = 0;
+        hasMoreMessages = true;
+        ClearSelectedFiles();
+        uploadError = string.Empty;
+        ClearMessageSearch();
+        isMessageSearchOpen = false;
+        isPinnedPanelOpen = false;
+        isRoomSettingsOpen = false;
+        pinnedMessages.Clear();
+
+        if (activeRoom != null)
+        {
+            // Reset unread count immediately for responsive UI
+            activeRoom.UnreadCount = 0;
+            StateHasChanged();
+
+            messages = await ChatService.GetRoomMessagesAsync(roomId);
+            messageSkip = messages.Count;
+            hasMoreMessages = messages.Count >= 50;
+            if (hubService != null)
+                await hubService.JoinRoomAsync(roomId);
+
+            // Load pinned messages in background
+            _ = LoadPinnedMessagesAsync(roomId);
+
+            if (messages.Any())
+            {
+                var lastMessage = messages.Last();
+                await ChatService.MarkAsReadAsync(roomId, lastMessage.Id);
+            }
+            StateHasChanged();
+            await ScrollToBottomAsync(false);
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (isSending) return;
+        
+        var hasText = !string.IsNullOrWhiteSpace(messageInput);
+        var hasFiles = selectedFiles.Any();
+
+        if (!hasText && !hasFiles) return;
+        if (!activeRoomId.HasValue) return;
+
+        if (hubService != null && activeRoomId.HasValue)
+            await hubService.StopTypingAsync(activeRoomId.Value);
+        _hasSentTyping = false;
+
+        isSending = true;
+        uploadError = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            ChatMessageResponse msg;
+
+            if (hasFiles)
+            {
+                // Send with attachments
+                msg = await ChatService.SendMessageWithAttachmentsAsync(
+                    activeRoomId.Value,
+                    hasText ? messageInput.Trim() : null,
+                    replyToMessage?.Id,
+                    selectedFiles);
+            }
+            else
+            {
+                // Send text-only message
+                var request = new SendMessageRequest
+                {
+                    RoomId = activeRoomId.Value,
+                    Content = messageInput.Trim(),
+                    MessageType = MessageType.Text,
+                    ParentMessageId = replyToMessage?.Id
+                };
+                msg = await ChatService.SendMessageAsync(request);
+            }
+
+            messageInput = string.Empty;
+            replyToMessage = null;
+            ClearSelectedFiles();
+
+            // Add own message immediately (sender is excluded from SignalR broadcast)
+            if (!messages.Any(m => m.Id == msg.Id))
+                messages.Add(msg);
+
+            // Update sidebar
+            var room = rooms.FirstOrDefault(r => r.Id == msg.RoomId);
+            if (room != null)
+            {
+                room.LastMessage = msg.Content;
+                room.LastMessageSender = msg.UserName;
+                room.LastMessageTime = msg.CreatedAt;
+                room.LastActivityAt = msg.CreatedAt;
+                rooms = rooms.OrderByDescending(r => r.LastActivityAt).ToList();
+                FilterRooms();
+            }
+
+            StateHasChanged();
+            await ScrollToBottomAsync();
+        }
+        catch (Exception ex)
+        {
+            uploadError = ex.Message.Contains("size")
+                ? "One or more files exceed the maximum allowed size."
+                : "Failed to send message. Please try again.";
+            StateHasChanged();
+        }
+        finally
+        {
+            isSending = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnMessageInput(ChangeEventArgs e)
+    {
+        messageInput = e.Value?.ToString() ?? string.Empty;
+        NotifyTyping();
+        StateHasChanged();
+    }
+
+    private async void NotifyTyping()
+    {
+        if (!activeRoomId.HasValue || hubService == null) return;
+
+        _typingStopCts?.Cancel();
+        _typingStartCts?.Cancel();
+        _typingStopCts = new CancellationTokenSource();
+        _typingStartCts = new CancellationTokenSource();
+        var stopCts = _typingStopCts;
+        var startCts = _typingStartCts;
+        var roomId = activeRoomId.Value;
+
+        if (!string.IsNullOrWhiteSpace(messageInput))
+        {
+            if (!_hasSentTyping)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(300, startCts.Token);
+                        await InvokeAsync(async () =>
+                        {
+                            if (hubService != null && activeRoomId == roomId)
+                            {
+                                await hubService.StartTypingAsync(roomId);
+                                _hasSentTyping = true;
+                                StateHasChanged();
+                            }
+                        });
+                    }
+                    catch (OperationCanceledException) { }
+                });
+            }
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(2000, stopCts.Token);
+                    await InvokeAsync(async () =>
+                    {
+                        if (hubService != null && activeRoomId == roomId)
+                        {
+                            await hubService.StopTypingAsync(roomId);
+                            _hasSentTyping = false;
+                            StateHasChanged();
+                        }
+                    });
+                }
+                catch (OperationCanceledException) { }
+            });
+        }
+        else
+        {
+            _ = InvokeAsync(async () =>
+            {
+                await hubService!.StopTypingAsync(roomId);
+                _hasSentTyping = false;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private async void HandleMessageReceived(ChatMessageResponse message)
+    {
+        await InvokeAsync(async () =>
+        {
+            var room = rooms.FirstOrDefault(r => r.Id == message.RoomId);
+            if (room == null)
+            {
+                var newRoom = await ChatService.GetChatRoomByIdAsync(message.RoomId);
+                if (newRoom != null)
+                {
+                    newRoom.LastMessage = message.Content;
+                    newRoom.LastMessageSender = message.UserName;
+                    newRoom.LastMessageTime = message.CreatedAt;
+                    newRoom.LastActivityAt = message.CreatedAt;
+                    if (message.UserId != currentUserId)
+                        newRoom.UnreadCount = 1;
+                    rooms.Insert(0, newRoom);
+                    rooms = rooms.OrderByDescending(r => r.LastActivityAt).ToList();
+                    FilterRooms();
+                }
+            }
+            else
+            {
+                room.LastMessage = message.Content;
+                room.LastMessageSender = message.UserName;
+                room.LastMessageTime = message.CreatedAt;
+                room.LastActivityAt = message.CreatedAt;
+                if (message.RoomId != activeRoomId && message.UserId != currentUserId)
+                    room.UnreadCount++;
+                rooms = rooms.OrderByDescending(r => r.LastActivityAt).ToList();
+                FilterRooms();
+            }
+
+            if (message.RoomId == activeRoomId)
+            {
+                if (!messages.Any(m => m.Id == message.Id))
+                    messages.Add(message);
+                if (message.UserId != currentUserId)
+                    _ = ChatService.MarkAsReadAsync(message.RoomId, message.Id);
+            }
+
+            StateHasChanged();
+            if (message.RoomId == activeRoomId)
+                await ScrollToBottomAsync();
+        });
+    }
+
+    private void HandleUserTyping(string userId, string userName, bool isTyping)
+    {
+        if (userId == currentUserId) return;
+
+        if (isTyping)
+        {
+            if (!typingUsers.Contains(userName))
+            {
+                typingUsers.Add(userName);
+            }
+        }
+        else
+        {
+            typingUsers.Remove(userName);
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleMessageDeleted(int messageId)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null)
+        {
+            msg.Content = "The message has been withdrawn.";
+            msg.IsDeleted = true;
+
+            // Update ParentMessage references in replies
+            foreach (var m in messages.Where(m => m.ParentMessage?.Id == messageId))
+            {
+                m.ParentMessage!.Content = "The message has been withdrawn.";
+                m.ParentMessage.IsDeleted = true;
+            }
+
+            // Update sidebar if this was the last message in the room
+            var room = rooms.FirstOrDefault(r => r.Id == msg.RoomId);
+            if (room != null && messages.LastOrDefault()?.Id == messageId)
+            {
+                room.LastMessage = "The message has been withdrawn.";
+            }
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleMessageUpdated(ChatMessageResponse message)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == message.Id);
+        if (msg != null)
+        {
+            msg.Content = message.Content;
+            msg.UpdatedAt = message.UpdatedAt;
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleReactionAdded(int messageId, string userId, string userName, string emoji)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null)
+        {
+            if (msg.Reactions.All(r => r.UserId != userId || r.Emoji != emoji))
+                msg.Reactions.Add(new ChatMessageReactionResponse { MessageId = messageId, UserId = userId, UserName = userName, Emoji = emoji });
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleReactionRemoved(int messageId, string userId, string emoji)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null)
+        {
+            var r = msg.Reactions.FirstOrDefault(x => x.UserId == userId && x.Emoji == emoji);
+            if (r != null) msg.Reactions.Remove(r);
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleMessageRead(int messageId, string userId, string userName)
+    {
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg != null && msg.ReadBy.All(x => x.UserId != userId))
+        {
+            msg.ReadBy.Add(new ChatMessageReadResponse { MessageId = messageId, UserId = userId, UserName = userName });
+        }
+        InvokeAsync(StateHasChanged);
+    }
+
+    // Emoji picker methods
+    private void CloseEmojiPickers()
+    {
+        if (isEmojiPickerOpen || reactionEmojiPickerMessageId != null)
+        {
+            isEmojiPickerOpen = false;
+            reactionEmojiPickerMessageId = null;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleEmojiPicker()
+    {
+        isEmojiPickerOpen = !isEmojiPickerOpen;
+        reactionEmojiPickerMessageId = null;
+    }
+
+    private void ToggleReactionEmojiPicker(int messageId)
+    {
+        reactionEmojiPickerMessageId = reactionEmojiPickerMessageId == messageId ? null : messageId;
+        isEmojiPickerOpen = false;
+    }
+
+    private void InsertEmoji(string emoji)
+    {
+        messageInput += emoji;
+        isEmojiPickerOpen = false;
+        StateHasChanged();
+    }
+
+    private async Task SelectReactionEmoji(int messageId, string emoji)
+    {
+        reactionEmojiPickerMessageId = null;
+        var msg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (msg == null) return;
+        var hasReacted = msg.Reactions.Any(r => r.UserId == currentUserId && r.Emoji == emoji);
+        await ToggleReaction(messageId, emoji, hasReacted);
+    }
+
+    private async Task ToggleReaction(int messageId, string emoji, bool hasReacted)
+    {
+        try
+        {
+            var msg = messages.FirstOrDefault(m => m.Id == messageId);
+            if (msg == null) return;
+
+            if (hasReacted)
+            {
+                // Optimistic local update: remove reaction
+                var existing = msg.Reactions.FirstOrDefault(r => r.UserId == currentUserId && r.Emoji == emoji);
+                if (existing != null) msg.Reactions.Remove(existing);
+                StateHasChanged();
+                await ChatService.RemoveReactionAsync(messageId, emoji);
+            }
+            else
+            {
+                // Optimistic local update: add reaction
+                if (msg.Reactions.All(r => r.UserId != currentUserId || r.Emoji != emoji))
+                {
+                    msg.Reactions.Add(new ChatMessageReactionResponse
+                    {
+                        MessageId = messageId,
+                        UserId = currentUserId ?? "",
+                        UserName = "",
+                        Emoji = emoji
+                    });
+                }
+                StateHasChanged();
+                await ChatService.AddReactionAsync(new AddReactionRequest { MessageId = messageId, Emoji = emoji });
+            }
+        }
+        catch { }
+    }
+
+    private void StartEdit(ChatMessageResponse message)
+    {
+        _editingMessageId = message.Id;
+        _editContent = message.Content ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private void CancelEditing()
+    {
+        _editingMessageId = null;
+        _editContent = string.Empty;
+        StateHasChanged();
+    }
+
+    private void HandleEditKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            CancelEditing();
+    }
+
+    private async Task SaveEdit(int messageId)
+    {
+        if (string.IsNullOrWhiteSpace(_editContent)) return;
+        try
+        {
+            var updated = await ChatService.UpdateMessageAsync(messageId, _editContent.Trim());
+            // Update local state from HTTP response (sender excluded from SignalR broadcast)
+            var msg = messages.FirstOrDefault(m => m.Id == messageId);
+            if (msg != null)
+            {
+                msg.Content = updated.Content;
+                msg.UpdatedAt = updated.UpdatedAt;
+            }
+            _editingMessageId = null;
+            _editContent = string.Empty;
+            StateHasChanged();
+        }
+        catch { }
+    }
+
+    private async Task ConfirmDeleteMessage(int messageId)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Unsend this message?"))
+            return;
+        try
+        {
+            var success = await ChatService.DeleteMessageAsync(messageId);
+            if (success)
+            {
+                // Update local state immediately (sender is excluded from SignalR broadcast)
+                var msg = messages.FirstOrDefault(m => m.Id == messageId);
+                if (msg != null)
+                {
+                    msg.Content = "The message has been withdrawn.";
+                    msg.IsDeleted = true;
+
+                    // Update ParentMessage references
+                    foreach (var m in messages.Where(m => m.ParentMessage?.Id == messageId))
+                    {
+                        m.ParentMessage!.Content = "The message has been withdrawn.";
+                        m.ParentMessage.IsDeleted = true;
+                    }
+
+                    // Update sidebar
+                    var room = rooms.FirstOrDefault(r => r.Id == msg.RoomId);
+                    if (room != null && messages.LastOrDefault()?.Id == messageId)
+                    {
+                        room.LastMessage = "The message has been withdrawn.";
+                    }
+                }
+                StateHasChanged();
+            }
+        }
+        catch { }
+    }
+
+    private void SetReplyTo(ChatMessageResponse message)
+    {
+        replyToMessage = message;
+        StateHasChanged();
+    }
+
+    private void ClearReplyTo()
+    {
+        replyToMessage = null;
+        StateHasChanged();
+    }
+
+    #region File Upload
+
+    private async Task TriggerFileInput()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval",
+                "document.querySelector('input[type=file][multiple]')?.click()");
+        }
+        catch { }
+    }
+
+    private async Task OnFilesSelected(InputFileChangeEventArgs e)
+    {
+        uploadError = string.Empty;
+
+        try
+        {
+            var filesToAdd = e.GetMultipleFiles();
+
+            foreach (var browserFile in filesToAdd)
+            {
+                if (browserFile.Size > MaxFileSizeBytes)
+                {
+                    uploadError = $"File '{browserFile.Name}' exceeds the maximum size of {MaxFileSizeBytes / (1024 * 1024)} MB.";
+                    continue;
+                }
+
+                if (browserFile.Size == 0)
+                {
+                    uploadError = $"File '{browserFile.Name}' is empty.";
+                    continue;
+                }
+
+                // Read file content into a MemoryStream (for Blazor WASM, we buffer it)
+                var ms = new MemoryStream();
+                await browserFile.OpenReadStream(MaxFileSizeBytes).CopyToAsync(ms);
+                ms.Position = 0;
+
+                selectedFiles.Add(new FileUploadItem
+                {
+                    FileName = browserFile.Name,
+                    Size = browserFile.Size,
+                    ContentType = browserFile.ContentType ?? "application/octet-stream",
+                    Content = ms
+                });
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            uploadError = "Failed to read selected files. Please try again.";
+            Console.WriteLine($"File selection error: {ex.Message}");
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveSelectedFile(int index)
+    {
+        if (index >= 0 && index < selectedFiles.Count)
+        {
+            var file = selectedFiles[index];
+            file.Content?.Dispose();
+            selectedFiles.RemoveAt(index);
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSelectedFiles()
+    {
+        foreach (var file in selectedFiles)
+        {
+            file.Content?.Dispose();
+        }
+        selectedFiles.Clear();
+    }
+
+    #endregion
+
+    #region Message Search
+
+    private void ToggleMessageSearch()
+    {
+        isMessageSearchOpen = !isMessageSearchOpen;
+        if (!isMessageSearchOpen)
+        {
+            ClearMessageSearch();
+        }
+        else
+        {
+            isPinnedPanelOpen = false;
+        }
+        StateHasChanged();
+    }
+
+    private void CloseMessageSearch()
+    {
+        isMessageSearchOpen = false;
+        ClearMessageSearch();
+        StateHasChanged();
+    }
+
+    private void ClearMessageSearch()
+    {
+        messageSearchQuery = string.Empty;
+        searchResults.Clear();
+        searchTotalCount = 0;
+        searchSkip = 0;
+        hasMoreSearchResults = false;
+        highlightedMessageId = null;
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts?.Dispose();
+        _searchDebounceCts = null;
+    }
+
+    private async Task OnMessageSearchInput()
+    {
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts?.Dispose();
+        _searchDebounceCts = new CancellationTokenSource();
+        var token = _searchDebounceCts.Token;
+
+        try
+        {
+            await Task.Delay(350, token);
+            if (token.IsCancellationRequested) return;
+            await ExecuteMessageSearch(resetResults: true);
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task ExecuteMessageSearch(bool resetResults)
+    {
+        if (activeRoomId == null) return;
+
+        var query = messageSearchQuery?.Trim() ?? string.Empty;
+        if (query.Length < 2)
+        {
+            searchResults.Clear();
+            searchTotalCount = 0;
+            hasMoreSearchResults = false;
+            StateHasChanged();
+            return;
+        }
+
+        if (resetResults)
+        {
+            searchSkip = 0;
+            searchResults.Clear();
+        }
+
+        isSearching = true;
+        StateHasChanged();
+
+        try
+        {
+            var (results, totalCount) = await ChatService.SearchMessagesAsync(activeRoomId.Value, query, searchSkip, 20);
+            if (resetResults)
+            {
+                searchResults = results;
+            }
+            else
+            {
+                searchResults.AddRange(results);
+            }
+            searchTotalCount = totalCount;
+            searchSkip = searchResults.Count;
+            hasMoreSearchResults = searchResults.Count < totalCount;
+        }
+        catch
+        {
+            // Silently handle errors
+        }
+        finally
+        {
+            isSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMoreSearchResults()
+    {
+        await ExecuteMessageSearch(resetResults: false);
+    }
+
+    private async Task NavigateToSearchResult(ChatMessageResponse result)
+    {
+        if (activeRoomId == null) return;
+
+        highlightedMessageId = result.Id;
+        StateHasChanged();
+
+        // Check if the message is already loaded in the current message list
+        var existingMessage = messages.FirstOrDefault(m => m.Id == result.Id);
+        if (existingMessage != null)
+        {
+            // Scroll to the message
+            await JSRuntime.InvokeVoidAsync("eval", $"document.querySelector('[data-message-id=\"{result.Id}\"]')?.scrollIntoView({{ behavior: 'smooth', block: 'center' }})");
+        }
+        else
+        {
+            // Need to load messages around this result
+            // Find approximate skip to load the page containing this message
+            // Load from the beginning and paginate until we find it, or reload with a targeted skip
+            messages.Clear();
+            messageSkip = 0;
+            hasMoreMessages = true;
+
+            // Load messages page by page until we find the target
+            bool found = false;
+            int maxAttempts = 20; // Prevent infinite loops
+            while (!found && hasMoreMessages && maxAttempts > 0)
+            {
+                var batch = await ChatService.GetRoomMessagesAsync(activeRoomId.Value, messageSkip, 50);
+                if (batch.Count < 50) hasMoreMessages = false;
+
+                messages.InsertRange(0, batch);
+                messageSkip += batch.Count;
+                maxAttempts--;
+
+                if (batch.Any(m => m.Id == result.Id))
+                {
+                    found = true;
+                }
+            }
+
+            StateHasChanged();
+            await Task.Delay(100); // Wait for DOM to update
+            await JSRuntime.InvokeVoidAsync("eval", $"document.querySelector('[data-message-id=\"{result.Id}\"]')?.scrollIntoView({{ behavior: 'smooth', block: 'center' }})");
+        }
+
+        // Auto-clear highlight after 3 seconds
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            await InvokeAsync(() =>
+            {
+                if (highlightedMessageId == result.Id)
+                {
+                    highlightedMessageId = null;
+                    StateHasChanged();
+                }
+            });
+        });
+    }
+
+    private MarkupString HighlightSearchMatch(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) || string.IsNullOrWhiteSpace(messageSearchQuery))
+            return new MarkupString(System.Net.WebUtility.HtmlEncode(content));
+
+        var query = messageSearchQuery.Trim();
+        var encoded = System.Net.WebUtility.HtmlEncode(content);
+        var encodedQuery = System.Net.WebUtility.HtmlEncode(query);
+
+        // Case-insensitive replacement with highlighting
+        var index = encoded.IndexOf(encodedQuery, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+            return new MarkupString(encoded);
+
+        var before = encoded[..index];
+        var match = encoded.Substring(index, encodedQuery.Length);
+        var after = encoded[(index + encodedQuery.Length)..];
+
+        return new MarkupString($"{before}<mark class=\"bg-amber-200 rounded px-0.5\">{match}</mark>{after}");
+    }
+
+    #endregion
+
+    #region Pinned Messages
+
+    private async Task LoadPinnedMessagesAsync(int roomId)
+    {
+        try
+        {
+            isLoadingPinned = true;
+            pinnedMessages = await ChatService.GetPinnedMessagesAsync(roomId);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
+        finally
+        {
+            isLoadingPinned = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void TogglePinnedPanel()
+    {
+        isPinnedPanelOpen = !isPinnedPanelOpen;
+        if (isPinnedPanelOpen)
+        {
+            isMessageSearchOpen = false;
+        }
+    }
+
+    private async Task PinMessage(int messageId)
+    {
+        if (!activeRoomId.HasValue || isPinning) return;
+
+        isPinning = true;
+        StateHasChanged();
+
+        try
+        {
+            var pinned = await ChatService.PinMessageAsync(activeRoomId.Value, messageId);
+
+            // Update local state
+            pinnedMessages.Insert(0, pinned);
+            var msg = messages.FirstOrDefault(m => m.Id == messageId);
+            if (msg != null) msg.IsPinned = true;
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to pin message: {ex.Message}");
+        }
+        finally
+        {
+            isPinning = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UnpinMessage(int roomId, int messageId)
+    {
+        if (isPinning) return;
+
+        isPinning = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await ChatService.UnpinMessageAsync(roomId, messageId);
+            if (success)
+            {
+                pinnedMessages.RemoveAll(p => p.MessageId == messageId);
+                var msg = messages.FirstOrDefault(m => m.Id == messageId);
+                if (msg != null) msg.IsPinned = false;
+
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to unpin message: {ex.Message}");
+        }
+        finally
+        {
+            isPinning = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NavigateToPinnedMessage(int messageId)
+    {
+        // Close pinned panel
+        isPinnedPanelOpen = false;
+
+        // Check if message is in current view
+        var existingMsg = messages.FirstOrDefault(m => m.Id == messageId);
+        if (existingMsg != null)
+        {
+            highlightedMessageId = messageId;
+            StateHasChanged();
+            await JSRuntime.InvokeVoidAsync("eval",
+                $"setTimeout(()=>{{var el=document.querySelector('[data-message-id=\"{messageId}\"]');if(el){{el.scrollIntoView({{behavior:'smooth',block:'center'}});el.classList.add('animate-pulse');setTimeout(()=>el.classList.remove('animate-pulse'),2000);}}}},50)");
+
+            // Clear highlight after 3 seconds
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                await InvokeAsync(() =>
+                {
+                    if (highlightedMessageId == messageId)
+                    {
+                        highlightedMessageId = null;
+                        StateHasChanged();
+                    }
+                });
+            });
+        }
+    }
+
+    private void HandleMessagePinned(ChatPinnedMessageResponse pin)
+    {
+        if (activeRoomId.HasValue && pin.RoomId == activeRoomId.Value)
+        {
+            // Add to pinned list if not already present
+            if (!pinnedMessages.Any(p => p.MessageId == pin.MessageId))
+            {
+                pinnedMessages.Insert(0, pin);
+            }
+
+            // Update message in the list
+            var msg = messages.FirstOrDefault(m => m.Id == pin.MessageId);
+            if (msg != null) msg.IsPinned = true;
+
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleMessageUnpinned(int roomId, int messageId)
+    {
+        if (activeRoomId.HasValue && roomId == activeRoomId.Value)
+        {
+            pinnedMessages.RemoveAll(p => p.MessageId == messageId);
+
+            var msg = messages.FirstOrDefault(m => m.Id == messageId);
+            if (msg != null) msg.IsPinned = false;
+
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    #endregion
+
+    #region Room Settings
+
+    private void ToggleRoomSettings()
+    {
+        isRoomSettingsOpen = !isRoomSettingsOpen;
+        if (isRoomSettingsOpen)
+        {
+            isMessageSearchOpen = false;
+            isPinnedPanelOpen = false;
+        }
+    }
+
+    private async Task HandleRoomUpdated(ChatRoomResponse updatedRoom)
+    {
+        if (activeRoom != null && activeRoom.Id == updatedRoom.Id)
+        {
+            activeRoom = updatedRoom;
+        }
+        var idx = rooms.FindIndex(r => r.Id == updatedRoom.Id);
+        if (idx >= 0)
+        {
+            rooms[idx] = updatedRoom;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleRoomLeft()
+    {
+        if (activeRoomId.HasValue)
+        {
+            var roomId = activeRoomId.Value;
+            rooms.RemoveAll(r => r.Id == roomId);
+            if (hubService != null)
+                await hubService.LeaveRoomAsync(roomId);
+            activeRoom = null;
+            activeRoomId = null;
+            messages.Clear();
+            isRoomSettingsOpen = false;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleMembersAdded(List<ChatParticipantResponse> newMembers)
+    {
+        if (activeRoom != null)
+        {
+            foreach (var member in newMembers)
+            {
+                if (!activeRoom.Participants.Any(p => p.UserId == member.UserId))
+                {
+                    activeRoom.Participants.Add(member);
+                }
+            }
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleMemberRemoved(string removedUserId)
+    {
+        if (removedUserId == currentUserId)
+        {
+            await HandleRoomLeft();
+            return;
+        }
+        if (activeRoom != null)
+        {
+            activeRoom.Participants.RemoveAll(p => p.UserId == removedUserId);
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleRoomUpdatedSignalR(ChatRoomResponse updatedRoom)
+    {
+        _ = HandleRoomUpdated(updatedRoom);
+    }
+
+    private void HandleParticipantsAddedSignalR(int roomId, List<ChatParticipantResponse> newMembers)
+    {
+        if (activeRoom != null && activeRoom.Id == roomId)
+        {
+            _ = HandleMembersAdded(newMembers);
+        }
+        // Also update the room in the sidebar
+        var room = rooms.FirstOrDefault(r => r.Id == roomId);
+        if (room != null)
+        {
+            foreach (var member in newMembers)
+            {
+                if (!room.Participants.Any(p => p.UserId == member.UserId))
+                {
+                    room.Participants.Add(member);
+                }
+            }
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleParticipantRemovedSignalR(int roomId, string removedUserId, string removedByUserId)
+    {
+        if (removedUserId == currentUserId)
+        {
+            // Current user was removed from the room
+            rooms.RemoveAll(r => r.Id == roomId);
+            if (activeRoom != null && activeRoom.Id == roomId)
+            {
+                activeRoom = null;
+                activeRoomId = null;
+                messages.Clear();
+                isRoomSettingsOpen = false;
+            }
+            InvokeAsync(StateHasChanged);
+            return;
+        }
+        if (activeRoom != null && activeRoom.Id == roomId)
+        {
+            activeRoom.Participants.RemoveAll(p => p.UserId == removedUserId);
+            InvokeAsync(StateHasChanged);
+        }
+        var room = rooms.FirstOrDefault(r => r.Id == roomId);
+        if (room != null)
+        {
+            room.Participants.RemoveAll(p => p.UserId == removedUserId);
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    #endregion
+
+    private async Task OpenCreateGroupModal()
+    {
+        showCreateGroupModal = true;
+        newGroupRoomName = string.Empty;
+        selectedUserIdsForGroup = new List<string>();
+        isLoadingUsersForGroup = true;
+        StateHasChanged();
+        try
+        {
+            usersForGroup = await ChatService.GetUsersForChatAsync(null);
+        }
+        finally
+        {
+            isLoadingUsersForGroup = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseCreateGroupModal()
+    {
+        showCreateGroupModal = false;
+        StateHasChanged();
+    }
+
+    private void ToggleGroupUser(string userId)
+    {
+        if (selectedUserIdsForGroup.Contains(userId))
+            selectedUserIdsForGroup.Remove(userId);
+        else
+            selectedUserIdsForGroup.Add(userId);
+        StateHasChanged();
+    }
+
+    private async Task CreateGroup()
+    {
+        if (string.IsNullOrWhiteSpace(newGroupRoomName) || !selectedUserIdsForGroup.Any()) return;
+        try
+        {
+            var request = new CreateChatRoomRequest
+            {
+                RoomName = newGroupRoomName.Trim(),
+                RoomType = ChatRoomType.Group,
+                ParticipantUserIds = selectedUserIdsForGroup.ToList()
+            };
+            var room = await ChatService.CreateChatRoomAsync(request);
+            rooms.Insert(0, room);
+            FilterRooms();
+            await SelectRoom(room.Id);
+            CloseCreateGroupModal();
+        }
+        catch { }
+    }
+
+    private void OpenNewChatDialog()
+    {
+        showNewChatModal = true;
+        StateHasChanged();
+    }
+
+    private void CloseNewChatModal()
+    {
+        showNewChatModal = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleNewChatUserSelected(ChatUserItemResponse user)
+    {
+        if (string.IsNullOrEmpty(user.Id)) return;
+        var room = await ChatService.GetOrCreateDirectRoomAsync(user.Id);
+        if (room == null) return;
+        var existing = rooms.FirstOrDefault(r => r.Id == room.Id);
+        if (existing == null)
+        {
+            rooms.Insert(0, room);
+            FilterRooms();
+        }
+        await SelectRoom(room.Id);
+        CloseNewChatModal();
+    }
+
+    private bool IsOwnMessage(ChatMessageResponse message)
+    {
+        if (string.IsNullOrEmpty(currentUserId) || message == null)
+            return false;
+        var msgUserId = message.UserId?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(msgUserId))
+            return false;
+        return string.Equals(msgUserId, currentUserId.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetRoomButtonClass(int roomId)
+    {
+        return activeRoomId == roomId 
+            ? "bg-[#1C1D2A] text-white" 
+            : "hover:bg-slate-50";
+    }
+
+    private string GetMessageContainerClass(ChatMessageResponse message, bool isOwn)
+    {
+        var baseClass = isOwn
+            ? "flex flex-row-reverse items-start gap-4 ml-auto max-w-2xl"
+            : "flex items-start gap-4 max-w-2xl";
+        var highlight = highlightedMessageId == message.Id
+            ? " ring-2 ring-amber-300 bg-amber-50/50 rounded-3xl p-2 -m-2 transition-all duration-500"
+            : "";
+        return $"{baseClass}{highlight} group/message";
+    }
+
+    private string GetRoomDisplayName(ChatRoomResponse room)
+    {
+        if (room.RoomType == ChatRoomType.Private && room.OtherParticipant != null)
+        {
+            return room.OtherParticipant.FullName ?? room.OtherParticipant.UserName;
+        }
+        return room.RoomName ?? "Unnamed Room";
+    }
+
+    private string GetStatusDotClass(bool isOnline, bool isActive)
+    {
+        var borderColor = isActive ? "border-[#1C1D2A]" : "border-white";
+        var bgColor = isOnline ? "bg-emerald-500" : "bg-slate-300";
+        return $"{borderColor} {bgColor}";
+    }
+
+    private string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return parts[0][..1].ToUpper();
+    }
+
+    private string FormatTime(DateTime? time)
+    {
+        if (!time.HasValue) return "";
+        
+        var now = DateTime.Now;
+        var diff = now - time.Value;
+        
+        if (diff.TotalMinutes < 1) return "Now";
+        if (diff.TotalHours < 1) return $"{(int)diff.TotalMinutes}m";
+        if (diff.TotalDays < 1) return time.Value.ToString("HH:mm");
+        if (diff.TotalDays < 2) return "Yesterday";
+        if (diff.TotalDays < 7) return time.Value.ToString("ddd");
+        return time.Value.ToString("MMM dd");
+    }
+
+    private string FormatDateSeparator(DateTime date)
+    {
+        var today = DateTime.Today;
+        if (date == today) return $"Today, {date:MMMM dd}";
+        if (date == today.AddDays(-1)) return $"Yesterday, {date:MMMM dd}";
+        if (date.Year == today.Year) return date.ToString("dddd, MMMM dd");
+        return date.ToString("dddd, MMMM dd, yyyy");
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private static bool IsImageAttachment(string? fileType)
+    {
+        if (string.IsNullOrWhiteSpace(fileType)) return false;
+        return fileType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetFileIconColor(string? fileType)
+    {
+        if (string.IsNullOrWhiteSpace(fileType)) return "text-slate-400";
+
+        return fileType.ToLowerInvariant() switch
+        {
+            var t when t.StartsWith("image/") => "text-blue-500",
+            var t when t.Contains("pdf") => "text-red-500",
+            var t when t.Contains("word") || t.Contains("document") => "text-blue-600",
+            var t when t.Contains("sheet") || t.Contains("excel") => "text-green-600",
+            var t when t.Contains("presentation") || t.Contains("powerpoint") => "text-orange-500",
+            var t when t.Contains("zip") || t.Contains("rar") || t.Contains("archive") || t.Contains("7z") || t.Contains("tar") || t.Contains("gz") => "text-yellow-600",
+            var t when t.Contains("video") => "text-purple-500",
+            var t when t.Contains("audio") => "text-pink-500",
+            _ => "text-slate-400"
+        };
+    }
+
+    private static string GetFileIconPath(string? fileType)
+    {
+        if (string.IsNullOrWhiteSpace(fileType))
+            return "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/>";
+
+        return fileType.ToLowerInvariant() switch
+        {
+            var t when t.StartsWith("image/") =>
+                "<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\"/><circle cx=\"9\" cy=\"9\" r=\"2\"/><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"/>",
+            var t when t.Contains("pdf") =>
+                "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/><path d=\"M10 12h4\"/><path d=\"M10 16h4\"/>",
+            var t when t.Contains("zip") || t.Contains("rar") || t.Contains("archive") || t.Contains("7z") || t.Contains("tar") || t.Contains("gz") =>
+                "<path d=\"M21 8v13H3V8\"/><path d=\"M1 3h22v5H1z\"/><path d=\"M10 12h4\"/>",
+            var t when t.Contains("video") =>
+                "<path d=\"m22 8-6 4 6 4V8Z\"/><rect width=\"14\" height=\"12\" x=\"2\" y=\"6\" rx=\"2\" ry=\"2\"/>",
+            var t when t.Contains("audio") =>
+                "<path d=\"M9 18V5l12-2v13\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><circle cx=\"18\" cy=\"16\" r=\"3\"/>",
+            _ =>
+                "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/>"
+        };
+    }
+
+    private static string GetFriendlyFileType(string? fileType)
+    {
+        if (string.IsNullOrWhiteSpace(fileType)) return "File";
+
+        return fileType.ToLowerInvariant() switch
+        {
+            "application/pdf" => "PDF",
+            "application/msword" or "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => "Word",
+            "application/vnd.ms-excel" or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => "Excel",
+            "application/vnd.ms-powerpoint" or "application/vnd.openxmlformats-officedocument.presentationml.presentation" => "PowerPoint",
+            "application/zip" => "ZIP",
+            "application/x-rar-compressed" => "RAR",
+            "text/plain" => "Text",
+            "text/csv" => "CSV",
+            "application/json" => "JSON",
+            var t when t.StartsWith("image/") => "Image",
+            var t when t.StartsWith("video/") => "Video",
+            var t when t.StartsWith("audio/") => "Audio",
+            _ => fileType.Split('/').LastOrDefault()?.ToUpperInvariant() ?? "File"
+        };
+    }
+
+    private async Task LoadMoreMessages()
+    {
+        if (!activeRoomId.HasValue || isLoadingMore || !hasMoreMessages) return;
+        isLoadingMore = true;
+        StateHasChanged();
+        try
+        {
+            var olderMessages = await ChatService.GetRoomMessagesAsync(activeRoomId.Value, messageSkip, 50);
+            if (olderMessages.Count < 50) hasMoreMessages = false;
+            if (olderMessages.Any())
+            {
+                messages.InsertRange(0, olderMessages);
+                messageSkip += olderMessages.Count;
+            }
+        }
+        catch { }
+        finally
+        {
+            isLoadingMore = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ScrollToBottomAsync(bool smooth = true)
+    {
+        try
+        {
+            await Task.Yield();
+            var behavior = smooth ? "smooth" : "instant";
+            await JSRuntime.InvokeVoidAsync("eval",
+                $"setTimeout(()=>{{var el=document.getElementById('chat-messages');if(el)el.scrollTo({{top:el.scrollHeight,behavior:'{behavior}'}});}},50)");
+        }
+        catch { }
+    }
+
+    #region Call Methods
+
+    private record CallMetadata(string CallType, string CallStatus, int? DurationSeconds, string CallerUserId, string CalleeUserId);
+
+    private CallMetadata ParseCallMetadata(string? metadata)
+    {
+        if (string.IsNullOrEmpty(metadata))
+            return new CallMetadata("Audio", "Ended", null, "", "");
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(metadata);
+            var root = doc.RootElement;
+            return new CallMetadata(
+                root.TryGetProperty("callType", out var ct) ? ct.GetString() ?? "Audio" : "Audio",
+                root.TryGetProperty("callStatus", out var cs) ? cs.GetString() ?? "Ended" : "Ended",
+                root.TryGetProperty("durationSeconds", out var ds) && ds.ValueKind == System.Text.Json.JsonValueKind.Number ? ds.GetInt32() : null,
+                root.TryGetProperty("callerUserId", out var cu) ? cu.GetString() ?? "" : "",
+                root.TryGetProperty("calleeUserId", out var ceu) ? ceu.GetString() ?? "" : ""
+            );
+        }
+        catch
+        {
+            return new CallMetadata("Audio", "Ended", null, "", "");
+        }
+    }
+
+    private async Task StartCallFromHistory(string callTypeStr)
+    {
+        var callType = callTypeStr == "Video" ? CallType.Video : CallType.Audio;
+        await StartCall(callType);
+    }
+
+    private async Task StartCall(CallType callType)
+    {
+        if (isInCall || activeRoom == null || activeRoom.RoomType != ChatRoomType.Private) return;
+
+        currentCallType = callType;
+        callPeerName = activeRoom.OtherParticipant?.FullName ?? activeRoom.OtherParticipant?.UserName ?? "Unknown";
+        callPeerAvatarUrl = activeRoom.OtherParticipant?.AvatarUrl;
+
+        // Initialize WebRTC and get local media
+        if (webRtcService == null) return;
+        var initialized = await webRtcService.InitializeAsync(callType == CallType.Video);
+        if (!initialized)
+        {
+            // Media access denied or failed
+            return;
+        }
+
+        // Create SDP offer
+        var sdpOffer = await webRtcService.CreateOfferAsync();
+        if (string.IsNullOrEmpty(sdpOffer)) return;
+
+        isInCall = true;
+        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ringing);
+        StateHasChanged();
+
+        // Send offer via SignalR
+        if (callHubService != null)
+        {
+            await callHubService.SendOfferAsync(new CallOfferRequest
+            {
+                RoomId = activeRoom.Id,
+                CallType = callType,
+                SdpOffer = sdpOffer
+            });
+        }
+
+        // Play ring-back tone for the caller while waiting
+        if (webRtcService != null)
+            await webRtcService.PlayRingtoneAsync();
+
+        // Start ringing timeout (30 seconds) — auto-cancel if no answer
+        _ringingTimeoutCts?.Cancel();
+        _ringingTimeoutCts = new CancellationTokenSource();
+        var token = _ringingTimeoutCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(30_000, token);
+                if (!token.IsCancellationRequested && isInCall && activeCallSessionId.HasValue)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        if (callHubService != null)
+                            await callHubService.CancelCallAsync(activeCallSessionId.Value);
+                    });
+                }
+            }
+            catch (TaskCanceledException) { /* Expected when call is answered or cancelled manually */ }
+        });
+    }
+
+
+
+    private void HandleIncomingCall(IncomingCallResponse incomingCall)
+    {
+        if (isInCall)
+        {
+            // Already in a call, auto-reject
+            _ = InvokeAsync(async () =>
+            {
+                if (callHubService != null)
+                    await callHubService.RejectCallAsync(incomingCall.CallSessionId);
+            });
+            return;
+        }
+
+        incomingCallData = incomingCall;
+        hasIncomingCall = true;
+
+        // Play ringtone
+        _ = InvokeAsync(async () =>
+        {
+            if (webRtcService != null)
+                await webRtcService.PlayRingtoneAsync();
+            StateHasChanged();
+        });
+    }
+
+    private void HandleCallRinging(int callSessionId)
+    {
+        activeCallSessionId = callSessionId;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleCallAnswered(CallAnsweredResponse response)
+    {
+        // Cancel ringing timeout — call was answered
+        _ringingTimeoutCts?.Cancel();
+
+        _ = InvokeAsync(async () =>
+        {
+            if (webRtcService == null) return;
+            // Stop ring-back tone
+            await webRtcService.StopRingtoneAsync();
+            // Set remote description (answer)
+            await webRtcService.SetRemoteDescriptionAsync(response.SdpAnswer);
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Connecting);
+            StateHasChanged();
+
+            // Start connecting timeout (15s) — auto-end if WebRTC handshake doesn't complete
+            StartConnectingTimeout();
+        });
+    }
+
+    private void HandleIceCandidateReceived(IceCandidateRequest ice)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            if (webRtcService != null)
+                await webRtcService.AddIceCandidateAsync(ice.Candidate, ice.SdpMid, ice.SdpMLineIndex);
+        });
+    }
+
+    private void HandleLocalIceCandidate(string candidate, string? sdpMid, int sdpMLineIndex)
+    {
+        if (!activeCallSessionId.HasValue || callHubService == null) return;
+
+        _ = InvokeAsync(async () =>
+        {
+            await callHubService.SendIceCandidateAsync(new IceCandidateRequest
+            {
+                CallSessionId = activeCallSessionId.Value,
+                Candidate = candidate,
+                SdpMid = sdpMid,
+                SdpMLineIndex = sdpMLineIndex
+            });
+        });
+    }
+
+    private void HandleCallEndedSignalR(CallEndedResponse response)
+    {
+        _ringingTimeoutCts?.Cancel();
+
+        _ = InvokeAsync(async () =>
+        {
+            if (webRtcService != null)
+            {
+                await webRtcService.StopRingtoneAsync();
+                await webRtcService.DisposeWebRtcAsync();
+            }
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ended);
+            isInCall = false;
+            hasIncomingCall = false;
+            incomingCallData = null;
+            activeCallSessionId = null;
+            StateHasChanged();
+        });
+    }
+
+    private void HandleCallError(string message)
+    {
+        _ringingTimeoutCts?.Cancel();
+
+        _ = InvokeAsync(async () =>
+        {
+            Console.WriteLine($"Call error: {message}");
+            if (webRtcService != null)
+            {
+                await webRtcService.StopRingtoneAsync();
+                await webRtcService.DisposeWebRtcAsync();
+            }
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ended);
+            isInCall = false;
+            activeCallSessionId = null;
+            StateHasChanged();
+        });
+    }
+
+    private void HandleMediaToggled(string userId, bool isAudioEnabled, bool isVideoEnabled)
+    {
+        videoCallWindow?.SetRemoteVideoEnabled(isVideoEnabled);
+    }
+
+    private void HandleWebRtcStateChanged(string state)
+    {
+        if (state == "connected")
+        {
+            // WebRTC handshake complete — cancel connecting timeout and move to Active
+            _connectingTimeoutCts?.Cancel();
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+            InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (state == "failed" || state == "closed")
+        {
+            _ringingTimeoutCts?.Cancel();
+            _connectingTimeoutCts?.Cancel();
+
+            _ = InvokeAsync(async () =>
+            {
+                Console.WriteLine($"WebRTC connection {state} — auto-ending call");
+                if (webRtcService != null)
+                    await webRtcService.DisposeWebRtcAsync();
+
+                // Notify server if we have an active session
+                if (callHubService != null && activeCallSessionId.HasValue)
+                    await callHubService.EndCallAsync(activeCallSessionId.Value);
+
+                videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ended);
+                isInCall = false;
+                hasIncomingCall = false;
+                incomingCallData = null;
+                activeCallSessionId = null;
+                StateHasChanged();
+            });
+        }
+    }
+
+    private async Task AcceptIncomingCall()
+    {
+        if (incomingCallData == null || callHubService == null) return;
+
+        // Stop ringtone
+        if (webRtcService != null)
+            await webRtcService.StopRingtoneAsync();
+
+        hasIncomingCall = false;
+        isInCall = true;
+        activeCallSessionId = incomingCallData.CallSessionId;
+        currentCallType = incomingCallData.CallType;
+        callPeerName = incomingCallData.CallerName;
+        callPeerAvatarUrl = incomingCallData.CallerAvatarUrl;
+        StateHasChanged();
+
+        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Connecting);
+
+        // Initialize WebRTC
+        if (webRtcService == null) return;
+        var initialized = await webRtcService.InitializeAsync(incomingCallData.CallType == CallType.Video);
+        if (!initialized)
+        {
+            await callHubService.RejectCallAsync(incomingCallData.CallSessionId);
+            isInCall = false;
+            activeCallSessionId = null;
+            StateHasChanged();
+            return;
+        }
+
+        // Set remote description (offer from caller)
+        await webRtcService.SetRemoteDescriptionAsync(incomingCallData.SdpOffer);
+
+        // Create answer
+        var sdpAnswer = await webRtcService.CreateAnswerAsync();
+        if (string.IsNullOrEmpty(sdpAnswer))
+        {
+            await callHubService.RejectCallAsync(incomingCallData.CallSessionId);
+            isInCall = false;
+            activeCallSessionId = null;
+            await webRtcService.DisposeWebRtcAsync();
+            StateHasChanged();
+            return;
+        }
+
+        // Send answer
+        await callHubService.SendAnswerAsync(new CallAnswerRequest
+        {
+            CallSessionId = incomingCallData.CallSessionId,
+            SdpAnswer = sdpAnswer
+        });
+
+        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+        incomingCallData = null;
+
+        // Start connecting timeout for callee side
+        StartConnectingTimeout();
+    }
+
+    private async Task RejectIncomingCall()
+    {
+        if (incomingCallData == null || callHubService == null) return;
+
+        // Stop ringtone
+        if (webRtcService != null)
+            await webRtcService.StopRingtoneAsync();
+
+        await callHubService.RejectCallAsync(incomingCallData.CallSessionId);
+        hasIncomingCall = false;
+        incomingCallData = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleCallEndedUI()
+    {
+        _ringingTimeoutCts?.Cancel();
+        isInCall = false;
+        hasIncomingCall = false;
+        incomingCallData = null;
+        activeCallSessionId = null;
+        StateHasChanged();
+    }
+
+    private void StartConnectingTimeout()
+    {
+        _connectingTimeoutCts?.Cancel();
+        _connectingTimeoutCts = new CancellationTokenSource();
+        var token = _connectingTimeoutCts.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(15_000, token);
+                if (!token.IsCancellationRequested && isInCall && activeCallSessionId.HasValue)
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        Console.WriteLine("Connecting timeout — auto-ending call");
+                        if (webRtcService != null)
+                            await webRtcService.DisposeWebRtcAsync();
+                        if (callHubService != null)
+                            await callHubService.EndCallAsync(activeCallSessionId.Value);
+                        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ended);
+                        isInCall = false;
+                        activeCallSessionId = null;
+                        StateHasChanged();
+                    });
+                }
+            }
+            catch (TaskCanceledException) { }
+        });
+    }
+
+    private async Task HandleCallHubReconnected()
+    {
+        if (callHubService == null) return;
+
+        var activeCall = await callHubService.GetActiveCallAsync();
+        if (activeCall == null)
+        {
+            if (isInCall)
+            {
+                if (webRtcService != null)
+                    await webRtcService.DisposeWebRtcAsync();
+                videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ended);
+                isInCall = false;
+                activeCallSessionId = null;
+                await InvokeAsync(StateHasChanged);
+            }
+            return;
+        }
+
+        isInCall = true;
+        activeCallSessionId = activeCall.CallSessionId;
+        currentCallType = activeCall.CallType;
+        callPeerName = activeCall.PeerName;
+        callPeerAvatarUrl = activeCall.PeerAvatarUrl;
+
+        if (activeCall.Status == CallStatus.Active)
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+        else
+            videoCallWindow?.SetCallState(VideoCallWindow.CallState.Ringing);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    #endregion
+
+    public async ValueTask DisposeAsync()
+    {
+        _typingStopCts?.Cancel();
+        _typingStartCts?.Cancel();
+        _searchDebounceCts?.Cancel();
+        _searchDebounceCts?.Dispose();
+        ClearSelectedFiles();
+        if (hubService != null)
+        {
+            hubService.OnMessageReceived -= HandleMessageReceived;
+            hubService.OnUserTyping -= HandleUserTyping;
+            hubService.OnMessageDeleted -= HandleMessageDeleted;
+            hubService.OnMessageUpdated -= HandleMessageUpdated;
+            hubService.OnReactionAdded -= HandleReactionAdded;
+            hubService.OnReactionRemoved -= HandleReactionRemoved;
+            hubService.OnMessageRead -= HandleMessageRead;
+            hubService.OnMessagePinned -= HandleMessagePinned;
+            hubService.OnMessageUnpinned -= HandleMessageUnpinned;
+            hubService.OnRoomUpdated -= HandleRoomUpdatedSignalR;
+            hubService.OnParticipantsAdded -= HandleParticipantsAddedSignalR;
+            hubService.OnParticipantRemoved -= HandleParticipantRemovedSignalR;
+            if (activeRoomId.HasValue)
+                await hubService.LeaveRoomAsync(activeRoomId.Value);
+        }
+        if (notificationHubService != null)
+            notificationHubService.OnUserStatusChanged -= HandleUserStatusChanged;
+
+        // Cleanup call services
+        if (callHubService != null)
+        {
+            callHubService.OnIncomingCall -= HandleIncomingCall;
+            callHubService.OnCallRinging -= HandleCallRinging;
+            callHubService.OnCallAnswered -= HandleCallAnswered;
+            callHubService.OnIceCandidateReceived -= HandleIceCandidateReceived;
+            callHubService.OnCallEnded -= HandleCallEndedSignalR;
+            callHubService.OnCallError -= HandleCallError;
+            callHubService.OnMediaToggled -= HandleMediaToggled;
+            callHubService.OnReconnected -= HandleCallHubReconnected;
+        }
+        if (webRtcService != null)
+        {
+            webRtcService.IceCandidateGenerated -= HandleLocalIceCandidate;
+            webRtcService.ConnectionStateChanged -= HandleWebRtcStateChanged;
+            if (isInCall)
+                await webRtcService.DisposeWebRtcAsync();
+        }
+
+        _ringingTimeoutCts?.Cancel();
+        _ringingTimeoutCts?.Dispose();
+        _connectingTimeoutCts?.Cancel();
+        _connectingTimeoutCts?.Dispose();
+    }
+}
