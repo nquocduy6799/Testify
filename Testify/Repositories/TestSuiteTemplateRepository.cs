@@ -135,6 +135,8 @@ namespace Testify.Repositories
                     Id = tc.Id,
                     SuiteTemplateId = tc.SuiteTemplateId,
                     Title = tc.Title,
+                    Preconditions = tc.Preconditions,
+                    Postconditions = tc.Postconditions,
                     Priority = tc.Priority,
                     TestStepTemplates = tc.TestStepTemplates.Select(ts => new TestStepTemplateResponse
                     {
@@ -154,6 +156,8 @@ namespace Testify.Repositories
             return new TestCaseTemplate
             {
                 Title = request.Title,
+                Preconditions = request.Preconditions,
+                Postconditions = request.Postconditions,
                 Priority = request.Priority,
                 TestStepTemplates = request.TestStepTemplates.Select(MapToEntity).ToList()
             };
@@ -164,6 +168,8 @@ namespace Testify.Repositories
             return new TestCaseTemplate
             {
                 Title = request.Title,
+                Preconditions = request.Preconditions,
+                Postconditions = request.Postconditions,
                 Priority = request.Priority,
                 TestStepTemplates = request.TestStepTemplates.Select(MapToEntity).ToList()
             };

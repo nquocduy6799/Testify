@@ -13,6 +13,9 @@ using Testify.Interfaces;
 using Testify.Repositories;
 using Testify.Hubs;
 using Testify.Client.Features.TestTemplates.Services;
+using Testify.Client.Features.TestSuites.Services;
+using Testify.Configuration;
+using Testify.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,6 +74,13 @@ builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
 builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
+builder.Services.AddScoped<ITestCaseTemplateRepository, TestCaseTemplateRepository>();
+builder.Services.AddScoped<ITestSuiteRepository, TestSuiteRepository>();
+builder.Services.AddScoped<ITestCaseRepository, TestCaseRepository>();
+
+// Gemini AI configuration
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.AddHttpClient<Testify.Interfaces.IAiTestCaseService, GeminiTestCaseService>();
 
 
 // Register services for server-side
@@ -81,6 +91,10 @@ builder.Services.AddScoped<INotificationService, ServerNotificationRepository>()
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
+builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
+builder.Services.AddScoped<ITestCaseService, TestCaseService>();
+builder.Services.AddScoped<Testify.Client.Interfaces.IAiTestCaseService, Testify.Client.Features.TestSuites.Services.AiTestCaseService>();
 
 
 // Add controllers for API endpoints
