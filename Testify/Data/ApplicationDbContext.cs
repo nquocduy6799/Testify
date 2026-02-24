@@ -150,6 +150,19 @@ namespace Testify.Data
                 .WithMany()
                 .HasForeignKey(n => n.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            // TemplateReviews - prevent multiple cascade paths from AspNetUsers
+            builder.Entity<TemplateReview>()
+                .HasOne(r => r.Template)
+                .WithMany(t => t.Reviews)
+                .HasForeignKey(r => r.TemplateId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<TemplateReview>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

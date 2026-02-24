@@ -265,13 +265,19 @@ namespace Testify.Migrations
                     b.Property<int>("CallType")
                         .HasColumnType("int");
 
+                    b.Property<string>("CalleeId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("CalleeUserId")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CallerId")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("CallerUserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("datetime2");
@@ -287,9 +293,9 @@ namespace Testify.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CalleeUserId");
+                    b.HasIndex("CalleeId");
 
-                    b.HasIndex("CallerUserId");
+                    b.HasIndex("CallerId");
 
                     b.HasIndex("RoomId");
 
@@ -1789,20 +1795,16 @@ namespace Testify.Migrations
                 {
                     b.HasOne("Testify.Data.ApplicationUser", "Callee")
                         .WithMany()
-                        .HasForeignKey("CalleeUserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .HasForeignKey("CalleeId");
 
                     b.HasOne("Testify.Data.ApplicationUser", "Caller")
                         .WithMany()
-                        .HasForeignKey("CallerUserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .HasForeignKey("CallerId");
 
                     b.HasOne("Testify.Entities.ChatRoom", "Room")
                         .WithMany()
                         .HasForeignKey("RoomId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Callee");
@@ -2128,7 +2130,7 @@ namespace Testify.Migrations
                     b.HasOne("Testify.Entities.TestSuiteTemplate", "Template")
                         .WithMany("Reviews")
                         .HasForeignKey("TemplateId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Testify.Data.ApplicationUser", "User")
@@ -2310,8 +2312,7 @@ namespace Testify.Migrations
 
                     b.HasOne("Testify.Entities.TemplateFolder", "Folder")
                         .WithMany()
-                        .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .HasForeignKey("FolderId");
 
                     b.HasOne("Testify.Data.ApplicationUser", "User")
                         .WithMany()
