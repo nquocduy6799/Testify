@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Testify.Data;
+using Testify.Entities;
 using Testify.Shared.Enums;
 
 namespace Testify.Entities
