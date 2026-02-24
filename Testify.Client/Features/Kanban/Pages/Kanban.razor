@@ -283,7 +283,9 @@ else
 
 @if (viewingTask != null)
 {
-	<TaskDetailModal Task="viewingTask" OnClose="@(() => viewingTask = null)"/>
+	<TaskDetailModal Task="viewingTask"
+					 OnViewTransactionLog="@((int taskId) => Navigation.NavigateTo($"/projects/{ProjectId}/kanban/tasks/{taskId}/log"))"
+					 OnClose="@(() => viewingTask = null)" />
 }
 
 @code {
