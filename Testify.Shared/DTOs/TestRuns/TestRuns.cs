@@ -152,6 +152,14 @@ namespace Testify.Shared.DTOs.TestRuns
     }
 
     #endregion
+
+    public class TestRunStepAttachmentInfo
+    {
+        public int Id { get; set; }
+        public string FileName { get; set; } = string.Empty;
+        public string FileUrl { get; set; } = string.Empty;
+        public int RunStepId { get; set; }
+    }
 }
 
 

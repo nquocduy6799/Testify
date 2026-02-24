@@ -55,8 +55,6 @@ namespace Testify.Shared.DTOs.KanbanTasks
         public DateTime? UpdatedAt { get; set; }
 
         public int TestPlanCount { get; set; }
-        public List<TaskAttachmentResponse> Attachments { get; set; } = new();
-        public List<TaskActivityResponse> Activities { get; set; } = new();
     }
 
     public class UpdateKanbanTaskRequest

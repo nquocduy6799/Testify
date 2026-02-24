@@ -28,7 +28,6 @@ namespace Testify.Repositories
                 .Where(t => t.MilestoneId == milestoneId && !t.IsDeleted)
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
-                .Include(t => t.Attachments)
                 .Select(t => MapToResponse(t))
                 .ToListAsync();
         }
@@ -39,7 +38,6 @@ namespace Testify.Repositories
                 .Where(t => t.Id == id && !t.IsDeleted)
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
-                .Include(t => t.Attachments)
  
                 .FirstOrDefaultAsync();
 
@@ -52,7 +50,6 @@ namespace Testify.Repositories
                 .Where(t => t.Milestone.ProjectId == projectId && !t.IsDeleted && t.Milestone.Status == MilestoneStatus.Active)
                 .Include(t => t.Assignee)
                 .Include(t => t.TestPlans)
-                .Include(t => t.Attachments)
                 .Include(t => t.Activities)
                 .Select(t => MapToResponse(t))
                 .ToListAsync();
@@ -202,8 +199,47 @@ namespace Testify.Repositories
                 CreatedAt = task.CreatedAt,
                 CreatedBy = task.CreatedBy,
                 UpdatedAt = task.UpdatedAt,
-                TestPlanCount = task.TestPlans?.Count ?? 0,
-                Attachments = task.Attachments.Select(a => new TaskAttachmentResponse
+                TestPlanCount = task.TestPlans?.Count ?? 0, 
+            };
+        }
+
+        public async Task<IEnumerable<TaskAttachmentResponse>> GetTaskAttachmentsAsync(int taskId)
+        {
+            // Get the task with its type and linked run steps
+            var task = await _context.KanbanTasks
+                .Where(t => t.Id == taskId && !t.IsDeleted)
+                .Include(t => t.LinkedRunSteps)
+                .FirstOrDefaultAsync();
+
+            if (task == null)
+                return new List<TaskAttachmentResponse>();
+
+            // If task is a Bug AND has linked test run steps, get attachments from TestRunStepAttachment
+            if (task.Type == Shared.Enums.TaskType.Bug && task.LinkedRunSteps.Any())
+            {
+                var runStepIds = task.LinkedRunSteps.Select(lrs => lrs.RunStepId).ToList();
+
+                var testRunStepAttachments = await _context.TestRunStepAttachments
+                    .Where(a => runStepIds.Contains(a.RunStepId))
+                    .Select(a => new TaskAttachmentResponse
+                    {
+                        Id = a.Id,
+                        KanbanTaskId = taskId, // Map to the bug's ID for client compatibility
+                        FileName = a.FileName,
+                        FileUrl = a.FileUrl,
+                        PublicId = a.PublicId ?? string.Empty,
+                        FileSize = a.FileSize,
+                        ContentType = a.ContentType
+                    })
+                    .ToListAsync();
+
+                return testRunStepAttachments;
+            }
+
+            // Otherwise (Feature OR Bug without linked run steps), get from TaskAttachment
+            var taskAttachments = await _context.TaskAttachments
+                .Where(a => a.KanbanTaskId == taskId)
+                .Select(a => new TaskAttachmentResponse
                 {
                     Id = a.Id,
                     KanbanTaskId = a.KanbanTaskId,
@@ -212,20 +248,32 @@ namespace Testify.Repositories
                     PublicId = a.PublicId ?? string.Empty,
                     FileSize = a.FileSize,
                     ContentType = a.ContentType
-                }).ToList(),
-                Activities = task.Activities.Select(act => new TaskActivityResponse
+                })
+                .ToListAsync();
+
+            return taskAttachments;
+        }
+
+        public async Task<List<TaskActivityResponse>> GetTaskActivityResponsesAsync(int taskId)
+        {
+            var activities = await _context.TaskActivities
+                .Where(a => a.KanbanTaskId == taskId)
+                .OrderByDescending(a => a.CreatedAt)  
+                .Select(a => new TaskActivityResponse
                 {
-                    Id = act.Id,
-                    KanbanTaskId = act.KanbanTaskId,
-                    FullName = act.FullName,
-                    Action = act.Action,
-                    OldValue = act.OldValue,
-                    NewValue = act.NewValue,
-                    Description = act.Description,
-                    CreatedBy = act.CreatedBy,
-                    CreatedAt = act.CreatedAt
-                }).ToList()
-            };
+                    Id = a.Id,
+                    KanbanTaskId = a.KanbanTaskId,
+                    FullName = a.FullName,
+                    Action = a.Action,
+                    OldValue = a.OldValue,
+                    NewValue = a.NewValue,
+                    Description = a.Description,
+                    CreatedBy = a.CreatedBy,
+                    CreatedAt = a.CreatedAt
+                })
+                .ToListAsync();
+
+            return activities;
         }
     }
 }

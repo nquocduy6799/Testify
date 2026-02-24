@@ -47,6 +47,7 @@ namespace Testify.Shared.DTOs.Bugs
         public string StepsToReproduce { get; set; } = string.Empty;
     }
 
+
     /// <summary>
     /// Response DTO for bug with additional test run linking context
     /// </summary>
@@ -83,6 +84,20 @@ namespace Testify.Shared.DTOs.Bugs
 
         // Attachments (screenshots)
         public List<TestRunStepAttachmentResponse> Attachments { get; set; } = new();
+    }
+
+
+    public class UpdateBugRequest
+    {
+        [Required(ErrorMessage = "Title is required.")]
+        [StringLength(255, MinimumLength = 3, ErrorMessage = "Title must be between 3 and 255 characters.")]
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime? DueDate { get; set; }
+        [Range(1, 5, ErrorMessage = "Priority must be between 1 and 5.")]
+        public TaskPriority Priority { get; set; } = TaskPriority.Medium;
+        public BugSeverity Severity { get; set; } = BugSeverity.Medium;
+        public string? AssigneeId { get; set; }
     }
 
     /// <summary>

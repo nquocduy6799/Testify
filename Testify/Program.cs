@@ -98,6 +98,7 @@ builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>(
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ITestPlanService, TestPlanService>();
 builder.Services.AddScoped<ITestRunService, TestRunService>();
+builder.Services.AddScoped<IBugService, BugService>();
 builder.Services.AddScoped<ModalService>();
 
 

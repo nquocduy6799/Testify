@@ -2,6 +2,7 @@
 @using Testify.Client.Interfaces
 @using Testify.Shared.DTOs.KanbanTasks
 @using Testify.Shared.DTOs.TaskActivity
+@using Testify.Shared.DTOs.TaskAttachments
 @using Testify.Shared.Enums
 @inject IKanbanTaskService KanbanTaskService
 
@@ -158,9 +159,9 @@
                             Integrated Assets
                         </h4>
                         <div class="space-y-2">
-                            @if (Task.Attachments != null && Task.Attachments.Any())
+                            @if (Attachments != null)
                             {
-                                @foreach (var file in Task.Attachments)
+                                @foreach (var file in Attachments)
                                 {
                                     <div class="group flex items-center justify-between rounded-3xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:shadow-md">
                                         <div class="flex min-w-0 items-center gap-3">
@@ -205,9 +206,9 @@
                         <div class="relative space-y-6 pl-4">
                             <div class="absolute top-0 bottom-0 left-4 w-0.5 bg-slate-50"></div>
 
-                            @if (Task.Activities != null && Task.Activities.Any())
+                            @if (Activities != null && Activities.Any())
                             {
-                                @foreach (var activity in Task.Activities)
+                                @foreach (var activity in Activities)
                                 {
                                     <div class="relative pl-6">
                                         <div class="absolute top-1.5 left-[-5px] h-2.5 w-2.5 rounded-full @GetActivityColor(activity.Action) ring-4 ring-white"></div>
@@ -284,8 +285,19 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    private IEnumerable<TaskAttachmentResponse> Attachments { get; set; } = new List<TaskAttachmentResponse>();
+    private IEnumerable<TaskActivityResponse> Activities { get; set; } = new List<TaskActivityResponse>();
     private bool IsBug => Task?.Type == TaskType.Bug;
     private bool IsOverdue => Task?.DueDate.HasValue == true && Task.DueDate.Value.Date < DateTime.Now.Date;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Task != null)
+        {
+            Activities = await KanbanTaskService.GetTaskActivitiesAsync(Task.Id);
+            Attachments = await KanbanTaskService.GetTaskAttachmentsAsync(Task.Id);
+        }
+    }
 
     private string GetStatusName(KanbanTaskStatus status)
     {

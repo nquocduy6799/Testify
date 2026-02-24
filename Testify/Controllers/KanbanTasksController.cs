@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Mail;
 using System.Security.Claims;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
+using Testify.Shared.DTOs.TaskActivity;
+using Testify.Shared.DTOs.TaskAttachments;
 
 namespace Testify.Controllers
 {
@@ -90,6 +93,33 @@ namespace Testify.Controllers
             }
 
             return NoContent();
+        }
+
+        [HttpGet("{id}/attachments")]
+        public async Task<ActionResult<IEnumerable<TaskAttachmentResponse>>> GetTaskAttachments(int id)
+        {
+            var attachments = await _kanbanTaskRepository.GetTaskAttachmentsAsync(id);
+
+            if (attachments == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(attachments);
+        }
+
+
+        [HttpGet("{id}/activities")]
+        public async Task<ActionResult<IEnumerable<TaskActivityResponse>>> GetTaskActivities(int id)
+        {
+            var activities = await _kanbanTaskRepository.GetTaskActivityResponsesAsync(id);
+
+            if (activities == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(activities);
         }
     }
 }

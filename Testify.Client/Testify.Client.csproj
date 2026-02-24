@@ -27,7 +27,6 @@
     <Folder Include="Features\Projects\Components\" />
     <Folder Include="Features\TeamMembers\Components\" />
     <Folder Include="Features\TeamMembers\Services\" />
-    <Folder Include="Features\TestRuns\Components\" />
   </ItemGroup>
 
 </Project>

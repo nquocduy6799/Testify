@@ -2,6 +2,7 @@
 using Testify.Client.Interfaces;
 using Testify.Shared.DTOs.KanbanTasks;
 using Testify.Shared.DTOs.TaskActivity;
+using Testify.Shared.DTOs.TaskAttachments;
 
 namespace Testify.Client.Features.Kanban.Services
 {
@@ -99,16 +100,29 @@ namespace Testify.Client.Features.Kanban.Services
             }
         }
 
-        async Task<List<TaskActivityResponse>> IKanbanTaskService.GetTaskActivityResponsesAsync(int taskId)
+        public async Task<List<TaskActivityResponse>> GetTaskActivitiesAsync(int taskId)
         {
             try
             {
-                var activities = await _httpClient.GetFromJsonAsync<List<TaskActivityResponse>>($"{ApiEndpoint}/activities/{taskId}");
+                var activities = await _httpClient.GetFromJsonAsync<List<TaskActivityResponse>>($"{ApiEndpoint}/{taskId}/activities");
                 return activities ?? new List<TaskActivityResponse>();
             }
             catch (HttpRequestException)
             {
                 return new List<TaskActivityResponse>();
+            }
+        }
+
+        public async Task<IEnumerable<TaskAttachmentResponse>> GetTaskAttachmentsAsync(int taskId)
+        {
+            try
+            {
+                var attachments = await _httpClient.GetFromJsonAsync<IEnumerable<TaskAttachmentResponse>>($"{ApiEndpoint}/{taskId}/attachments");
+                return attachments ?? new List<TaskAttachmentResponse>();
+            }
+            catch (HttpRequestException)
+            {
+                return new List<TaskAttachmentResponse>();
             }
         }
     }

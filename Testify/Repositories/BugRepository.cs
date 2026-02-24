@@ -5,6 +5,7 @@ using Testify.Interfaces;
 using Testify.Interfaces.Testify.Interfaces;
 using Testify.Shared.DTOs.Bugs;
 using Testify.Shared.Enums;
+using Testify.Shared.Helpers;
 using static Testify.Shared.Enums.MilestoneEnum;
 
 namespace Testify.Repositories
@@ -309,7 +310,7 @@ namespace Testify.Repositories
                     NewValue = status.ToString(),
                     Description = $"Bug status changed from {originalStatus} to {status}",
                     CreatedBy = userId,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTimeHelper.GetVietnamTime()
                 };
                 await _taskActivityRepository.CreateActivityAsync(activity);
 
@@ -376,9 +377,6 @@ namespace Testify.Repositories
                     ContentType = a.ContentType,
                     FileSize = a.FileSize,
                 }).ToList(),
-                CreatedAt = bug.CreatedAt,
-                UpdatedAt = bug.UpdatedAt,
-                ResolvedAt = bug.Status == KanbanTaskStatus.Done ? bug.UpdatedAt : null
             };
 
             return response;
