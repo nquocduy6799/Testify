@@ -12,7 +12,7 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260224160254_Init")]
+    [Migration("20260224161526_Init")]
     partial class Init
     {
         /// <inheritdoc />
