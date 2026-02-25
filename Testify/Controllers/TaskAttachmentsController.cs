@@ -103,6 +103,19 @@ namespace Testify.Controllers
             return Ok(attachments);
         }
 
+        [HttpGet("download/{attachmentId}")]
+        public async Task<IActionResult> Download(int attachmentId)
+        {
+            var attachment = await _attachmentRepository.GetAttachmentByIdAsync(attachmentId);
+            if (attachment == null)
+                return NotFound();
+
+            using var http = new HttpClient();
+            var stream = await http.GetStreamAsync(attachment.FileUrl);
+
+            return File(stream, attachment.ContentType ?? "application/octet-stream", attachment.FileName);
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
