@@ -129,29 +129,55 @@ namespace Testify.Client.Features.TestRuns.Services
 
         #region UC-09: Start Test Plan Execution
 
+        //public async Task<StartExecutionResponse?> StartExecutionAsync(int testPlanId, List<int> testSuiteIds)
+        //{
+        //    try
+        //    {
+        //        var request = new StartExecutionRequest
+        //        {
+        //            TestPlanId = testPlanId,
+        //            TestSuiteIds = testSuiteIds
+        //        };
+
+        //        var response = await _httpClient.PostAsJsonAsync($"{ApiEndpoint}/start-execution", request);
+        //        response.EnsureSuccessStatusCode();
+
+        //        var result = await response.Content.ReadFromJsonAsync<StartExecutionResponse>();
+        //        return result;
+        //    }
+        //    catch (HttpRequestException ex)
+        //    {
+        //        // Log or handle the error appropriately
+        //        Console.WriteLine($"Failed to start test plan execution: {ex.Message}");
+        //        return null;
+        //    }
+        //}
+
+
         public async Task<StartExecutionResponse?> StartExecutionAsync(int testPlanId, List<int> testSuiteIds)
         {
-            try
+            var request = new StartExecutionRequest
             {
-                var request = new StartExecutionRequest
-                {
-                    TestPlanId = testPlanId,
-                    TestSuiteIds = testSuiteIds
-                };
+                TestPlanId = testPlanId,
+                TestSuiteIds = testSuiteIds
+            };
 
-                var response = await _httpClient.PostAsJsonAsync($"{ApiEndpoint}/start-execution", request);
-                response.EnsureSuccessStatusCode();
+            var response = await _httpClient.PostAsJsonAsync($"{ApiEndpoint}/start-execution", request);
 
-                var result = await response.Content.ReadFromJsonAsync<StartExecutionResponse>();
-                return result;
-            }
-            catch (HttpRequestException ex)
+            if (!response.IsSuccessStatusCode)
             {
-                // Log or handle the error appropriately
-                Console.WriteLine($"Failed to start test plan execution: {ex.Message}");
-                return null;
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"StartExecution failed [{(int)response.StatusCode}]: {errorBody}");
+                throw new HttpRequestException(
+                    $"[{(int)response.StatusCode}] {errorBody}",
+                    null,
+                    response.StatusCode);
             }
+
+            return await response.Content.ReadFromJsonAsync<StartExecutionResponse>();
         }
+
+
 
         public async Task<BulkCreateTestRunsResponse?> BulkCreateTestRunsAsync(int testPlanId, List<int> testCaseIds)
         {

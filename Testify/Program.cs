@@ -87,6 +87,9 @@ builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>(
 builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<ICallSessionRepository, CallSessionRepository>();
+builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();           
+builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>(); 
+builder.Services.AddScoped<ITestRunRepository, TestRunRepository>();
 
 // Gemini AI configuration
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));

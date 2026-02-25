@@ -438,11 +438,18 @@
             _project = await ProjectService.GetProjectByIdAsync(ProjectId);
             _plans = await TestPlanService.GetAllTestPlansAsync(ProjectId);
             _milestones = await MilestoneService.GetMilestonesByProjectAsync(ProjectId);
-            _testSuites = (await TestPlanService.GetAllTestSuitesByProjectIdAsync(ProjectId)).ToList();
+
+            // Add explicit error handling
+            var suites = await TestPlanService.GetAllTestSuitesByProjectIdAsync(ProjectId);
+            _testSuites = suites.ToList();
+
+            // Debug output
+            Console.WriteLine($"Loaded {_testSuites.Count} test suites for project {ProjectId}");
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            _errorMessage = $"Error loading data: {ex.Message}";
+            Console.WriteLine($"Error: {ex}"); 
         }
         finally
         {
@@ -524,41 +531,80 @@
         {
             _errorMessage = $"Failed to delete test plan: {ex.Message}";
         }
-	}
+    }
 
     private void CloseExecutionPrompt()
     {
         _planToExecute = null;
     }
 
+    // private async Task HandleStartExecutionAsync()
+    // {
+    //     if (_planToExecute is null)
+    //         return;
+
+    //     bool confirmed = await ModalService.ShowStartExecutionWarningAsync();
+
+    //     if (!confirmed)
+    //     {
+    //         CloseExecutionPrompt();
+    //         return;
+    //     }
+
+    //     try
+    //     {
+    //         var testSuiteIds = _planToExecute.TestSuites.Select(s => s.Id).ToList();
+        
+    //         var result = await TestRunService.StartExecutionAsync(_planToExecute.Id, testSuiteIds);
+
+    //         if (result is not null)
+    //         {
+    //             Navigate to the test execution hub
+    //             Navigation.NavigateTo($"/projects/{ProjectId}/testplans/{_planToExecute.Id}");
+    //             @page "/projects/{ProjectId:int}/testplans/{TestPlanId:int}/execute"
+				// Navigation.NavigateTo($"/projects/{ProjectId}/testplans/{_planToExecute.Id}/execute");
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         _errorMessage = $"Failed to start execution: {ex.Message}";
+    //     }
+    //     finally
+    //     {
+    //         CloseExecutionPrompt();
+    //     }
+    // }
+
+
     private async Task HandleStartExecutionAsync()
     {
         if (_planToExecute is null)
             return;
 
-        bool confirmed = await ModalService.ShowStartExecutionWarningAsync();
-
-        if (!confirmed)
-        {
-            CloseExecutionPrompt();
-            return;
-        }
-
         try
         {
             var testSuiteIds = _planToExecute.TestSuites.Select(s => s.Id).ToList();
-        
+
+            if (testSuiteIds.Count == 0)
+            {
+                _errorMessage = "This test plan has no enrolled test suites. Add at least one suite before starting execution.";
+                return;
+            }
+
             var result = await TestRunService.StartExecutionAsync(_planToExecute.Id, testSuiteIds);
 
             if (result is not null)
             {
-                // Navigate to the test execution hub
-                Navigation.NavigateTo($"/projects/{ProjectId}/testplans/{_planToExecute.Id}");
+                Navigation.NavigateTo($"/projects/{ProjectId}/testplans/{_planToExecute.Id}/execute");
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            _errorMessage = $"Failed to start execution: {ex.Message}";
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to start execution: {ex.Message}";
+            _errorMessage = $"Unexpected error: {ex.Message}";
         }
         finally
         {
