@@ -581,6 +581,14 @@
         if (_planToExecute is null)
             return;
 
+            bool confirmed = await ModalService.ShowStartExecutionWarningAsync();
+
+            if (!confirmed)
+            {
+                CloseExecutionPrompt();
+                return;
+            }
+
         try
         {
             var testSuiteIds = _planToExecute.TestSuites.Select(s => s.Id).ToList();
@@ -614,7 +622,7 @@
 
     private void NavigateToPlan(int planId)
     {
-        Navigation.NavigateTo($"/projects/{ProjectId}/testplans/{planId}");
+        Navigation.NavigateTo($"/projects/{ProjectId}/testplans/{planId}/execute");
     }
 
     private void NavigateToPlanBlueprintDetail(int planId)

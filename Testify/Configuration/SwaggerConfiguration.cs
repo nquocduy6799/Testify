@@ -9,6 +9,8 @@ public static class SwaggerConfiguration
     {
         services.AddSwaggerGen(options =>
         {
+            options.CustomSchemaIds(type => type.FullName);
+
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Name = "Authorization",
