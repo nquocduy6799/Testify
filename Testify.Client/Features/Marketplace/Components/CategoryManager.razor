@@ -1,276 +1,324 @@
+@using Blazicons
 @using Testify.Shared.DTOs.Marketplace
+@inject IJSRuntime JSRuntime
 
-<div class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-    @* --- Header Section --- *@
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/60 backdrop-blur-xl p-8 rounded-[32px] border border-white shadow-sm ring-1 ring-slate-100">
+<div class="max-w-[1400px] mx-auto px-6 space-y-10 pb-32 animate-in fade-in duration-700">
+
+    @* ══════ Header ══════ *@
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-            <h1 class="text-3xl font-black text-slate-900 tracking-tight">Category Structure</h1>
-            <p class="text-slate-500 font-medium">Manage how test suites are organized in the marketplace.</p>
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-8 h-8 bg-purple-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-purple-200" style="font-size:20px;">
+                    <Blazicon Svg="@Lucide.Archive" />
+                </div>
+                <h1 class="text-4xl font-black text-slate-800 tracking-tight">Category Registry</h1>
+            </div>
+            <p class="text-slate-400 font-medium">Orchestrating global organizational nodes for the shared template ecosystem.</p>
         </div>
-        <button @onclick="() => SelectCategory(null)" 
-                class="flex items-center gap-2 bg-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all hover:scale-[1.02] active:scale-[0.98]">
-            @* Icon: Plus (Lucide) *@
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14"/><path d="M12 5v14"/>
-            </svg>
-            Create Category
-        </button>
+
+        <div class="flex items-center gap-4">
+            <div class="bg-white p-2 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mr-2">
+                    @Categories.Count Nodes Provisioned
+                </span>
+            </div>
+            <button @onclick="OpenCreateForm"
+                    class="bg-[#1C1D2A] text-white px-8 py-4 rounded-[32px] font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-3 shadow-xl shadow-slate-200 active:scale-95"
+                    style="font-size:20px;">
+                <Blazicon Svg="@Lucide.FolderPlus" />
+                <span style="font-size:12px;">Initialize Category</span>
+            </button>
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        
-        @* --- LEFT: Category List --- *@
-        <div class="lg:col-span-4 space-y-6">
-            <div class="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col h-full min-h-[500px]">
-                <div class="p-6 border-b border-slate-50">
-                    <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
-                        @* Icon: FolderTree (Lucide) *@
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20 10a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2.5a1 1 0 0 1-.8-.4l-.9-1.2A1 1 0 0 0 15 3h-2a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M20 21a1 1 0 0 0 1-1v-3a1 1 0 0 0-1-1h-2.9a1 1 0 0 1-.88-.55l-.42-.85a1 1 0 0 0-.9-.6H13a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1Z"/><path d="M3 5a2 2 0 0 0 2 2h3"/><path d="M3 3v13a2 2 0 0 0 2 2h3"/>
-                        </svg>
-                        Available Categories
-                    </h3>
-                    
-                    @* Search Input *@
-                    <div class="relative group">
-                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors">
-                            @* Icon: Search (Lucide) *@
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                            </svg>
-                        </span>
-                        <input type="text" 
-                               placeholder="Find category..." 
-                               @bind="searchQuery"
-                               @bind:event="oninput"
-                               class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-100 bg-slate-50/50 focus:bg-white focus:border-purple-200 focus:ring-4 focus:ring-purple-500/5 outline-none text-sm font-medium transition-all" />
-                    </div>
+    @* ══════ KPI Stats ══════ *@
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-xl transition-all">
+            <div class="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform text-purple-500" style="font-size:28px;">
+                <Blazicon Svg="@Lucide.Layers" />
+            </div>
+            <div>
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Registry Load</p>
+                <h4 class="text-2xl font-black text-slate-800 mt-0.5">@Categories.Count</h4>
+            </div>
+        </div>
+        <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-xl transition-all">
+            <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform text-emerald-500" style="font-size:28px;">
+                <Blazicon Svg="@Lucide.ShieldCheck" />
+            </div>
+            <div>
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">System Nodes</p>
+                <h4 class="text-2xl font-black text-slate-800 mt-0.5">@Categories.Count</h4>
+            </div>
+        </div>
+        <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-xl transition-all">
+            <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform text-blue-500" style="font-size:28px;">
+                <Blazicon Svg="@Lucide.Activity" />
+            </div>
+            <div>
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Utilization</p>
+                <h4 class="text-2xl font-black text-slate-800 mt-0.5">84%</h4>
+            </div>
+        </div>
+        <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-xl transition-all">
+            <div class="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform text-orange-500" style="font-size:28px;">
+                <Blazicon Svg="@Lucide.TrendingUp" />
+            </div>
+            <div>
+                <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Status</p>
+                <h4 class="text-2xl font-black text-slate-800 mt-0.5">Optimized</h4>
+            </div>
+        </div>
+    </div>
+
+    @* ══════ Main Content ══════ *@
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-10">
+
+        @* ── Category Table ── *@
+        <div class="xl:col-span-8 space-y-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
+                <div class="relative group w-full sm:w-80">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors" style="font-size:16px;">
+                        <Blazicon Svg="@Lucide.Search" />
+                    </span>
+                    <input type="text"
+                           placeholder="Search nodes by identifier..."
+                           @bind="searchQuery"
+                           @bind:event="oninput"
+                           class="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-100 rounded-[24px] shadow-sm text-xs font-bold focus:ring-2 focus:ring-purple-500/10 transition-all outline-none" />
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[48px] border border-slate-100 shadow-sm overflow-hidden">
+                <div class="bg-slate-50/50 border-b border-slate-100">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr>
+                                <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Category Node</th>
+                                <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Subcategories</th>
+                                <th class="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                            </tr>
+                        </thead>
+                    </table>
                 </div>
 
-                <div class="flex-1 overflow-y-auto px-2 py-4">
-                    @if (FilteredCategories.Any())
-                    {
-                        <div class="space-y-1">
+                @if (FilteredCategories.Any())
+                {
+                    <table class="w-full text-left">
+                        <tbody class="divide-y divide-slate-50">
                             @foreach (var cat in FilteredCategories)
                             {
-                                <button @onclick="() => SelectCategory(cat)"
-                                        class="w-full text-left p-4 flex items-center justify-between rounded-2xl transition-all @(selectedCategory?.Id == cat.Id ? "bg-purple-50 text-purple-700 border border-purple-100 shadow-sm" : "hover:bg-slate-50 text-slate-600")">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center @(selectedCategory?.Id == cat.Id ? "bg-purple-600 text-white" : "bg-slate-100 text-slate-400")">
-                                            @* Icon: Grid (Lucide) *@
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
-                                            </svg>
+                                <tr class="transition-colors group hover:bg-slate-50/30">
+                                    <td class="px-8 py-6">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-white shadow-sm group-hover:scale-105 transition-transform bg-purple-50 text-purple-500" style="font-size:24px;">
+                                                <Blazicon Svg="@Lucide.FolderOpen" />
+                                            </div>
+                                            <div>
+                                                <p class="text-sm font-black text-slate-800">@cat.Name</p>
+                                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">ID: TF@cat.Id</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <span class="font-bold block text-sm">@cat.Name</span>
-                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">@cat.Subcategories.Count Subcategories</span>
+                                    </td>
+                                    <td class="px-8 py-6">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-lg border border-slate-100">
+                                                <span class="text-slate-400" style="font-size:12px;"><Blazicon Svg="@Lucide.Layers" /></span>
+                                                <span class="text-xs font-black text-slate-700">@cat.Subcategories.Count</span>
+                                            </div>
+                                            <span class="text-[10px] font-bold text-slate-400 uppercase">Children</span>
                                         </div>
-                                    </div>
-                                    @* Icon: ChevronRight (Lucide) *@
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@(selectedCategory?.Id == cat.Id ? "text-purple-400" : "text-slate-200")">
-                                        <path d="m9 18 6-6-6-6"/>
-                                    </svg>
-                                </button>
+                                    </td>
+                                    <td class="px-8 py-6 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <button class="p-3 bg-slate-50 hover:bg-white rounded-xl text-slate-400 hover:text-[#7E96E1] border border-transparent hover:border-slate-100 transition-all shadow-sm"
+                                                    title="View" style="font-size:16px;">
+                                                <Blazicon Svg="@Lucide.Eye" />
+                                            </button>
+                                            <button @onclick="() => StartEdit(cat)"
+                                                    class="p-3 bg-slate-50 hover:bg-white rounded-xl text-slate-400 hover:text-purple-500 border border-transparent hover:border-slate-100 transition-all shadow-sm"
+                                                    title="Edit" style="font-size:16px;">
+                                                <Blazicon Svg="@Lucide.Pencil" />
+                                            </button>
+                                            <button @onclick="() => DeleteCategory(cat)"
+                                                    class="p-3 bg-slate-50 hover:bg-red-50 rounded-xl text-slate-400 hover:text-red-500 border border-transparent hover:border-red-100 transition-all shadow-sm"
+                                                    title="Delete" style="font-size:16px;">
+                                                <Blazicon Svg="@Lucide.Trash2" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
                             }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="p-32 text-center flex flex-col items-center">
+                        <div class="w-20 h-20 bg-slate-50 rounded-[32px] flex items-center justify-center mb-6 shadow-inner">
+                            <span class="text-slate-200" style="font-size:40px;"><Blazicon Svg="@Lucide.FolderOpen" /></span>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="p-12 text-center text-slate-400">
-                            <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                @* Icon: Search (Lucide) *@
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                                </svg>
-                            </div>
-                            <p class="text-sm font-bold">No matches found</p>
-                        </div>
-                    }
-                </div>
+                        <h3 class="text-xl font-black text-slate-800 uppercase tracking-widest">No Registry Matches</h3>
+                        <p class="text-slate-400 max-w-xs mt-2 font-medium">No categories found matching your search.</p>
+                    </div>
+                }
             </div>
         </div>
 
-        @* --- RIGHT: Edit Panel --- *@
-        <div class="lg:col-span-8">
-            <div class="bg-white rounded-[40px] border border-slate-100 shadow-sm p-10 flex flex-col h-full">
-                <div class="flex justify-between items-center mb-10 pb-6 border-b border-slate-50">
-                    <div>
-                        <h2 class="text-2xl font-black text-slate-900 tracking-tight">
-                            @(selectedCategory != null && selectedCategory.Id > 0 ? "Refine Category" : "New Category")
-                        </h2>
-                        <p class="text-sm text-slate-400 font-medium">Configure properties and children.</p>
+        @* ── Sidebar ── *@
+        <div class="xl:col-span-4 space-y-8">
+            <div class="bg-slate-900 rounded-[48px] p-10 text-white relative overflow-hidden shadow-2xl">
+                <div class="relative z-10">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center backdrop-blur-md shadow-lg shadow-purple-900/50">
+                            <span class="text-purple-400" style="font-size:20px;"><Blazicon Svg="@Lucide.ShieldCheck" /></span>
+                        </div>
+                        <h4 class="text-lg font-black tracking-tight">System Policy</h4>
                     </div>
-                    @if (selectedCategory != null && selectedCategory.Id > 0)
-                    {
-                        <button @onclick="DeleteCategory" 
-                                class="flex items-center gap-2 text-rose-500 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all text-sm font-bold">
-                            @* Icon: Trash2 (Lucide) *@
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
-                            </svg>
-                            Delete
-                        </button>
-                    }
+                    <p class="text-slate-400 text-xs leading-relaxed font-medium italic">
+                        "Global categories are immutable once synchronized with project instances. Registry pruning requires root-level confirmation to prevent trace-link fragmentation."
+                    </p>
+                    <button class="mt-8 w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2 group">
+                        View Registry Protocol
+                        <span class="text-slate-500 group-hover:text-white transition-colors" style="font-size:12px;"><Blazicon Svg="@Lucide.ArrowUpRight" /></span>
+                    </button>
                 </div>
-                
-                <div class="space-y-10 flex-1">
-                    @* Category Name *@
-                    <div class="space-y-3">
-                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            Identity & Label
-                        </label>
-                        <input type="text" 
-                               @bind="categoryFormData.Name"
-                               class="w-full px-6 py-4 rounded-2xl border border-slate-100 bg-slate-50/30 focus:bg-white focus:border-purple-200 focus:ring-4 focus:ring-purple-500/5 outline-none text-lg font-bold text-slate-900 transition-all"
-                               placeholder="e.g. Enterprise Cloud" />
-                    </div>
+                <div class="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-[100px]"></div>
+            </div>
 
-                    @* Subcategories Section *@
-                    <div class="space-y-6">
-                        <label class="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            @* Icon: Tag (Lucide) *@
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>
-                            </svg>
-                            Subcategories
-                        </label>
-                        
-                        <div class="bg-slate-50/50 rounded-3xl p-6 border border-slate-100">
-                            <div class="flex flex-wrap gap-2 mb-6 min-h-[48px]">
-                                @foreach (var sub in categoryFormData.Subcategories)
-                                {
-                                    <div class="bg-white border border-slate-100 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 flex items-center gap-2 shadow-sm group hover:border-purple-200 transition-all">
-                                        <span>@sub</span>
-                                        <button @onclick="() => RemoveSubcategory(sub)"
-                                                class="text-slate-300 hover:text-rose-500 transition-colors">
-                                            @* Icon: X (Lucide) *@
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                }
-                                @if (!categoryFormData.Subcategories.Any())
-                                {
-                                    <div class="w-full flex items-center justify-center py-4 border-2 border-dashed border-slate-100 rounded-2xl text-slate-300 text-xs font-bold">
-                                        No subcategories defined yet.
-                                    </div>
-                                }
-                            </div>
-
-                            @* Add Subcategory *@
-                            <div class="flex gap-2">
-                                <input type="text" 
-                                       @bind="newSubcategoryName"
-                                       @onkeyup="HandleSubInputKeyUp"
-                                       placeholder="Add subcategory name..."
-                                       class="flex-1 px-5 py-3 rounded-xl border border-slate-100 focus:border-purple-200 outline-none bg-white text-sm font-medium transition-all" />
-                                <button @onclick="AddSubcategory"
-                                        class="bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all">
-                                    Add
-                                </button>
-                            </div>
+            <div class="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm space-y-6">
+                <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 px-1">
+                    <span class="text-emerald-500" style="font-size:16px;"><Blazicon Svg="@Lucide.Activity" /></span>
+                    Recent Transactions
+                </h4>
+                <div class="space-y-6 relative pl-4">
+                    <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-50"></div>
+                    <div class="relative pl-6">
+                        <div class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-white"></div>
+                        <div>
+                            <p class="text-xs font-black text-slate-800">Registry Active</p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">Now</p>
                         </div>
                     </div>
-                </div>
-
-                <div class="pt-10 mt-10 border-t border-slate-50">
-                    <button @onclick="SaveCategory"
-                            class="w-full bg-purple-600 text-white py-4 rounded-2xl font-black text-sm tracking-widest uppercase shadow-xl shadow-purple-500/20 hover:bg-purple-700 transition-all transform active:scale-[0.99] flex items-center justify-center gap-3">
-                        @* Icon: Save (Lucide) *@
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/>
-                        </svg>
-                        @(selectedCategory != null && selectedCategory.Id > 0 ? "Sync Changes" : "Initialize Category")
-                    </button>
+                    <div class="relative pl-6">
+                        <div class="absolute left-[-5px] top-1.5 w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-white"></div>
+                        <div>
+                            <p class="text-xs font-black text-slate-800">System Initialized</p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">Jan 2024</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+@* ══════ Editor Modal ══════ *@
+@if (isFormOpen)
+{
+    <div class="fixed inset-0 z-[250] flex items-center justify-center p-6">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md" @onclick="() => isFormOpen = false"></div>
+        <div class="relative bg-white w-full max-w-lg rounded-[48px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            <div class="p-10 border-b border-slate-50 flex items-start justify-between bg-slate-50/50">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-[#1C1D2A] rounded-2xl flex items-center justify-center shadow-lg">
+                        <span class="text-purple-400" style="font-size:28px;"><Blazicon Svg="@Lucide.Archive" /></span>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800">@(editingCategory != null ? "Refactor Node" : "Initialize Node")</h2>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Registry Governance</p>
+                    </div>
+                </div>
+                <button @onclick="() => isFormOpen = false" class="p-3 hover:bg-white rounded-2xl text-slate-400 transition-all" style="font-size:24px;">
+                    <Blazicon Svg="@Lucide.X" />
+                </button>
+            </div>
+
+            <div class="p-10 space-y-8">
+                <div class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Node Identifier</label>
+                        <input @bind="formName"
+                               placeholder="e.g. Cloud Security Cluster"
+                               class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-purple-500 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800" />
+                    </div>
+                    <div class="p-6 bg-blue-50 border border-blue-100 rounded-[32px] space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-blue-500 animate-pulse" style="font-size:14px;"><Blazicon Svg="@Lucide.Zap" /></span>
+                            <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest">Architectural Tip</span>
+                        </div>
+                        <p class="text-[10px] text-blue-500 font-medium leading-relaxed">
+                            Nodes represent top-level semantic domains. Choose descriptive titles to assist global discoverability.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button @onclick="HandleSave"
+                            class="w-full py-5 bg-[#1C1D2A] text-white font-black text-lg rounded-2xl hover:bg-slate-800 hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-slate-200">
+                        <span class="text-emerald-400" style="font-size:20px;"><Blazicon Svg="@Lucide.Check" /></span>
+                        @(editingCategory != null ? "Apply Registry Update" : "Initialize Node Instance")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter] public List<CategoryDto> Categories { get; set; } = new();
-    [Parameter] public EventCallback<CategoryDto> OnUpdateCategory { get; set; }
     [Parameter] public EventCallback<CategoryDto> OnCreateCategory { get; set; }
-    [Parameter] public EventCallback<int> OnDeleteCategory { get; set; }
+    [Parameter] public EventCallback<CategoryDto> OnUpdateCategory { get; set; }
+    [Parameter] public EventCallback<CategoryDto> OnDeleteCategory { get; set; }
 
-    // State
-    private CategoryDto? selectedCategory;
-    private CategoryDto categoryFormData = new();
-    private string newSubcategoryName = "";
     private string searchQuery = "";
+    private bool isFormOpen;
+    private CategoryDto? editingCategory;
+    private string formName = "";
 
-    // Computed Property for Search
-    private IEnumerable<CategoryDto> FilteredCategories => 
-        string.IsNullOrWhiteSpace(searchQuery) 
-        ? Categories 
-        : Categories.Where(c => c.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<CategoryDto> FilteredCategories => Categories.Where(c =>
+        string.IsNullOrWhiteSpace(searchQuery) ||
+        c.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
 
-    private void SelectCategory(CategoryDto? cat)
+    private void OpenCreateForm()
     {
-        selectedCategory = cat;
-        // Deep copy để tránh sửa trực tiếp vào list gốc trước khi Save
-        if (cat != null)
+        editingCategory = null;
+        formName = "";
+        isFormOpen = true;
+    }
+
+    private void StartEdit(CategoryDto cat)
+    {
+        editingCategory = cat;
+        formName = cat.Name;
+        isFormOpen = true;
+    }
+
+    private async Task HandleSave()
+    {
+        if (string.IsNullOrWhiteSpace(formName)) return;
+
+        if (editingCategory != null)
         {
-            categoryFormData = new CategoryDto
-            {
-                Id = cat.Id,
-                Name = cat.Name,
-                Subcategories = new List<string>(cat.Subcategories)
-            };
+            editingCategory.Name = formName.Trim();
+            await OnUpdateCategory.InvokeAsync(editingCategory);
         }
         else
         {
-            // Reset form for create new
-            categoryFormData = new CategoryDto { Subcategories = new List<string>() };
+            await OnCreateCategory.InvokeAsync(new CategoryDto { Name = formName.Trim() });
         }
+
+        isFormOpen = false;
+        editingCategory = null;
+        formName = "";
     }
 
-    private void AddSubcategory()
+    private async Task DeleteCategory(CategoryDto cat)
     {
-        if (!string.IsNullOrWhiteSpace(newSubcategoryName) && 
-            !categoryFormData.Subcategories.Contains(newSubcategoryName.Trim()))
-        {
-            categoryFormData.Subcategories.Add(newSubcategoryName.Trim());
-            newSubcategoryName = "";
-        }
-    }
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to decommission the category \"{cat.Name}\"?");
+        if (!confirmed) return;
 
-    private void RemoveSubcategory(string sub)
-    {
-        categoryFormData.Subcategories.Remove(sub);
-    }
-
-    private void HandleSubInputKeyUp(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter") AddSubcategory();
-    }
-
-    private async Task SaveCategory()
-    {
-        if (string.IsNullOrWhiteSpace(categoryFormData.Name)) return; // Validation đơn giản
-
-        if (selectedCategory != null && selectedCategory.Id > 0)
-        {
-            await OnUpdateCategory.InvokeAsync(categoryFormData);
-        }
-        else
-        {
-            await OnCreateCategory.InvokeAsync(categoryFormData);
-            // Reset form sau khi tạo
-            categoryFormData = new CategoryDto { Subcategories = new List<string>() };
-        }
-    }
-
-    private async Task DeleteCategory()
-    {
-        if (selectedCategory != null && selectedCategory.Id > 0)
-        {
-            // Trong thực tế nên dùng Modal Dialog của Blazor thay vì confirm() js
-            await OnDeleteCategory.InvokeAsync(selectedCategory.Id);
-            SelectCategory(null);
-        }
+        await OnDeleteCategory.InvokeAsync(cat);
     }
 }

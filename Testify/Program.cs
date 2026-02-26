@@ -107,6 +107,8 @@ if (app.Environment.IsDevelopment())
             await RoleSeeder.SeedRolesAsync(services);
             await UserSeeder.SeedUsersAsync(services);
         }
+        // Seed marketplace data (categories, templates, tags)
+        await MarketplaceSeeder.SeedAsync(db);
     }
     catch (Exception ex)
     {

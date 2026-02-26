@@ -1,134 +1,295 @@
-@page "/marketplace"
-@using Testify.Shared.DTOs.Marketplace
-@using Testify.Client.Features.Marketplace.Components
+@page "/admin/marketplace"
+@using Blazicons
+@using Microsoft.AspNetCore.Authorization
 @using Testify.Client.Interfaces
-@inject IMarketplaceService MarketplaceService
+@using Testify.Shared.DTOs.Marketplace
+@attribute [Authorize(Roles = "Admin")]
 @rendermode InteractiveWebAssembly
+@inject IMarketplaceService MarketplaceService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
-<div class="min-h-screen bg-[#f9fafb] text-slate-900 pb-20">
-    <section class="relative px-8 pt-12 pb-24 overflow-hidden bg-slate-900 rounded-b-[60px] mb-10">
-        <div class="relative z-10 text-center space-y-6">
-            <h1 class="text-4xl md:text-6xl font-black text-white tracking-tight">
-                Marketplace <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400">Templates</span>
+<PageTitle>Marketplace Preview - Testify Admin</PageTitle>
+
+<div class="max-w-[1400px] mx-auto px-8 space-y-12 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+    @* ══════ Hero Marketplace Header ══════ *@
+    <div class="bg-[#1C1D2A] rounded-[48px] p-12 text-white relative overflow-hidden shadow-2xl flex flex-col md:flex-row items-center justify-between gap-10">
+        <div class="relative z-10 space-y-6 flex-1">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-[#E85D3F] text-[10px] font-black uppercase tracking-[0.3em]">
+                <span style="font-size:14px;"><Blazicon Svg="@Lucide.Sparkles" /></span>
+                Neural Blueprint Exchange
+            </div>
+            <h1 class="text-5xl lg:text-7xl font-black tracking-tighter leading-none">
+                The Global <br />
+                <span class="text-[#E85D3F]">Quality</span> Registry.
             </h1>
-            <div class="max-w-3xl mx-auto pt-4">
-                <div class="flex items-center bg-white rounded-2xl shadow-2xl border-4 border-white/10 h-14 px-5 gap-3">
-                    <svg class="text-slate-400 flex-shrink-0" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                    </svg>
-                    <input type="text" 
-                           @bind="searchTerm" 
-                           @bind:event="oninput"
-                           placeholder="Search templates..."
-                           class="w-full h-full bg-transparent text-slate-900 text-lg font-medium focus:outline-none placeholder:text-slate-400" />
+            <p class="text-slate-400 text-lg font-medium max-w-xl">
+                Browse, sync, and deploy industry-standard test architectures directly to your workspace. Powered by community intelligence.
+            </p>
+            <div class="flex gap-4">
+                <button class="bg-white text-[#1C1D2A] px-10 py-5 rounded-[24px] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-white/5">
+                    Publish Your Logic
+                </button>
+                <div class="flex items-center gap-6 pl-6 border-l border-white/10">
+                    <div>
+                        <p class="text-2xl font-black">@FormatCount(totalClones)</p>
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Global Clones</p>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-black">@totalAuthors</p>
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Verified Authors</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </section>
 
-    <div class="max-w-[1400px] mx-auto px-8 -mt-10 relative z-20">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            
-            <aside class="lg:col-span-3 space-y-8">
-                <div class="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm sticky top-28">
-                    <div class="space-y-6">
-                        <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
-                            </svg>
-                            Categories
-                        </h3>
-                        
-                        <div class="space-y-1.5">
-                            <button @onclick="() => selectedCategoryId = null"
-                                    class="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold transition-all @(selectedCategoryId == null ? "bg-purple-600 text-white shadow-lg shadow-purple-200" : "text-slate-500 hover:bg-slate-50 text-slate-900")">
-                                <span>All Suites</span>
-                                <span class="opacity-50 font-medium">@AllTemplates.Count</span>
-                            </button>
+        @* Abstract Neural Globe Visual *@
+        <div class="hidden md:flex relative w-80 h-80 items-center justify-center flex-shrink-0 z-10">
+            <div class="w-full h-full rounded-full border-4 border-dashed border-[#E85D3F]/20 animate-[spin_60s_linear_infinite] absolute"></div>
+            <div class="w-[80%] h-[80%] rounded-full border-2 border-dashed border-[#7E96E1]/20 animate-[spin_40s_linear_infinite_reverse] absolute"></div>
+            <div class="relative">
+                <span class="text-[#E85D3F]" style="font-size:96px;"><Blazicon Svg="@Lucide.ShoppingBag" /></span>
+                <div class="absolute inset-0 blur-3xl opacity-30 bg-[#E85D3F] animate-pulse"></div>
+            </div>
+        </div>
 
-                            @foreach (var cat in Categories)
+        <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-[#E85D3F] rounded-full blur-[150px] opacity-10"></div>
+        <div class="absolute top-0 left-1/2 w-96 h-96 bg-[#7E96E1] rounded-full blur-[150px] opacity-5"></div>
+    </div>
+
+    @* ══════ Discovery Controls ══════ *@
+    <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
+        <div class="relative group w-full lg:w-[450px]">
+            <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#E85D3F] transition-colors" style="font-size:20px;">
+                <Blazicon Svg="@Lucide.Search" />
+            </span>
+            <input type="text"
+                   placeholder="Search by tech stack, compliance, or logic type..."
+                   @bind="searchQuery"
+                   @bind:event="oninput"
+                   class="w-full pl-16 pr-8 py-5 bg-white border border-slate-100 rounded-[32px] shadow-sm text-sm font-bold outline-none focus:ring-4 focus:ring-[#E85D3F]/5 transition-all" />
+        </div>
+
+        <div class="flex items-center gap-2 p-1.5 bg-white border border-slate-100 rounded-[32px] shadow-sm overflow-x-auto no-scrollbar w-full lg:w-auto">
+            @foreach (var cat in categories)
+            {
+                <button @onclick="() => selectedCategory = cat"
+                        class="@($"px-8 py-3 rounded-[24px] text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap {(selectedCategory == cat ? "bg-[#1C1D2A] text-white shadow-xl" : "text-slate-400 hover:text-slate-600")}")">
+                    @cat
+                </button>
+            }
+        </div>
+    </div>
+
+    @* ══════ Grid Content ══════ *@
+    @if (isLoading)
+    {
+        <div class="flex justify-center py-20">
+            <div class="w-12 h-12 border-4 border-slate-200 border-t-[#E85D3F] rounded-full animate-spin"></div>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+            @foreach (var item in FilteredItems)
+            {
+                <div class="bg-white rounded-[48px] p-10 border border-slate-50 shadow-sm hover:shadow-2xl transition-all group flex flex-col h-full relative overflow-hidden">
+                    @* Categories & Stats *@
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-[9px] font-black uppercase tracking-widest">@item.CategoryName</span>
+                            @if (item.Stars > 5)
                             {
-                                <button @onclick="() => selectedCategoryId = cat.Id"
-                                        class="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-bold transition-all @(selectedCategoryId == cat.Id ? "bg-purple-600 text-white shadow-lg shadow-purple-200" : "text-slate-500 hover:bg-slate-50 text-slate-900 group")">
-                                    <div class="flex items-center gap-3">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@(selectedCategoryId == cat.Id ? "text-white" : "text-slate-400 group-hover:text-purple-500")">
-                                            <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
-                                        </svg>
-                                        <span>@cat.Name</span>
-                                    </div>
-                                    <span class="opacity-50 font-medium">
-                                        @AllTemplates.Count(t => t.CategoryName == cat.Name)
-                                    </span>
-                                </button>
+                                <div class="flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100">
+                                    <span style="font-size:12px;"><Blazicon Svg="@Lucide.ShieldCheck" /></span>
+                                    Verified
+                                </div>
+                            }
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-amber-400" style="font-size:16px;"><Blazicon Svg="@Lucide.Star" /></span>
+                            <span class="text-xs font-black text-slate-800">@item.Stars</span>
+                        </div>
+                    </div>
+
+                    @* Title & Description *@
+                    <div class="space-y-4 flex-1">
+                        <h3 class="text-2xl font-black text-slate-800 group-hover:text-[#E85D3F] transition-colors leading-tight">@item.Title</h3>
+                        <p class="text-slate-400 text-sm font-medium leading-relaxed line-clamp-3 italic">"@item.Description"</p>
+                        <div class="flex flex-wrap gap-2 pt-2">
+                            @foreach (var tag in item.Tags)
+                            {
+                                <span class="text-[10px] font-bold text-slate-300 uppercase">#@tag</span>
                             }
                         </div>
                     </div>
-                </div>
-            </aside>
 
-            <div class="lg:col-span-9">
-                @if (FilteredTemplates.Any())
-                {
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                        @foreach (var template in FilteredTemplates)
-                        {
-                            <TemplateCard Template="@template" 
-                                          CategoryName="@template.CategoryName"
-                                          OnClone="HandleClone"
-                                          OnBuy="HandleBuy" />
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="py-24 flex flex-col items-center justify-center bg-white rounded-[40px] border border-slate-100 border-dashed space-y-6">
-                        <div class="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
-                            </svg>
+                    @* Interaction Footer *@
+                    <div class="mt-10 space-y-6">
+                        <div class="flex items-center justify-between p-6 bg-slate-50 rounded-[32px] border border-slate-100/50">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+                                    <span class="text-[#7E96E1]" style="font-size:20px;"><Blazicon Svg="@Lucide.Download" /></span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-800">@FormatCount(item.Clones)</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Active Clones</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-black text-slate-800">@item.Views</p>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Views</p>
+                            </div>
                         </div>
-                        <h3 class="text-xl font-black text-slate-900">No templates found</h3>
-                        <button @onclick="ResetFilters" class="px-6 py-3 bg-slate-900 text-white rounded-2xl text-sm font-bold">
-                            Clear all filters
-                        </button>
+
+                        <div class="flex gap-3">
+                            <button class="flex-1 py-5 bg-[#1C1D2A] text-white rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 shadow-slate-100">
+                                <span class="text-[#E85D3F]" style="font-size:16px;"><Blazicon Svg="@Lucide.Zap" /></span>
+                                Sync to Library
+                            </button>
+                            <button @onclick="() => CopyShareLink(item.Id)"
+                                    class="@($"p-5 border rounded-[24px] transition-all shadow-sm relative {(copiedId == item.Id ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white border-slate-100 hover:border-[#7E96E1] text-[#7E96E1]")}")"
+                                    title="Copy Share Link">
+                                @if (copiedId == item.Id)
+                                {
+                                    <span style="font-size:20px;"><Blazicon Svg="@Lucide.Check" /></span>
+                                }
+                                else
+                                {
+                                    <span style="font-size:20px;"><Blazicon Svg="@Lucide.ArrowUpRight" /></span>
+                                }
+                            </button>
+                        </div>
                     </div>
-                }
+
+                    <p class="absolute -bottom-4 -left-4 text-[60px] font-black text-slate-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-tighter -z-10 truncate max-w-full">
+                        @item.AuthorName
+                    </p>
+                </div>
+            }
+
+            @if (!FilteredItems.Any())
+            {
+                <div class="col-span-full py-40 flex flex-col items-center justify-center text-center bg-white/40 rounded-[64px] border-2 border-dashed border-slate-100">
+                    <div class="w-24 h-24 bg-white rounded-[40px] flex items-center justify-center shadow-sm mb-8">
+                        <span class="text-slate-200" style="font-size:40px;"><Blazicon Svg="@Lucide.Search" /></span>
+                    </div>
+                    <h3 class="text-3xl font-black text-slate-800 uppercase tracking-widest">No Intelligence Matches</h3>
+                    <p class="text-slate-400 max-w-md mt-2 font-medium leading-relaxed">We couldn't find any blueprints matching your query.</p>
+                    <button @onclick="ResetFilters"
+                            class="mt-8 px-10 py-4 bg-[#1C1D2A] text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                        Reset Marketplace Feed
+                    </button>
+                </div>
+            }
+        </div>
+    }
+
+    @* ══════ Community Banner ══════ *@
+    <div class="bg-gradient-to-br from-[#7E96E1] to-[#6379c9] rounded-[64px] p-16 text-white flex flex-col md:flex-row items-center gap-16 relative overflow-hidden shadow-2xl">
+        <div class="relative z-10 flex-1 space-y-8">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                    <span style="font-size:24px;"><Blazicon Svg="@Lucide.Users" /></span>
+                </div>
+                <h3 class="text-3xl font-black tracking-tight uppercase">Community Vanguard</h3>
+            </div>
+            <p class="text-blue-50 text-xl font-medium leading-relaxed max-w-2xl italic">
+                "Testify Marketplace has saved our team over 400 hours of redundant architecture planning. Being able to sync a SOC2-ready suite in seconds is a game-changer for our deployment velocity."
+            </p>
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-[20px] overflow-hidden border-4 border-white/20">
+                    <img src="https://picsum.photos/seed/marcus/100/100" alt="" class="w-full h-full object-cover" />
+                </div>
+                <div>
+                    <p class="text-lg font-black leading-none">Marcus Aurelius</p>
+                    <p class="text-[10px] font-black text-blue-200 uppercase tracking-widest mt-1">Lead Architect, Rome Tech</p>
+                </div>
             </div>
         </div>
+        <div class="relative flex-shrink-0">
+            <div class="bg-white/10 backdrop-blur-xl p-10 rounded-[48px] border border-white/20 flex flex-col items-center gap-6">
+                <div class="flex -space-x-4">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        var seed = i * 20;
+                        <div class="w-12 h-12 rounded-full border-4 border-[#7E96E1] overflow-hidden bg-slate-200">
+                            <img src="@($"https://picsum.photos/seed/{seed}/50/50")" alt="" />
+                        </div>
+                    }
+                </div>
+                <div class="text-center">
+                    <p class="text-3xl font-black">4,200+</p>
+                    <p class="text-[10px] font-black text-blue-200 uppercase tracking-widest mt-1">Global Contributors</p>
+                </div>
+                <button class="w-full py-4 bg-white text-blue-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-50 transition-all shadow-xl">
+                    Join the Vanguard
+                </button>
+            </div>
+        </div>
+        <span class="absolute -bottom-10 -right-10 text-white opacity-[0.03] rotate-12" style="font-size:256px;">
+            <Blazicon Svg="@Lucide.Layers" />
+        </span>
     </div>
 </div>
 
 @code {
-    // Data gốc
-    private List<TemplateDto> AllTemplates = new();
-    private List<CategoryDto> Categories = new();
+    private string searchQuery = "";
+    private string selectedCategory = "All";
+    private int? copiedId = null;
+    private bool isLoading = true;
 
-    // State bộ lọc
-    private string searchTerm = "";
-    private int? selectedCategoryId;
+    private List<TemplateDto> allTemplates = new();
+    private List<string> categories = new() { "All" };
+    private int totalClones;
+    private int totalAuthors;
 
-    // Logic lọc dữ liệu (Computed Property)
-    private IEnumerable<TemplateDto> FilteredTemplates => AllTemplates
-        .Where(t => string.IsNullOrWhiteSpace(searchTerm) || t.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-        .Where(t => selectedCategoryId == null || GetCategoryIdByName(t.CategoryName) == selectedCategoryId);
+    private IEnumerable<TemplateDto> FilteredItems => allTemplates.Where(item =>
+    {
+        var matchesSearch = string.IsNullOrWhiteSpace(searchQuery) ||
+            item.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+            item.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase);
+        var matchesCat = selectedCategory == "All" || item.CategoryName == selectedCategory;
+        return matchesSearch && matchesCat;
+    });
 
     protected override async Task OnInitializedAsync()
     {
-        // Load cả Template và Category từ API
-        AllTemplates = await MarketplaceService.GetTemplatesAsync();
-        Categories = await MarketplaceService.GetCategoriesAsync(); 
+        try
+        {
+            allTemplates = await MarketplaceService.GetTemplatesAsync();
+
+            var cats = await MarketplaceService.GetCategoriesAsync();
+            categories = new List<string> { "All" };
+            categories.AddRange(cats.Select(c => c.Name).Where(n => !string.IsNullOrEmpty(n)).Distinct());
+
+            totalClones = allTemplates.Sum(t => t.Clones);
+            totalAuthors = allTemplates.Select(t => t.AuthorName).Distinct().Count();
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
-    // Helper: Vì TemplateDto đang lưu CategoryName, cần map ngược lại ID để so sánh
-    private int GetCategoryIdByName(string name) => Categories.FirstOrDefault(c => c.Name == name)?.Id ?? 0;
+    private async Task CopyShareLink(int itemId)
+    {
+        var shareLink = $"{Navigation.BaseUri}marketplace/template/{itemId}";
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", shareLink);
+        copiedId = itemId;
+        StateHasChanged();
+        await Task.Delay(2000);
+        copiedId = null;
+        StateHasChanged();
+    }
 
     private void ResetFilters()
     {
-        searchTerm = "";
-        selectedCategoryId = null;
+        searchQuery = "";
+        selectedCategory = "All";
     }
 
-    private async Task HandleClone(int id) { /* Logic Clone */ }
-    
-    private async Task HandleBuy(int id) { /* Logic Buy */ }
+    private string FormatCount(int count) =>
+        count >= 1000 ? $"{count / 1000.0:0.#}k" : count.ToString();
 }

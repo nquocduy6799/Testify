@@ -1,0 +1,115 @@
+@page "/admin/category-registry"
+@using Blazicons
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Testify.Data
+@using Testify.Entities
+@using Testify.Components.Features.Categories
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+@inject ApplicationDbContext DbContext
+
+<PageTitle>Category Registry - Testify Admin</PageTitle>
+
+<CategoryManagement Folders="folders"
+                    Suites="suites"
+                    OnUpdateFolders="HandleUpdateFolders"
+                    OnUpdateSuites="HandleUpdateSuites" />
+
+@code {
+    private List<CategoryManagement.TemplateFolderViewModel> folders = new();
+    private List<CategoryManagement.TestSuiteViewModel> suites = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var categories = await DbContext.TemplateCategories
+            .AsNoTracking()
+            .ToListAsync();
+
+        folders = categories.Select(c => new CategoryManagement.TemplateFolderViewModel
+        {
+            Id = c.Id.ToString(),
+            Name = c.Name ?? "",
+            CreatedBy = "Admin"
+        }).ToList();
+
+        var templates = await DbContext.TestSuiteTemplates
+            .Include(t => t.Category)
+            .AsNoTracking()
+            .ToListAsync();
+
+        suites = templates.Select(t => new CategoryManagement.TestSuiteViewModel
+        {
+            Id = t.Id.ToString(),
+            Name = t.Name,
+            Folder = t.Category?.Name
+        }).ToList();
+    }
+
+    private async Task HandleUpdateFolders(List<CategoryManagement.TemplateFolderViewModel> updatedFolders)
+    {
+        // Detect NEW folders (ID starts with "TF-")
+        var newFolders = updatedFolders.Where(f => f.Id.StartsWith("TF-")).ToList();
+        foreach (var nf in newFolders)
+        {
+            var entity = new TemplateCategory { Name = nf.Name };
+            DbContext.TemplateCategories.Add(entity);
+            await DbContext.SaveChangesAsync();
+            nf.Id = entity.Id.ToString();
+        }
+
+        // Detect UPDATED folders
+        foreach (var uf in updatedFolders.Where(f => !f.Id.StartsWith("TF-")))
+        {
+            if (int.TryParse(uf.Id, out var id))
+            {
+                var entity = await DbContext.TemplateCategories.FindAsync(id);
+                if (entity != null && entity.Name != uf.Name)
+                {
+                    entity.Name = uf.Name;
+                }
+            }
+        }
+
+        // Detect DELETED folders
+        var existingIds = updatedFolders
+            .Where(f => !f.Id.StartsWith("TF-"))
+            .Select(f => int.TryParse(f.Id, out var id) ? id : -1)
+            .Where(id => id > 0)
+            .ToHashSet();
+        var allDbIds = await DbContext.TemplateCategories.Select(c => c.Id).ToListAsync();
+        foreach (var dbId in allDbIds.Where(id => !existingIds.Contains(id)))
+        {
+            var toRemove = await DbContext.TemplateCategories.FindAsync(dbId);
+            if (toRemove != null) DbContext.TemplateCategories.Remove(toRemove);
+        }
+
+        await DbContext.SaveChangesAsync();
+        folders = updatedFolders;
+    }
+
+    private async Task HandleUpdateSuites(List<CategoryManagement.TestSuiteViewModel> updatedSuites)
+    {
+        foreach (var us in updatedSuites)
+        {
+            if (int.TryParse(us.Id, out var id))
+            {
+                var template = await DbContext.TestSuiteTemplates.FindAsync(id);
+                if (template != null)
+                {
+                    if (!string.IsNullOrEmpty(us.Folder))
+                    {
+                        var cat = await DbContext.TemplateCategories.FirstOrDefaultAsync(c => c.Name == us.Folder);
+                        template.CategoryId = cat?.Id;
+                    }
+                    else
+                    {
+                        template.CategoryId = null;
+                    }
+                }
+            }
+        }
+        await DbContext.SaveChangesAsync();
+        suites = updatedSuites;
+    }
+}
