@@ -2,10 +2,9 @@
 @using Testify.Client.Shared.Services
 @inherits LayoutComponentBase
 
-<div>
-
-	<NavMenu /> 
-	<main>
+<div class="min-h-screen flex flex-col bg-slate-50/70">
+	<NavMenu />
+	<main class="flex-1">
 		@Body
 	</main>
 	<Footer />

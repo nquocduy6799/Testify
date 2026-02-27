@@ -1,0 +1,76 @@
+@page "/maintenance"
+@using Microsoft.AspNetCore.Components.Authorization
+
+<PageTitle>Under Maintenance – Testify</PageTitle>
+
+<div class="min-h-screen bg-[#1C1D2A] flex items-center justify-center p-6 font-sans">
+
+    @* Ambient glows *@
+    <div class="pointer-events-none fixed inset-0 overflow-hidden">
+        <div class="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-purple-600/10 blur-[180px]"></div>
+        <div class="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-amber-500/10 blur-[180px]"></div>
+    </div>
+
+    <div class="relative z-10 text-center max-w-lg">
+
+        @* Spinning rings icon *@
+        <div class="relative mx-auto mb-10 h-32 w-32 flex items-center justify-center">
+            <div class="absolute inset-0 rounded-full border-4 border-dashed border-purple-500/30 animate-spin" style="animation-duration:8s;"></div>
+            <div class="absolute inset-4 rounded-full border-2 border-dashed border-amber-500/20 animate-spin" style="animation-duration:5s;animation-direction:reverse;"></div>
+            <div class="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-purple-900/60">
+                <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </div>
+        </div>
+
+        @* Badge *@
+        <div class="inline-flex items-center gap-2 mb-6 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-amber-400">
+            <span class="relative flex h-2 w-2">
+                <span class="absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75 animate-ping"></span>
+                <span class="relative inline-flex h-2 w-2 rounded-full bg-amber-400"></span>
+            </span>
+            Scheduled Maintenance
+        </div>
+
+        <h1 class="text-5xl font-black tracking-tight text-white mb-4">
+            We'll be right<br/>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-400">back online</span>
+        </h1>
+
+        <p class="text-slate-400 text-lg font-medium leading-relaxed mb-10">
+            Our team is performing scheduled maintenance to improve your experience.
+            This won't take long — please check back shortly.
+        </p>
+
+        @* Info cards *@
+        <div class="grid grid-cols-3 gap-4 mb-10">
+            <div class="rounded-[24px] border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+                <div class="text-2xl font-black text-white mb-1">99.9%</div>
+                <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Uptime SLA</div>
+            </div>
+            <div class="rounded-[24px] border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+                <div class="text-2xl font-black text-white mb-1">~15m</div>
+                <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Est. Duration</div>
+            </div>
+            <div class="rounded-[24px] border border-white/10 bg-white/5 p-5 backdrop-blur-md">
+                <div class="text-2xl font-black text-white mb-1">Live</div>
+                <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status Page</div>
+            </div>
+        </div>
+
+        <a href="/Account/Login"
+           class="inline-flex items-center gap-2 rounded-2xl bg-white/10 border border-white/10 px-6 py-3 text-sm font-black text-slate-300 hover:bg-white/20 transition-all no-underline">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14" />
+            </svg>
+            Admin Login
+        </a>
+
+        <p class="mt-8 text-xs font-bold text-slate-600 uppercase tracking-widest">
+            Testify Platform · System Kernel v4.2.0
+        </p>
+    </div>
+</div>

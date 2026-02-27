@@ -15,9 +15,30 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject Testify.Shared.Interfaces.ISystemSettingsService SystemSettings
 
 <PageTitle>Register</PageTitle>
 
+@if (!_registrationOpen)
+{
+    <div class="min-h-screen bg-[#F3F5F9] flex items-center justify-center p-8 font-sans">
+        <div class="text-center max-w-md">
+            <div class="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 mb-6">
+                <svg class="h-8 w-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h2 class="text-3xl font-black text-slate-800 mb-3">Registration Closed</h2>
+            <p class="text-slate-500 font-medium mb-8">New account registration is currently disabled by the administrator. Please check back later or contact support.</p>
+            <a href="Account/Login" class="inline-flex items-center gap-2 rounded-2xl bg-[#1C1D2A] text-white px-8 py-4 font-black text-sm no-underline hover:opacity-90 transition-all">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14" /></svg>
+                Back to Login
+            </a>
+        </div>
+    </div>
+}
+else
+{
 <div class="flex min-h-screen overflow-hidden bg-white font-sans">
 
     @* --- LEFT SIDE: VISUALS --- *@
@@ -180,8 +201,15 @@
         </div>
     </div>
 </div>
+}
 
 @code {
+    private bool _registrationOpen = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _registrationOpen = await SystemSettings.GetBoolSettingAsync("OpenRegistration", true);
+    }
     private IEnumerable<IdentityError>? identityErrors;
     private bool showPassword = false;
     private List<string> roles = new() { "Designer", "Developer", "Strategist", "Writer", "Manager" };
