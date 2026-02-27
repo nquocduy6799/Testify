@@ -50,7 +50,8 @@ var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString)
+    options.UseSqlServer(connectionString, sqlOptions =>
+        sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null))
 );
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -128,6 +129,9 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ITestPlanService, TestPlanService>();
 builder.Services.AddScoped<ITestRunService, TestRunService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
+builder.Services.AddSingleton<Testify.Shared.Interfaces.ISystemSettingsService, Testify.Services.SystemSettingsService>();
+builder.Services.AddScoped<Testify.Shared.Interfaces.IDashboardService, Testify.Services.DashboardService>();
+builder.Services.AddScoped<Testify.Client.Interfaces.IUserService, Testify.Services.UserService>();
 builder.Services.AddScoped<ITemplateReviewService, TemplateReviewService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITagService, TagService>();
@@ -207,6 +211,13 @@ else
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+// Auth middleware must run before any middleware that checks context.User
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Maintenance Mode middleware – redirects non-admin users when maintenance is active
+app.UseMiddleware<Testify.Middleware.MaintenanceMiddleware>();
 
 app.UseAntiforgery();
 

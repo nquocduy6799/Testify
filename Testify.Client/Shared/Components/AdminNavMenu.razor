@@ -1,0 +1,135 @@
+@inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@rendermode InteractiveAuto
+
+<header class="fixed top-0 left-0 right-0 z-[100] h-20 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm px-8 flex items-center">
+    <div class="mx-auto flex w-full max-w-[1400px] items-center justify-between">
+
+        @* --- LOGO SECTION --- *@
+        <NavLink href="/admin" class="group flex cursor-pointer items-center gap-2 no-underline">
+            <div class="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[#E85D3F] shadow-[#E85D3F]/20 shadow-lg transition-transform group-hover:scale-110">
+                <div class="h-5 w-5 rounded-full bg-white opacity-30 blur-[1px]"></div>
+                <div class="absolute text-xl font-bold text-white">A</div>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-slate-800">TESTIFY</span>
+        </NavLink>
+
+        @* --- ADMIN NAVIGATION LINKS --- *@
+        <nav class="hidden items-center gap-8 md:flex">
+            <NavLink class="group relative py-1 text-sm font-bold text-slate-400 transition-all hover:text-slate-600"
+                     href="/admin"
+                     Match="NavLinkMatch.All">
+                Dashboard
+                <span class="absolute -bottom-1 left-0 hidden h-1 w-full rounded-full bg-[#E85D3F] group-[.active]:animate-in group-[.active]:fade-in group-[.active]:zoom-in group-[.active]:block"></span>
+            </NavLink>
+            <NavLink class="group relative py-1 text-sm font-bold text-slate-400 transition-all hover:text-slate-600"
+                     href="/admin/users">
+                Users
+                <span class="absolute -bottom-1 left-0 hidden h-1 w-full rounded-full bg-[#E85D3F] group-[.active]:animate-in group-[.active]:fade-in group-[.active]:zoom-in group-[.active]:block"></span>
+            </NavLink>
+            <NavLink class="group relative py-1 text-sm font-bold text-slate-400 transition-all hover:text-slate-600"
+                     href="/admin/categories">
+                Category
+                <span class="absolute -bottom-1 left-0 hidden h-1 w-full rounded-full bg-[#E85D3F] group-[.active]:animate-in group-[.active]:fade-in group-[.active]:zoom-in group-[.active]:block"></span>
+            </NavLink>
+        </nav>
+
+        @* --- RIGHT SIDE: PROFILE & EXIT --- *@
+        <div class="relative flex items-center gap-4">
+
+            @* Back to App *@
+            <NavLink href="/dashboard"
+                     class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-transparent bg-white text-slate-500 text-xs font-bold shadow-sm hover:shadow-md transition-all no-underline">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                Back to App
+            </NavLink>
+
+            @* Profile dropdown *@
+            <AuthorizeView>
+                <Authorized>
+                    <div class="relative">
+                        <button @onclick="ToggleMenu"
+                                class="flex items-center gap-2 rounded-full border-2 p-1 pr-3 transition-all hover:bg-white hover:shadow-md @(_isMenuOpen ? "border-[#E85D3F] bg-white shadow-sm" : "border-white")">
+                            <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-slate-100 shadow-sm">
+                                <img src="https://ui-avatars.com/api/?name=@(Uri.EscapeDataString(GetUserFullName(context)))&background=E85D3F&color=fff" alt="Profile" class="h-full w-full object-cover"/>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 transition-transform duration-300 @(_isMenuOpen ? "rotate-180 text-[#E85D3F]" : "")">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </button>
+
+                        @if (_isMenuOpen)
+                        {
+                            <div class="animate-in fade-in slide-in-from-top-4 absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl ring-1 ring-black/5 duration-200">
+                                <div class="border-b border-slate-50 bg-slate-50/50 p-5">
+                                    <p class="mb-1 text-xs font-bold tracking-widest text-slate-400 uppercase">Signed in as</p>
+                                    <p class="truncate font-bold text-slate-800">@GetUserFullName(context)</p>
+                                    <p class="truncate text-[10px] text-slate-500">@GetUserEmail(context)</p>
+                                </div>
+                                <div class="p-2">
+                                    <a href="Account/Manage" class="flex w-full items-center gap-3 rounded-2xl p-3 text-sm font-bold text-slate-600 no-underline transition-all hover:bg-slate-50 hover:text-[#E85D3F]">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                        </svg>
+                                        My Profile
+                                    </a>
+                                </div>
+                                <div class="border-t border-slate-50 bg-slate-50/20 p-2">
+                                    <form action="Account/Logout" method="post">
+                                        <AntiforgeryToken/>
+                                        <input type="hidden" name="ReturnUrl" value="@currentUrl"/>
+                                        <button type="submit" class="flex w-full items-center gap-3 rounded-2xl border-none bg-transparent p-3 text-sm font-bold text-rose-500 transition-all hover:bg-rose-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+                                            </svg>
+                                            Log out
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</header>
+
+@code {
+    private bool _isMenuOpen = false;
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        _isMenuOpen = false;
+        StateHasChanged();
+    }
+
+    private void ToggleMenu() => _isMenuOpen = !_isMenuOpen;
+
+    private string GetUserFullName(AuthenticationState authState)
+        => authState.User.FindFirst("name")?.Value
+           ?? authState.User.FindFirst(ClaimTypes.Name)?.Value
+           ?? authState.User.Identity?.Name
+           ?? "Admin";
+
+    private string GetUserEmail(AuthenticationState authState)
+        => authState.User.FindFirst(ClaimTypes.Email)?.Value
+           ?? authState.User.FindFirst("email")?.Value
+           ?? "";
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
