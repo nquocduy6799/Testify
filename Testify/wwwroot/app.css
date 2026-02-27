@@ -59,6 +59,12 @@ html, body {
         display: block !important;
     }
 
+/* Blazicons: Make SVG icons respect font-size via 1em sizing */
+svg[blazicon] {
+    width: 1em;
+    height: 1em;
+}
+
 /* Hide scrollbar for sub-navigation */
 .no-scrollbar::-webkit-scrollbar {
     display: none;
