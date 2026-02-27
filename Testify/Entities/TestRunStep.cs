@@ -5,7 +5,7 @@ using Testify.Shared.Enums;
 
 namespace Testify.Entities
 {
-    public class TestRunStep
+    public class TestRunStep : AuditEntity
     {
         public int Id { get; set; }
         public int RunId { get; set; }

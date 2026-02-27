@@ -11,7 +11,7 @@ namespace Testify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
+    [Authorize]
     public class ProjectsController : ControllerBase
     {
         private readonly IProjectRepository _projectRepository;
@@ -114,6 +114,28 @@ namespace Testify.Controllers
 
             return Ok(role);
         }
+
+
+        [HttpGet("{projectId}/my-context")]
+        public async Task<ActionResult<ProjectUserContext?>> GetProjectUserContext(int projectId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var context = await _projectRepository.GetProjectUserContextAsync(projectId, userId);
+
+            if (context == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(context);
+        }
+
 
         // GET: api/Projects/5/members
         [HttpGet("{projectId}/members")]

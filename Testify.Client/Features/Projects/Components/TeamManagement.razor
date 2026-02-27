@@ -157,7 +157,9 @@
     private List<TeamMemberResponse> _members = new();
     private List<PendingInvitationResponse> _pendingInvitations = new();
     private bool _isLoadingMembers;
+#pragma warning disable CS0414
     private bool _isLoadingInvitations;
+#pragma warning restore CS0414
     private bool _isProcessing;
     private bool _showInviteModal;
     private TeamMemberResponse? _memberToRemove;

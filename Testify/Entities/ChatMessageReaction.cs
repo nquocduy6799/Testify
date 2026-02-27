@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Testify.Data;
+﻿using Testify.Data;
+using Testify.Shared.Helpers;
 
 namespace Testify.Entities
 {
@@ -11,7 +9,7 @@ namespace Testify.Entities
         public int MessageId { get; set; }
         public string UserId { get; set; } = string.Empty;
         public string Reaction { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTimeHelper.GetVietnamTime();
 
         // Navigation properties
         public virtual ChatMessage Message { get; set; } = null!;

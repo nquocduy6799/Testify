@@ -6,11 +6,28 @@ using Testify.Shared.Enums;
 
 namespace Testify.Shared.DTOs.TestCases
 {
+    public class TestSuiteResponse
+    {
+        public int Id { get; set; }
+        public int ProjectId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int? FolderId { get; set; }
+        public int? SourceTemplateId { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
+        public DateTime? UpdatedAt { get; set; }
+        public string? UpdatedBy { get; set; }
+    }
+
     public class TestCaseTemplateResponse
     {
         public int Id { get; set; }
         public int SuiteTemplateId { get; set; }
         public string Title { get; set; } = string.Empty;
+        public string? Preconditions { get; set; }
+        public string? Postconditions { get; set; }
         public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
 
         public List<TestStepTemplateResponse> TestStepTemplates { get; set; } = new();
@@ -22,6 +39,12 @@ namespace Testify.Shared.DTOs.TestCases
         [StringLength(200)]
         public string Title { get; set; } = string.Empty;
 
+        [StringLength(2000)]
+        public string? Preconditions { get; set; }
+
+        [StringLength(2000)]
+        public string? Postconditions { get; set; }
+
         public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
 
         public List<CreateTestStepTemplateRequest> TestStepTemplates { get; set; } = new();
@@ -32,6 +55,12 @@ namespace Testify.Shared.DTOs.TestCases
         [Required]
         [StringLength(200)]
         public string Title { get; set; } = string.Empty;
+
+        [StringLength(2000)]
+        public string? Preconditions { get; set; }
+
+        [StringLength(2000)]
+        public string? Postconditions { get; set; }
 
         public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
 

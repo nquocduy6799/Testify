@@ -1,19 +1,28 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using Testify.Client.Features.Chat.Services;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
 using Testify.Client.Features.Marketplace.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
+using Testify.Client.Features.TestPlans.Services;
+using Testify.Client.Features.TestRuns.Services;
+using Testify.Client.Features.TestSuites.Services;
+using Testify.Client.Features.TestTemplates.Services;
 using Testify.Client.Interfaces;
+using Testify.Client.Shared.Services;
 using Testify.Components;
 using Testify.Components.Account;
+using Testify.Configuration;
 using Testify.Data;
+using Testify.Hubs;
 using Testify.Interfaces;
 using Testify.Repositories;
-using Testify.Hubs;
-using Testify.Client.Features.TestTemplates.Services;
+using Testify.Services;
+using Testify.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,7 +81,29 @@ builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
 builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
+builder.Services.AddScoped<ITestCaseTemplateRepository, TestCaseTemplateRepository>();
+builder.Services.AddScoped<ITestSuiteRepository, TestSuiteRepository>();
+builder.Services.AddScoped<ITestCaseRepository, TestCaseRepository>();
+builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
+builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
+builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<ICallSessionRepository, CallSessionRepository>();
+builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();           
+builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>(); 
+builder.Services.AddScoped<ITestRunRepository, TestRunRepository>();
+builder.Services.AddScoped<ITestRunStepAttachmentRepository, TestRunStepAttachmentRepository>();
 
+// Gemini AI configuration
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.AddHttpClient<Testify.Interfaces.IAiTestCaseService, GeminiTestCaseService>();
+
+// Hosted services
+builder.Services.AddHostedService<StaleCallCleanupService>();
+
+// File upload settings and storage
+builder.Services.Configure<FileUploadSettings>(
+    builder.Configuration.GetSection(FileUploadSettings.SectionName));
+builder.Services.AddSingleton<IFileStorageService, Testify.Services.LocalFileStorageService>();
 
 // Register services for server-side
 builder.Services.AddScoped<IProjectService, ProjectService>();
@@ -80,6 +111,8 @@ builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
 builder.Services.AddScoped<IMilestoneService, MilestoneService>();
 builder.Services.AddScoped<INotificationService, ServerNotificationRepository>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
@@ -88,8 +121,13 @@ builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 // Add controllers for API endpoints
 builder.Services.AddControllers();
 
+// Add Swagger/OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerConfiguration();
+
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserPresenceService, UserPresenceService>();
 
 var app = builder.Build();
 
@@ -122,6 +160,14 @@ if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
     app.UseMigrationsEndPoint();
+
+    // Enable Swagger UI in development
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Testify API v1");
+        options.RoutePrefix = "swagger"; // Access at /swagger
+    });
 }
 else
 {
@@ -129,6 +175,7 @@ else
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
@@ -139,8 +186,10 @@ app.MapStaticAssets();
 // Map API controllers
 app.MapControllers();
 
-// Map SignalR Hub
+// Map SignalR Hubs
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<CallHub>("/hubs/call");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
@@ -165,43 +214,70 @@ app.Run();
 
 
 
+
+
+
+//using Microsoft.AspNetCore.Identity;
+//using Microsoft.EntityFrameworkCore;
+//using Swashbuckle.AspNetCore.SwaggerGen;
+//using Testify.Client.Features.Invitations.Services;
+//using Testify.Client.Features.Kanban.Services;
+//using Testify.Client.Features.Milestones.Services;
+//using Testify.Client.Features.Notifications.Services;
+//using Testify.Client.Features.Projects.Services;
+//using Testify.Client.Interfaces;
+//using Testify.Components;
+//using Testify.Components.Account;
+//using Testify.Data;
+//using Testify.Interfaces;
+//using Testify.Repositories;
+//using Testify.Hubs;
+//using Testify.Client.Features.TestTemplates.Services;
+//using Testify.Configuration;
+//using Testify.Client.Shared.Services;
+
 //var builder = WebApplication.CreateBuilder(args);
 
 //// Add services to the container.
-//builder.Services.AddRazorComponents()
+//builder
+//    .Services.AddRazorComponents()
+//    .AddInteractiveServerComponents()
 //    .AddInteractiveWebAssemblyComponents()
 //    .AddAuthenticationStateSerialization();
-
-//builder.Services.AddRazorComponents()
-//    .AddInteractiveServerComponents();
-
 
 //builder.Services.AddCascadingAuthenticationState();
 //builder.Services.AddScoped<IdentityRedirectManager>();
 
-//builder.Services.AddAuthentication(options =>
-//{
-//    options.DefaultScheme = IdentityConstants.ApplicationScheme;
-//    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-//})
+//builder
+//    .Services.AddAuthentication(options =>
+//    {
+//        options.DefaultScheme = IdentityConstants.ApplicationScheme;
+//        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+//    })
 //    .AddIdentityCookies();
 //builder.Services.AddAuthorization();
 
-//var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+//var connectionString =
+//    builder.Configuration.GetConnectionString("DefaultConnection")
+//    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 //builder.Services.AddDbContext<ApplicationDbContext>(options =>
-//    options.UseSqlServer(connectionString));
+//    options.UseSqlServer(connectionString)
+//);
 //builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-//builder.Services.AddIdentityCore<ApplicationUser>(options =>
-//{
-//    options.SignIn.RequireConfirmedAccount = true;
-//    options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-//})
+//builder
+//    .Services.AddIdentityCore<ApplicationUser>(options =>
+//    {
+//        options.SignIn.RequireConfirmedAccount = false;
+//        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
+//    })
+//    .AddRoles<IdentityRole>()
 //    .AddEntityFrameworkStores<ApplicationDbContext>()
 //    .AddSignInManager()
 //    .AddDefaultTokenProviders();
 
 //builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
 //// Add HttpClient for server-side rendering
 //builder.Services.AddScoped(sp =>
 //{
@@ -210,16 +286,70 @@ app.Run();
 //    return new HttpClient { BaseAddress = new Uri(navigationManager.BaseUri) };
 //});
 
-//// Register TodoService for server-side
+//// Register repositories
+//builder.Services.AddScoped<ICurrentUserRepository, CurrentUserRepository>();
+//builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
+//builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
+//builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+//builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
+//builder.Services.AddScoped<ITestSuiteTemplateRepository, TestSuiteTemplateRepository>();
+//builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
+
+
+//// Register services for server-side
 //builder.Services.AddScoped<IProjectService, ProjectService>();
+//builder.Services.AddScoped<IKanbanTaskService, KanbanTaskService>();
+//builder.Services.AddScoped<IMilestoneService, MilestoneService>();
+//builder.Services.AddScoped<INotificationService, ServerNotificationRepository>();
+//builder.Services.AddScoped<IInvitationService, InvitationService>();
+//builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
+//builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+//builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+
+
+
+//// Add controllers for API endpoints
+//builder.Services.AddControllers();
+
+//// Add Swagger/OpenAPI
+//builder.Services.AddEndpointsApiExplorer();
+//builder.Services.AddSwaggerConfiguration();
+
+
+//// Add SignalR for real-time notifications
+//builder.Services.AddSignalR();
 
 //var app = builder.Build();
+
+//// Seed users and roles
+//using (var scope = app.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    try
+//    {
+//        await RoleSeeder.SeedRolesAsync(services);
+//        await UserSeeder.SeedUsersAsync(services);
+//    }
+//    catch (Exception ex)
+//    {
+//        var logger = services.GetRequiredService<ILogger<Program>>();
+//        logger.LogError(ex, "An error occurred while seeding the database.");
+//    }
+//}
 
 //// Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{
 //    app.UseWebAssemblyDebugging();
 //    app.UseMigrationsEndPoint();
+
+//    // Enable Swagger UI in development
+//    app.UseSwagger();
+//    app.UseSwaggerUI(options =>
+//    {
+//        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Testify API v1");
+//        options.RoutePrefix = "swagger"; // Access at /swagger
+//    });
 //}
 //else
 //{
@@ -233,16 +363,30 @@ app.Run();
 //app.UseAntiforgery();
 
 //app.MapStaticAssets();
-////app.MapRazorComponents<App>()
-////    .AddInteractiveWebAssemblyRenderMode()
-////    .AddAdditionalAssemblies(typeof(Testify.Client._Imports).Assembly);
+
+//// Map API controllers
+//app.MapControllers();
+
+//// Map SignalR Hub
+//app.MapHub<NotificationHub>("/hubs/notifications");
 
 //app.MapRazorComponents<App>()
-//       .AddInteractiveServerRenderMode()
-//       .AddInteractiveWebAssemblyRenderMode()
-//       .AddAdditionalAssemblies(typeof(Testify.Client._Imports).Assembly);
+//    .AddInteractiveServerRenderMode()
+//    .AddInteractiveWebAssemblyRenderMode()
+//    .AddAdditionalAssemblies(typeof(Testify.Client._Imports).Assembly);
 
 //// Add additional endpoints required by the Identity /Account Razor components.
 //app.MapAdditionalIdentityEndpoints();
 
 //app.Run();
+
+
+
+
+
+
+
+
+
+
+

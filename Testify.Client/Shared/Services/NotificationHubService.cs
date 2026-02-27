@@ -29,10 +29,19 @@ namespace Testify.Client.Shared.Services
 
         public async Task StartAsync()
         {
+            // If already connected, do nothing
+            if (_hubConnection?.State == HubConnectionState.Connected)
+            {
+                Console.WriteLine("[NotificationHubService] Already connected");
+                return;
+            }
+
+            // If connection exists but is disconnected/stopped, dispose it and create a new one
             if (_hubConnection != null)
             {
-                Console.WriteLine("[NotificationHubService] Already connected or connecting");
-                return;
+                Console.WriteLine("[NotificationHubService] Disposing stale connection before reconnecting");
+                try { await _hubConnection.DisposeAsync(); } catch { }
+                _hubConnection = null;
             }
 
             try
@@ -108,6 +117,8 @@ namespace Testify.Client.Shared.Services
                 _hubConnection.Closed += async (error) =>
                 {
                     Console.WriteLine($"[SignalR] Connection closed: {error?.Message}");
+                    // Reset connection so StartAsync can create a new one
+                    _hubConnection = null;
                     // Attempt to reconnect after 5 seconds
                     await Task.Delay(5000);
                     await StartAsync();
@@ -141,7 +152,9 @@ namespace Testify.Client.Shared.Services
         {
             if (_hubConnection != null)
             {
-                await _hubConnection.StopAsync();
+                try { await _hubConnection.StopAsync(); } catch { }
+                try { await _hubConnection.DisposeAsync(); } catch { }
+                _hubConnection = null;
                 _onlineUsers.Clear();
                 Console.WriteLine("[SignalR] Disconnected");
             }

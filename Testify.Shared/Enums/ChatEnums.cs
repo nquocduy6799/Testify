@@ -23,7 +23,8 @@ namespace Testify.Shared.Enums
         Text,
         Image,
         File,
-        System
+        System,
+        Call
     }
 
     public enum NotificationType
@@ -45,5 +46,21 @@ namespace Testify.Shared.Enums
 
         // Project Events
         ProjectInvitation = 30
+    }
+
+    public enum CallType
+    {
+        Audio,
+        Video
+    }
+
+    public enum CallStatus
+    {
+        Ringing,
+        Active,
+        Ended,
+        Missed,
+        Rejected,
+        Cancelled
     }
 }

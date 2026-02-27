@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Testify.Data;
 using Testify.Shared.Enums;
 
@@ -13,7 +12,7 @@ namespace Testify.Entities
         public string UserId { get; set; } = string.Empty;
         public MessageType MessageType { get; set; } = MessageType.Text;
         public string Content { get; set; } = string.Empty;
-        public bool IsDeleted { get; set; } = false;
+        public new bool IsDeleted { get; set; } = false;
         public int? ParentMessageId { get; set; }
         public string? Metadata { get; set; }
 

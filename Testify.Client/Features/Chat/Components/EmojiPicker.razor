@@ -1,0 +1,154 @@
+@namespace Testify.Client.Features.Chat.Components
+
+<div class="absolute bottom-full mb-2 @(AlignRight ? "right-0" : "left-0") z-50 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-[slideDown_0.2s_ease-out]" @onclick:stopPropagation="true">
+    @* Search *@
+    <div class="px-3 pt-3 pb-2">
+        <div class="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+            </svg>
+            <input type="text"
+                   @bind="searchQuery"
+                   @bind:event="oninput"
+                   placeholder="Search emoji..."
+                   class="w-full pl-9 pr-3 py-2 bg-slate-50 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20 border border-slate-100" />
+        </div>
+    </div>
+
+    @* Category Tabs *@
+    @if (string.IsNullOrWhiteSpace(searchQuery))
+    {
+        <div class="flex gap-0.5 px-3 pb-2 overflow-x-auto no-scrollbar">
+            @foreach (var cat in EmojiCategories)
+            {
+                <button @onclick="() => selectedCategory = cat.Key"
+                        class="@(selectedCategory == cat.Key ? "bg-slate-100 text-slate-700" : "text-slate-400 hover:bg-slate-50") p-1.5 rounded-lg transition-all text-sm flex-shrink-0"
+                        title="@cat.Key">
+                    @cat.Value.First()
+                </button>
+            }
+        </div>
+    }
+
+    @* Emoji Grid *@
+    <div class="h-52 overflow-y-auto px-3 pb-3">
+        @if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var filtered = GetFilteredEmojis();
+            if (filtered.Any())
+            {
+                <div class="grid grid-cols-8 gap-0.5">
+                    @foreach (var emoji in filtered)
+                    {
+                        <button @onclick="() => SelectEmoji(emoji)"
+                                class="p-1.5 rounded-lg hover:bg-slate-100 transition-all text-lg text-center cursor-pointer active:scale-90">
+                            @emoji
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="flex items-center justify-center h-full">
+                    <p class="text-xs text-slate-400">No emoji found</p>
+                </div>
+            }
+        }
+        else
+        {
+            var categoryEmojis = EmojiCategories.GetValueOrDefault(selectedCategory) ?? Array.Empty<string>();
+            <div class="grid grid-cols-8 gap-0.5">
+                @foreach (var emoji in categoryEmojis)
+                {
+                    <button @onclick="() => SelectEmoji(emoji)"
+                            class="p-1.5 rounded-lg hover:bg-slate-100 transition-all text-lg text-center cursor-pointer active:scale-90">
+                        @emoji
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<string> OnEmojiSelected { get; set; }
+    [Parameter] public bool AlignRight { get; set; }
+
+    private string searchQuery = string.Empty;
+    private string selectedCategory = "Smileys";
+
+    private static readonly Dictionary<string, string[]> EmojiCategories = new()
+    {
+        ["Smileys"] = new[] { "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙", "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🫡", "🤐", "🤨", "😐", "😑", "😶", "🫥", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "🥸", "😎", "🤓", "🧐", "😕", "🫤", "😟", "🙁", "😮", "😯", "😲", "😳", "🥺", "🥹", "😦", "😧", "😨", "😰", "😥", "😢", "😭", "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖" },
+        ["Gestures"] = new[] { "👋", "🤚", "🖐️", "✋", "🖖", "🫱", "🫲", "🫳", "🫴", "👌", "🤌", "🤏", "✌️", "🤞", "🫰", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "🫵", "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "🫶", "👐", "🤲", "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦿", "🦵", "🦶", "👂", "🦻", "👃", "🧠", "🫀", "🫁", "🦷", "🦴", "👀", "👁️", "👅", "👄", "🫦" },
+        ["Hearts"] = new[] { "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❤️‍🔥", "❤️‍🩹", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "♥️", "💋", "💌", "💐", "🌹", "🌸", "💮", "🏵️", "🌺", "🌻", "🌼", "🌷", "🪷", "🌱", "🪴", "🌿", "☘️", "🍀", "🎋", "🎍" },
+        ["Objects"] = new[] { "⌚", "📱", "💻", "⌨️", "🖥️", "🖨️", "🖱️", "🖲️", "🕹️", "💽", "💾", "💿", "📀", "📷", "📹", "🎥", "📽️", "🎞️", "📞", "☎️", "📟", "📠", "📺", "📻", "🎙️", "🎚️", "🎛️", "🧭", "⏱️", "⏲️", "⏰", "🕰️", "⌛", "⏳", "📡", "🔋", "🪫", "🔌", "💡", "🔦", "🕯️", "🪔", "🧯", "🛢️", "💸", "💵", "💴", "💶", "💷", "🪙", "💰", "💳", "🧾", "✉️", "📧", "📨", "📩", "📤", "📥", "📦", "📫" },
+        ["Food"] = new[] { "🍇", "🍈", "🍉", "🍊", "🍋", "🍌", "🍍", "🥭", "🍎", "🍏", "🍐", "🍑", "🍒", "🍓", "🫐", "🥝", "🍅", "🫒", "🥥", "🥑", "🍆", "🥔", "🥕", "🌽", "🌶️", "🫑", "🥒", "🥬", "🥦", "🧄", "🧅", "🍄", "🥜", "🫘", "🌰", "🍞", "🥐", "🥖", "🫓", "🥨", "🥯", "🥞", "🧇", "🧀", "🍖", "🍗", "🥩", "🥓", "🍔", "🍟", "🍕", "🌭", "🥪", "🌮", "🌯", "🫔", "🥙", "🧆", "🥚", "🍳", "🥘", "🍲", "🫕", "🥣" },
+        ["Animals"] = new[] { "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐽", "🐸", "🐵", "🙈", "🙉", "🙊", "🐒", "🐔", "🐧", "🐦", "🐤", "🐣", "🐥", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛", "🦋", "🐌", "🐞", "🐜", "🪰", "🪲", "🪳", "🦟", "🦗", "🕷️", "🕸️", "🦂", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬" },
+        ["Activities"] = new[] { "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱", "🪀", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🪃", "🥅", "⛳", "🪁", "🏹", "🎣", "🤿", "🥊", "🥋", "🎽", "🛹", "🛼", "🛷", "⛸️", "🥌", "🎿", "⛷️", "🏂", "🪂", "🏋️", "🤸", "🤺", "⛹️", "🤾", "🏌️", "🏇", "🧘", "🎪", "🎭", "🎨", "🎬", "🎤", "🎧", "🎼", "🎹", "🥁", "🪘", "🎷", "🎺", "🪗", "🎸", "🪕", "🎻", "🎲", "♟️", "🎯", "🎳" },
+        ["Symbols"] = new[] { "✅", "❌", "❓", "❗", "‼️", "⁉️", "💯", "🔥", "✨", "🎉", "🎊", "🎈", "🎀", "🎁", "🏆", "🏅", "🥇", "🥈", "🥉", "⭐", "🌟", "💫", "⚡", "🔔", "🔕", "📣", "📢", "💬", "💭", "🗯️", "🗨️", "👁️‍🗨️", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚫", "⚪", "🟤", "🔶", "🔷", "🔸", "🔹", "▪️", "▫️", "◾", "◽", "🔲", "🔳", "⬛", "⬜", "♠️", "♣️", "♥️", "♦️", "🃏", "🎴", "🀄", "🔇", "🔈", "🔉", "🔊" },
+        ["Flags"] = new[] { "🏁", "🚩", "🎌", "🏴", "🏳️", "🏳️‍🌈", "🏳️‍⚧️", "🇻🇳", "🇺🇸", "🇬🇧", "🇫🇷", "🇩🇪", "🇯🇵", "🇰🇷", "🇨🇳", "🇹🇭", "🇮🇩", "🇸🇬", "🇲🇾", "🇵🇭", "🇦🇺", "🇨🇦", "🇧🇷", "🇮🇳", "🇷🇺", "🇮🇹", "🇪🇸", "🇳🇱", "🇸🇪", "🇳🇴", "🇩🇰", "🇫🇮", "🇵🇱", "🇨🇭", "🇦🇹", "🇧🇪", "🇵🇹", "🇬🇷", "🇹🇷", "🇲🇽", "🇦🇷", "🇨🇴", "🇨🇱", "🇵🇪", "🇪🇬", "🇿🇦", "🇳🇬", "🇰🇪", "🇪🇹", "🇸🇦", "🇦🇪", "🇮🇱" }
+    };
+
+    private static readonly Dictionary<string, string[]> EmojiKeywords = new()
+    {
+        ["😀"] = new[] { "grin", "happy", "smile" },
+        ["😂"] = new[] { "laugh", "cry", "tears", "lol" },
+        ["😍"] = new[] { "love", "heart", "eyes" },
+        ["😘"] = new[] { "kiss", "love" },
+        ["😎"] = new[] { "cool", "sunglasses" },
+        ["🤔"] = new[] { "think", "hmm", "wondering" },
+        ["😢"] = new[] { "cry", "sad", "tear" },
+        ["😡"] = new[] { "angry", "mad", "rage" },
+        ["😱"] = new[] { "scream", "shock", "horror" },
+        ["🥳"] = new[] { "party", "celebrate" },
+        ["👍"] = new[] { "thumbs up", "like", "ok", "yes" },
+        ["👎"] = new[] { "thumbs down", "dislike", "no" },
+        ["❤️"] = new[] { "heart", "love", "red" },
+        ["🔥"] = new[] { "fire", "hot", "lit" },
+        ["✅"] = new[] { "check", "done", "yes" },
+        ["❌"] = new[] { "cross", "no", "wrong" },
+        ["💯"] = new[] { "hundred", "perfect", "score" },
+        ["🎉"] = new[] { "party", "celebrate", "congrats" },
+        ["✨"] = new[] { "sparkle", "new", "shine" },
+        ["👏"] = new[] { "clap", "applause", "bravo" },
+        ["🙏"] = new[] { "pray", "please", "thanks" },
+        ["💪"] = new[] { "strong", "muscle", "flex" },
+        ["👀"] = new[] { "eyes", "look", "see" },
+        ["🤝"] = new[] { "handshake", "deal", "agree" },
+    };
+
+    private List<string> GetFilteredEmojis()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery)) return new();
+
+        var query = searchQuery.Trim().ToLower();
+        var results = new List<string>();
+
+        // Search by keyword
+        foreach (var kvp in EmojiKeywords)
+        {
+            if (kvp.Value.Any(k => k.Contains(query)))
+            {
+                results.Add(kvp.Key);
+            }
+        }
+
+        // Search all emojis by matching the emoji itself
+        foreach (var cat in EmojiCategories.Values)
+        {
+            foreach (var emoji in cat)
+            {
+                if (!results.Contains(emoji) && emoji.Contains(query))
+                    results.Add(emoji);
+            }
+        }
+
+        return results.Distinct().Take(64).ToList();
+    }
+
+    private async Task SelectEmoji(string emoji)
+    {
+        await OnEmojiSelected.InvokeAsync(emoji);
+    }
+}

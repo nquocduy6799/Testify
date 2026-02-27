@@ -33,4 +33,12 @@ namespace Testify.Shared.Enums
         Medium = 2,
         High = 3
     }
+
+    public enum BugSeverity
+    {
+        Critical = 4,
+        High = 3,
+        Medium = 2,
+        Low = 1
+    }
 }
