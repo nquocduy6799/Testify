@@ -4,6 +4,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using Testify.Client.Features.Chat.Services;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
+using Testify.Client.Features.Marketplace.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
@@ -114,16 +115,8 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
-builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
-builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
-builder.Services.AddScoped<ITestCaseService, TestCaseService>();
-builder.Services.AddScoped<Testify.Client.Interfaces.IAiTestCaseService, AiTestCaseService>();
-builder.Services.AddScoped<IChatService, ChatService>();
-builder.Services.AddScoped<ITestPlanService, TestPlanService>();
-builder.Services.AddScoped<ITestRunService, TestRunService>();
+builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 
-builder.Services.AddScoped<ChatHubService>();
-builder.Services.AddScoped<ModalService>();
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();
@@ -138,14 +131,22 @@ builder.Services.AddSingleton<IUserPresenceService, UserPresenceService>();
 
 var app = builder.Build();
 
-// Seed users and roles
-using (var scope = app.Services.CreateScope())
+// Seed users and roles (only in Development, skip if already seeded)
+if (app.Environment.IsDevelopment())
 {
+    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
     try
     {
-        await RoleSeeder.SeedRolesAsync(services);
-        await UserSeeder.SeedUsersAsync(services);
+        var db = services.GetRequiredService<ApplicationDbContext>();
+        // Only seed if database is empty (faster check)
+        if (!db.Roles.Any())
+        {
+            await RoleSeeder.SeedRolesAsync(services);
+            await UserSeeder.SeedUsersAsync(services);
+        }
+        // Seed marketplace data (categories, templates, tags)
+        await MarketplaceSeeder.SeedAsync(db);
     }
     catch (Exception ex)
     {
