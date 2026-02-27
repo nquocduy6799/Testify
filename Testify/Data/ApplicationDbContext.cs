@@ -163,6 +163,25 @@ namespace Testify.Data
                 .WithMany()
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            // CallSession - prevent multiple cascade paths from AspNetUsers
+            builder.Entity<CallSession>()
+                .HasOne(c => c.Caller)
+                .WithMany()
+                .HasForeignKey(c => c.CallerUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<CallSession>()
+                .HasOne(c => c.Callee)
+                .WithMany()
+                .HasForeignKey(c => c.CalleeUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<CallSession>()
+                .HasOne(c => c.Room)
+                .WithMany()
+                .HasForeignKey(c => c.RoomId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
