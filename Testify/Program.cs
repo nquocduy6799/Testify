@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Testify.Client.Features.Account.Services;
 using Testify.Client.Features.Chat.Services;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
@@ -92,6 +93,10 @@ builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();
 builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>();
 builder.Services.AddScoped<ITestRunRepository, TestRunRepository>();
 builder.Services.AddScoped<ITestRunStepAttachmentRepository, TestRunStepAttachmentRepository>();
+builder.Services.AddScoped<ITagRepository, TagRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<ITemplateReviewRepository, TemplateReviewRepository>();
+
 
 // Gemini AI configuration
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
@@ -123,6 +128,9 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ITestPlanService, TestPlanService>();
 builder.Services.AddScoped<ITestRunService, TestRunService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
+builder.Services.AddScoped<ITemplateReviewService, TemplateReviewService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ITagService, TagService>();
 
 builder.Services.AddScoped<ChatHubService>();
 builder.Services.AddScoped<ModalService>();
