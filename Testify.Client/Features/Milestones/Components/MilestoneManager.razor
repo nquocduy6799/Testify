@@ -1,10 +1,18 @@
 @using Testify.Shared.DTOs.Milestones
+@using Testify.Shared.DTOs.KanbanTasks
+@using Testify.Shared.DTOs.Projects
+@using Testify.Shared.Enums
 @using Testify.Client.Features.Milestones.Services
 @using Testify.Client.Features.Milestones.Components
+@using Testify.Client.Features.Kanban.Components
 @using Testify.Client.Interfaces
 @using Testify.Client.Shared.Services
+@using Microsoft.AspNetCore.Components.Forms
 @using static Testify.Shared.Enums.MilestoneEnum
 @inject IMilestoneService MilestoneService
+@inject IKanbanTaskService KanbanTaskService
+@inject ITaskAttachmentService TaskAttachmentService
+@inject IProjectService ProjectService
 @inject IServiceProvider ServiceProvider
 @implements IAsyncDisposable
 
@@ -114,6 +122,19 @@
     }
 
     <MilestoneForm Show="showModal" Milestone="editingMilestone" OnSave="SaveMilestone" OnCancel="CloseModal" />
+
+    @* --- QUICK TASK FORM --- *@
+    @if (showTaskForm && taskFormMilestoneId.HasValue && currentUser != null)
+    {
+        <QuickTaskForm InitialStatus="KanbanTaskStatus.ToDo"
+                       MilestoneId="@taskFormMilestoneId.Value"
+                       CurrentUserId="@currentUser.UserId"
+                       CurrentUserName="@currentUser.UserName"
+                       CanAssignToOthers="@currentUser.IsPM"
+                       TeamMembers="@teamMembers"
+                       OnSave="@HandleSaveTask"
+                       OnClose="@CloseTaskForm" />
+    }
 </div>
 
 @code {
@@ -123,10 +144,16 @@
     private bool isLoading = true;
     private MilestoneStatus activeFilter = MilestoneStatus.All;
     
-    // Form State
+    // Milestone Form State
     private bool showModal = false;
     private MilestoneResponse editingMilestone = new();
     
+    // Quick Task Form State
+    private bool showTaskForm = false;
+    private int? taskFormMilestoneId;
+    private ProjectUserContext? currentUser;
+    private List<TeamMemberResponse> teamMembers = new();
+
     // Real-time
     private NotificationHubService? _hubService;
 
@@ -139,6 +166,8 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadMilestones();
+        await LoadUserContextAsync();
+        await LoadTeamMembersAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -155,6 +184,9 @@
                     Console.WriteLine("[MilestoneManager] Starting SignalR connection...");
                     await _hubService.StartAsync();
                 }
+
+                // Join project group for scoped real-time updates
+                await _hubService.JoinProjectGroupAsync(ProjectId);
                 
                 _hubService.OnMilestoneCreated += HandleMilestoneCreated;
                 _hubService.OnMilestoneUpdated += HandleMilestoneUpdated;
@@ -259,7 +291,8 @@
                 Name = editingMilestone.Name,
                 Description = editingMilestone.Description,
                 StartDate = editingMilestone.StartDate,
-                EndDate = editingMilestone.EndDate
+                EndDate = editingMilestone.EndDate,
+                Status = editingMilestone.Status
             };
             await MilestoneService.CreateMilestoneAsync(createDTO);
         }
@@ -300,9 +333,68 @@
         }
     }
 
+    private async Task LoadUserContextAsync()
+    {
+        try
+        {
+            currentUser = await ProjectService.GetProjectUserContextAsync(ProjectId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MilestoneManager] Failed to load user context: {ex.Message}");
+        }
+    }
+
+    private async Task LoadTeamMembersAsync()
+    {
+        try
+        {
+            teamMembers = await ProjectService.GetMembersAsync(ProjectId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MilestoneManager] Failed to load team members: {ex.Message}");
+        }
+    }
+
     private void OpenAddTaskDialog(int milestoneId)
     {
-        Console.WriteLine($"[TODO] Open Quick Task Form for Milestone ID: {milestoneId}");
+        taskFormMilestoneId = milestoneId;
+        showTaskForm = true;
+    }
+
+    private void CloseTaskForm()
+    {
+        showTaskForm = false;
+        taskFormMilestoneId = null;
+    }
+
+    private async Task HandleSaveTask((CreateKanbanTaskRequest Request, List<IBrowserFile> Files, int? TaskId, bool IsEditMode) data)
+    {
+        try
+        {
+            var newTask = await KanbanTaskService.CreateTaskAsync(data.Request);
+
+            // Upload attachments if any
+            if (data.Files.Count > 0)
+            {
+                try
+                {
+                    await TaskAttachmentService.UploadAttachmentsAsync(newTask.Id, data.Files);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[MilestoneManager] Task created but attachment upload failed: {ex.Message}");
+                }
+            }
+
+            CloseTaskForm();
+            await LoadMilestones();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MilestoneManager] Failed to create task: {ex.Message}");
+        }
     }
 
     private async Task DeleteMilestone(int milestoneId)
@@ -332,6 +424,9 @@
             _hubService.OnMilestoneCreated -= HandleMilestoneCreated;
             _hubService.OnMilestoneUpdated -= HandleMilestoneUpdated;
             _hubService.OnMilestoneDeleted -= HandleMilestoneDeleted;
+
+            // Leave project group when component is disposed
+            await _hubService.LeaveProjectGroupAsync(ProjectId);
         }
     }
 }

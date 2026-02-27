@@ -148,6 +148,42 @@ namespace Testify.Client.Shared.Services
             }
         }
 
+        // ============================================
+        // PROJECT GROUP MANAGEMENT
+        // ============================================
+
+        public async Task JoinProjectGroupAsync(int projectId)
+        {
+            if (_hubConnection?.State == HubConnectionState.Connected)
+            {
+                try
+                {
+                    await _hubConnection.InvokeAsync("JoinProjectGroup", projectId);
+                    Console.WriteLine($"[SignalR] Joined project group: project_{projectId}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SignalR] Error joining project group {projectId}: {ex.Message}");
+                }
+            }
+        }
+
+        public async Task LeaveProjectGroupAsync(int projectId)
+        {
+            if (_hubConnection?.State == HubConnectionState.Connected)
+            {
+                try
+                {
+                    await _hubConnection.InvokeAsync("LeaveProjectGroup", projectId);
+                    Console.WriteLine($"[SignalR] Left project group: project_{projectId}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SignalR] Error leaving project group {projectId}: {ex.Message}");
+                }
+            }
+        }
+
         public async Task StopAsync()
         {
             if (_hubConnection != null)

@@ -1,5 +1,6 @@
 ﻿@using System.ComponentModel.DataAnnotations
 @using Testify.Shared.DTOs.Milestones
+@using static Testify.Shared.Enums.MilestoneEnum
 
 @if (Show)
 {
@@ -68,17 +69,26 @@
                             <InputTextArea @bind-Value="Milestone.Description" rows="3" class="w-full resize-none rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-medium text-slate-600 transition-all outline-none focus:border-[#7E96E1] focus:bg-white" placeholder="What are the key goals for this milestone?" />
                         </div>
 
-                        @* Status Field (Bổ sung để khớp với Logic edit) *@
+                        @* Status Field *@
                          <div class="space-y-1.5">
                             <label class="flex items-center gap-2 text-xs font-black tracking-widest text-slate-400 uppercase">
                                 Status
                             </label>
                             <InputSelect @bind-Value="Milestone.Status" class="w-full rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-bold text-slate-800 transition-all outline-none focus:border-[#7E96E1] focus:bg-white">
-                                <option value="Planned">Planned</option>
-                                <option value="Active">Active</option>
-                                <option value="Completed">Completed</option>
-                                <option value="OnHold">On Hold</option>
-                                <option value="Closed">Closed</option>
+                                @if (Milestone.Id == 0)
+                                {
+                                    @* When creating: only allow Active and Planned *@
+                                    <option value="@MilestoneStatus.Active">Active</option>
+                                    <option value="@MilestoneStatus.Planned">Planned</option>
+                                }
+                                else
+                                {
+                                    @* When editing: allow all statuses except All *@
+                                    @foreach (var status in Enum.GetValues<MilestoneStatus>().Where(s => s != MilestoneStatus.All))
+                                    {
+                                        <option value="@status">@status</option>
+                                    }
+                                }
                             </InputSelect>
                         </div>
 

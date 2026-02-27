@@ -67,27 +67,43 @@ namespace Testify.Hubs
         }
 
         // ============================================
+        // PROJECT GROUP MANAGEMENT
+        // ============================================
+
+        public async Task JoinProjectGroup(int projectId)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"project_{projectId}");
+            Console.WriteLine($"[NotificationHub] Connection {Context.ConnectionId} joined project_{projectId}");
+        }
+
+        public async Task LeaveProjectGroup(int projectId)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"project_{projectId}");
+            Console.WriteLine($"[NotificationHub] Connection {Context.ConnectionId} left project_{projectId}");
+        }
+
+        // ============================================
         // MILESTONE EVENTS
         // ============================================
         
         // Broadcast milestone created
         public async Task BroadcastMilestoneCreated(int projectId, object milestone)
         {
-            await Clients.All.SendAsync("MilestoneCreated", projectId, milestone);
+            await Clients.Group($"project_{projectId}").SendAsync("MilestoneCreated", projectId, milestone);
             Console.WriteLine($"[NotificationHub] Broadcast: MilestoneCreated - Project {projectId}");
         }
 
         // Broadcast milestone updated
         public async Task BroadcastMilestoneUpdated(int projectId, object milestone)
         {
-            await Clients.All.SendAsync("MilestoneUpdated", projectId, milestone);
+            await Clients.Group($"project_{projectId}").SendAsync("MilestoneUpdated", projectId, milestone);
             Console.WriteLine($"[NotificationHub] Broadcast: MilestoneUpdated - Project {projectId}");
         }
 
         // Broadcast milestone deleted
         public async Task BroadcastMilestoneDeleted(int projectId, int milestoneId)
         {
-            await Clients.All.SendAsync("MilestoneDeleted", projectId, milestoneId);
+            await Clients.Group($"project_{projectId}").SendAsync("MilestoneDeleted", projectId, milestoneId);
             Console.WriteLine($"[NotificationHub] Broadcast: MilestoneDeleted - Project {projectId}, Milestone {milestoneId}");
         }
 
