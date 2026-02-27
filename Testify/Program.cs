@@ -88,8 +88,8 @@ builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>(
 builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<ICallSessionRepository, CallSessionRepository>();
-builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();           
-builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>(); 
+builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();
+builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>();
 builder.Services.AddScoped<ITestRunRepository, TestRunRepository>();
 builder.Services.AddScoped<ITestRunStepAttachmentRepository, TestRunStepAttachmentRepository>();
 
@@ -115,8 +115,17 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
+builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
+builder.Services.AddScoped<ITestCaseService, TestCaseService>();
+builder.Services.AddScoped<Testify.Client.Interfaces.IAiTestCaseService, AiTestCaseService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<ITestPlanService, TestPlanService>();
+builder.Services.AddScoped<ITestRunService, TestRunService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 
+builder.Services.AddScoped<ChatHubService>();
+builder.Services.AddScoped<ModalService>();
 
 // Add controllers for API endpoints
 builder.Services.AddControllers();
@@ -131,22 +140,34 @@ builder.Services.AddSingleton<IUserPresenceService, UserPresenceService>();
 
 var app = builder.Build();
 
-// Seed users and roles (only in Development, skip if already seeded)
-if (app.Environment.IsDevelopment())
+// Seed users and roles
+//using (var scope = app.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    try
+//    {
+//        await RoleSeeder.SeedRolesAsync(services);
+//        await UserSeeder.SeedUsersAsync(services);
+//    }
+//    catch (Exception ex)
+//    {
+//        var logger = services.GetRequiredService<ILogger<Program>>();
+//        logger.LogError(ex, "An error occurred while seeding the database.");
+//    }
+//}
+
+// Seed users and roles
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
     try
     {
-        var db = services.GetRequiredService<ApplicationDbContext>();
-        // Only seed if database is empty (faster check)
-        if (!db.Roles.Any())
-        {
-            await RoleSeeder.SeedRolesAsync(services);
-            await UserSeeder.SeedUsersAsync(services);
-        }
-        // Seed marketplace data (categories, templates, tags)
-        await MarketplaceSeeder.SeedAsync(db);
+        await RoleSeeder.SeedRolesAsync(services);
+        await UserSeeder.SeedUsersAsync(services);
+
+        // Seed marketplace data
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        await MarketplaceSeeder.SeedAsync(dbContext);
     }
     catch (Exception ex)
     {
@@ -379,14 +400,3 @@ app.Run();
 //app.MapAdditionalIdentityEndpoints();
 
 //app.Run();
-
-
-
-
-
-
-
-
-
-
-

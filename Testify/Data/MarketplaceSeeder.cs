@@ -26,18 +26,18 @@ namespace Testify.Data
             }
             await db.SaveChangesAsync();
 
-            // Skip templates if already seeded
-            if (await db.TestSuiteTemplates.AnyAsync()) return;
+            // Skip if the specific seeded templates already exist
+            if (await db.TestSuiteTemplates.AnyAsync(t => t.Name == "Gemini API Stress Matrix")) return;
 
             // --- 2. Tags (add missing ones) ---
             var tagNames = new[] { "Gemini", "LLM", "Stress-Test", "Security", "SOC2", "Enterprise",
                                    "Ecom", "Stripe", "UI", "FinTech", "Ledger", "Math",
                                    "React", "API", "Performance", "Mobile", "iOS", "Android" };
-            var existingTags = await db.Set<TemplateTag>().Select(t => t.TagName).ToListAsync();
+            var existingTags = await db.TemplateTags.Select(t => t.TagName).ToListAsync();
             var newTags = tagNames.Where(t => !existingTags.Contains(t)).Select(t => new TemplateTag { TagName = t }).ToList();
             if (newTags.Any())
             {
-                db.Set<TemplateTag>().AddRange(newTags);
+                db.TemplateTags.AddRange(newTags);
                 await db.SaveChangesAsync();
             }
 
@@ -46,9 +46,14 @@ namespace Testify.Data
             if (adminUser == null) return;
             var userId = adminUser.Id;
 
-            // Lookup helpers
-            var catLookup = await db.TemplateCategories.ToDictionaryAsync(c => c.Name!, c => c.Id);
-            var tagLookup = await db.Set<TemplateTag>().ToDictionaryAsync(t => t.TagName!, t => t.Id);
+            // Lookup helpers — filter nulls to avoid ArgumentNullException
+            var catLookup = await db.TemplateCategories
+                .Where(c => c.Name != null)
+                .ToDictionaryAsync(c => c.Name!, c => c.Id);
+
+            var tagLookup = await db.TemplateTags
+                .Where(t => t.TagName != null)
+                .ToDictionaryAsync(t => t.TagName!, t => t.Id);
 
             // --- 3. Templates ---
             var templates = new List<TestSuiteTemplate>
@@ -146,10 +151,10 @@ namespace Testify.Data
             await db.SaveChangesAsync();
 
             // --- 4. Template-Tag associations ---
-            var templateList = await db.TestSuiteTemplates.ToListAsync();
+            // Reuse the already-tracked local list — no need to re-query the DB
             var tagAssociations = new List<TestSuiteTemplateTag>();
 
-            foreach (var t in templateList)
+            foreach (var t in templates)
             {
                 var associatedTags = t.Name switch
                 {
@@ -173,7 +178,7 @@ namespace Testify.Data
                 }
             }
 
-            db.Set<TestSuiteTemplateTag>().AddRange(tagAssociations);
+            db.TestSuiteTemplateTags.AddRange(tagAssociations);
             await db.SaveChangesAsync();
         }
     }

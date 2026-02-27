@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
-using Testify.Client.Features.Marketplace.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
@@ -12,6 +11,7 @@ using Testify.Client.Features.TestSuites.Services;
 using Testify.Client.Interfaces;
 using Testify.Client.Shared.Services;
 using Testify.Client.Features.Chat.Services;
+using Testify.Client.Features.Marketplace.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -35,6 +35,13 @@ builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<ITaskAttachmentService, TaskAttachmentService>();
 builder.Services.AddScoped<ITemplateFolderService, TemplateFolderService>();
 builder.Services.AddScoped<ITestSuiteTemplateService, TestSuiteTemplateService>();
+builder.Services.AddScoped<ITestCaseTemplateService, TestCaseTemplateService>();
+builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
+builder.Services.AddScoped<ITestCaseService, TestCaseService>();
+builder.Services.AddScoped<IAiTestCaseService, AiTestCaseService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<ITestPlanService, TestPlanService>();
+builder.Services.AddScoped<ITestRunService, TestRunService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 
 
