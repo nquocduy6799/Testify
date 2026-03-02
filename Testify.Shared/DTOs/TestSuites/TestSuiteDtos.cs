@@ -42,6 +42,11 @@ namespace Testify.Shared.DTOs.TestSuites
         /// If set, the suite (with all its cases &amp; steps) will be cloned from this template.
         /// </summary>
         public int? SourceTemplateId { get; set; }
+
+        /// <summary>
+        /// Optional: specific test case template IDs to clone. If null/empty, all cases are cloned.
+        /// </summary>
+        public List<int>? SelectedTestCaseTemplateIds { get; set; }
     }
 
     public class UpdateTestSuiteRequest

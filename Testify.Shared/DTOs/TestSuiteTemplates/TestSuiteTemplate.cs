@@ -13,6 +13,12 @@ namespace Testify.Shared.DTOs.TestTemplates
         public int? FolderId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public string? OwnerName { get; set; }
+        public bool IsPublic { get; set; }
+        public int CloneCount { get; set; }
+        public int ViewCount { get; set; }
+        public int TotalStarred { get; set; }
 
         // Audit fields (from AuditEntity)
         public DateTime CreatedAt { get; set; }

@@ -33,11 +33,38 @@ namespace Testify.Controllers
             return Ok(suite);
         }
 
+        // GET: api/TestSuites/check-name?projectId=1&name=xxx&excludeId=2
+        [HttpGet("check-name")]
+        public async Task<ActionResult<bool>> CheckNameExists([FromQuery] int projectId, [FromQuery] string name, [FromQuery] int? excludeId = null)
+        {
+            var exists = await _testSuiteRepository.IsSuiteNameExistsAsync(projectId, name, excludeId);
+            return Ok(exists);
+        }
+
+        // GET: api/TestSuites/suggest-name?projectId=1&baseName=xxx
+        [HttpGet("suggest-name")]
+        public async Task<ActionResult<string>> SuggestUniqueName([FromQuery] int projectId, [FromQuery] string baseName)
+        {
+            var uniqueName = await _testSuiteRepository.GenerateUniqueSuiteNameAsync(projectId, baseName);
+            return Ok(uniqueName);
+        }
+
         // POST: api/TestSuites
         [HttpPost]
         public async Task<ActionResult<TestSuiteResponse>> Create([FromBody] CreateTestSuiteRequest request)
         {
             var userName = User.FindFirstValue(ClaimTypes.Name) ?? "system";
+
+            // Determine the effective name
+            string effectiveName = request.Name;
+
+            // Check for duplicate name in the project (name is always provided by UI now)
+            if (!string.IsNullOrWhiteSpace(effectiveName))
+            {
+                var nameExists = await _testSuiteRepository.IsSuiteNameExistsAsync(request.ProjectId, effectiveName);
+                if (nameExists)
+                    return Conflict(new { message = $"A test suite named \"{effectiveName}\" already exists in this project." });
+            }
 
             TestSuiteResponse result;
 
@@ -61,6 +88,19 @@ namespace Testify.Controllers
         public async Task<IActionResult> Update(int id, [FromBody] UpdateTestSuiteRequest request)
         {
             var userName = User.FindFirstValue(ClaimTypes.Name) ?? "system";
+
+            // Get the existing suite to know its ProjectId
+            var existing = await _testSuiteRepository.GetTestSuiteByIdAsync(id);
+            if (existing is null) return NotFound();
+
+            // Check for duplicate name (excluding current suite)
+            if (!string.IsNullOrWhiteSpace(request.Name))
+            {
+                var nameExists = await _testSuiteRepository.IsSuiteNameExistsAsync(existing.ProjectId, request.Name, id);
+                if (nameExists)
+                    return Conflict(new { message = $"A test suite named \"{request.Name}\" already exists in this project." });
+            }
+
             var success = await _testSuiteRepository.UpdateTestSuiteAsync(id, request, userName);
             if (!success) return NotFound();
             return NoContent();

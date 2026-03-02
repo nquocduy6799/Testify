@@ -27,6 +27,19 @@ namespace Testify.Client.Features.TestTemplates.Services
             }
         }
 
+        public async Task<List<TestSuiteTemplateResponse>> GetCloneableTemplatesAsync()
+        {
+            try
+            {
+                var templates = await _httpClient.GetFromJsonAsync<List<TestSuiteTemplateResponse>>($"{ApiEndpoint}/cloneable");
+                return templates ?? new List<TestSuiteTemplateResponse>();
+            }
+            catch (HttpRequestException)
+            {
+                return new List<TestSuiteTemplateResponse>();
+            }
+        }
+
         public async Task<TestSuiteTemplateResponse> GetTestSuiteTemplateByIdAsync(int id)
         {
             try
