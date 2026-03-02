@@ -27,6 +27,18 @@ namespace Testify.Repositories
             return templates.Select(MapToResponse).ToList();
         }
 
+        public async Task<IEnumerable<TestSuiteTemplateResponse>> GetCloneableTemplatesAsync(string userId)
+        {
+            var templates = await _context.TestSuiteTemplates
+                .Include(t => t.TestCaseTemplates)
+                    .ThenInclude(tc => tc.TestStepTemplates)
+                .Where(t => !t.IsDeleted && (t.IsPublic || t.UserId == userId))
+                .OrderByDescending(t => t.CreatedAt)
+                .ToListAsync();
+
+            return templates.Select(MapToResponse).ToList();
+        }
+
         public async Task<TestSuiteTemplateResponse?> GetTestSuiteTemplateByIdAsync(int id)
         {
             var template = await _context.TestSuiteTemplates
@@ -126,6 +138,11 @@ namespace Testify.Repositories
                 FolderId = template.FolderId,
                 Name = template.Name,
                 Description = template.Description,
+                UserId = template.UserId,
+                IsPublic = template.IsPublic,
+                CloneCount = template.CloneCount,
+                ViewCount = template.ViewCount,
+                TotalStarred = template.TotalStarred,
                 CreatedAt = template.CreatedAt,
                 CreatedBy = template.CreatedBy,
                 UpdatedAt = template.UpdatedAt,

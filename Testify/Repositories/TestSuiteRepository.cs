@@ -36,6 +36,41 @@ namespace Testify.Repositories
             return suite is null ? null : MapToResponse(suite);
         }
 
+        public async Task<bool> IsSuiteNameExistsAsync(int projectId, string name, int? excludeSuiteId = null)
+        {
+            return await _context.TestSuites
+                .AnyAsync(s => !s.IsDeleted
+                    && s.ProjectId == projectId
+                    && s.Name.ToLower() == name.ToLower()
+                    && (!excludeSuiteId.HasValue || s.Id != excludeSuiteId.Value));
+        }
+
+        public async Task<string> GenerateUniqueSuiteNameAsync(int projectId, string baseName)
+        {
+            // Get all existing suite names in this project (case-insensitive)
+            var existingNames = await _context.TestSuites
+                .Where(s => !s.IsDeleted && s.ProjectId == projectId)
+                .Select(s => s.Name.ToLower())
+                .ToListAsync();
+
+            var existingSet = new HashSet<string>(existingNames);
+
+            // If the base name doesn't exist, return it directly
+            if (!existingSet.Contains(baseName.ToLower()))
+                return baseName;
+
+            // Try "Name (2)", "Name (3)", etc.
+            for (int i = 2; i <= 999; i++)
+            {
+                var candidate = $"{baseName} ({i})";
+                if (!existingSet.Contains(candidate.ToLower()))
+                    return candidate;
+            }
+
+            // Fallback (extremely unlikely)
+            return $"{baseName} ({Guid.NewGuid().ToString()[..6]})";
+        }
+
         public async Task<TestSuiteResponse> CreateTestSuiteAsync(CreateTestSuiteRequest request, string userName)
         {
             var suite = new TestSuite
@@ -68,18 +103,36 @@ namespace Testify.Repositories
             if (template is null)
                 return null;
 
+            var effectiveName = string.IsNullOrWhiteSpace(request.Name) ? template.Name : request.Name;
+
+            // Check for duplicate name in the project
+            var nameExists = await _context.TestSuites
+                .AnyAsync(s => !s.IsDeleted
+                    && s.ProjectId == request.ProjectId
+                    && s.Name.ToLower() == effectiveName.ToLower());
+            if (nameExists)
+                return null; // Controller should pre-check; this is a safety net
+
             var suite = new TestSuite
             {
                 ProjectId = request.ProjectId,
-                Name = string.IsNullOrWhiteSpace(request.Name) ? template.Name : request.Name,
+                Name = effectiveName,
                 Description = string.IsNullOrWhiteSpace(request.Description) ? template.Description : request.Description,
                 FolderId = request.FolderId,
                 SourceTemplateId = template.Id
             };
             suite.MarkAsCreated(userName);
 
+            // Determine which test case templates to clone
+            var caseTemplatesToClone = template.TestCaseTemplates.AsEnumerable();
+            if (request.SelectedTestCaseTemplateIds is { Count: > 0 })
+            {
+                var selectedIds = new HashSet<int>(request.SelectedTestCaseTemplateIds);
+                caseTemplatesToClone = caseTemplatesToClone.Where(c => selectedIds.Contains(c.Id));
+            }
+
             // Clone cases & steps from template
-            foreach (var caseTemplate in template.TestCaseTemplates)
+            foreach (var caseTemplate in caseTemplatesToClone)
             {
                 var testCase = new TestCase
                 {
@@ -103,6 +156,9 @@ namespace Testify.Repositories
 
                 suite.TestCases.Add(testCase);
             }
+
+            // Increment CloneCount on the template
+            template.CloneCount++;
 
             _context.TestSuites.Add(suite);
             await _context.SaveChangesAsync();

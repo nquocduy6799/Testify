@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using static Testify.Shared.Enums.MilestoneEnum;
 
 namespace Testify.Shared.DTOs.Milestones
 {
@@ -18,9 +19,19 @@ namespace Testify.Shared.DTOs.Milestones
         [Required]
         public int ProjectId { get; set; }
 
+        public MilestoneStatus Status { get; set; } = MilestoneStatus.Active;
+
         public bool IsValidDateRange()
         {
             return EndDate >= StartDate;
+        }
+
+        /// <summary>
+        /// Only Active and Planned are valid statuses when creating a new milestone.
+        /// </summary>
+        public bool IsValidStatusForCreation()
+        {
+            return Status == MilestoneStatus.Active || Status == MilestoneStatus.Planned;
         }
     }
 }

@@ -7,6 +7,7 @@ namespace Testify.Client.Interfaces
     public interface ITestSuiteTemplateService
     {
         Task<List<TestSuiteTemplateResponse>> GetTestSuiteTemplatesAsync();
+        Task<List<TestSuiteTemplateResponse>> GetCloneableTemplatesAsync();
         Task<TestSuiteTemplateResponse> GetTestSuiteTemplateByIdAsync(int id);
         Task<TestSuiteTemplateResponse> CreateTestSuiteTemplateAsync(CreateTestSuiteTemplateRequest request);
         Task<TestSuiteTemplateResponse> UpdateTestSuiteTemplateAsync(int id, UpdateTestSuiteTemplateRequest request);

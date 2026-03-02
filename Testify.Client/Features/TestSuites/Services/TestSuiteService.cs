@@ -45,10 +45,22 @@ namespace Testify.Client.Features.TestSuites.Services
             try
             {
                 var response = await _httpClient.PostAsJsonAsync(ApiEndpoint, request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                    var message = error?.GetValueOrDefault("message") ?? "A test suite with this name already exists in this project.";
+                    throw new InvalidOperationException(message);
+                }
+
                 response.EnsureSuccessStatusCode();
 
                 var created = await response.Content.ReadFromJsonAsync<TestSuiteResponse>();
                 return created ?? throw new InvalidOperationException("Failed to create test suite.");
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (HttpRequestException ex)
             {
@@ -80,6 +92,36 @@ namespace Testify.Client.Features.TestSuites.Services
             catch (HttpRequestException)
             {
                 return false;
+            }
+        }
+
+        public async Task<bool> CheckSuiteNameExistsAsync(int projectId, string name, int? excludeId = null)
+        {
+            try
+            {
+                var url = $"{ApiEndpoint}/check-name?projectId={projectId}&name={Uri.EscapeDataString(name)}";
+                if (excludeId.HasValue)
+                    url += $"&excludeId={excludeId.Value}";
+                var result = await _httpClient.GetFromJsonAsync<bool>(url);
+                return result;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<string> SuggestUniqueNameAsync(int projectId, string baseName)
+        {
+            try
+            {
+                var url = $"{ApiEndpoint}/suggest-name?projectId={projectId}&baseName={Uri.EscapeDataString(baseName)}";
+                var result = await _httpClient.GetStringAsync(url);
+                return result;
+            }
+            catch
+            {
+                return baseName;
             }
         }
     }

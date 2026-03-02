@@ -4,8 +4,26 @@
 @using Testify.Shared.DTOs
 @using Testify.Shared.DTOs.TestSuites
 @using Testify.Shared.Enums
+@implements IDisposable
 
 <div class="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="bg-red-50 border border-red-200 text-red-700 px-5 py-3 rounded-2xl flex items-center justify-between animate-in fade-in slide-in-from-top-2 duration-300">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                <span class="text-sm font-semibold">@_errorMessage</span>
+            </div>
+            <button @onclick="() => _errorMessage = null" class="text-red-400 hover:text-red-600 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    }
+
     <!-- Header -->
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div class="flex items-center gap-4">
@@ -240,6 +258,33 @@
     private int? _editingCaseId;
     private TestCaseFormResult? _editFormData;
     private string? _errorMessage;
+    private System.Timers.Timer? _errorTimer;
+
+    private void ShowTimedError(string message, int milliseconds = 5000)
+    {
+        _errorTimer?.Stop();
+        _errorTimer?.Dispose();
+        _errorMessage = message;
+        _errorTimer = new System.Timers.Timer(milliseconds);
+        _errorTimer.Elapsed += (_, _) =>
+        {
+            InvokeAsync(() =>
+            {
+                _errorMessage = null;
+                _errorTimer?.Dispose();
+                _errorTimer = null;
+                StateHasChanged();
+            });
+        };
+        _errorTimer.AutoReset = false;
+        _errorTimer.Start();
+    }
+
+    public void Dispose()
+    {
+        _errorTimer?.Stop();
+        _errorTimer?.Dispose();
+    }
 
     private void OnAddTestCase()
     {
@@ -321,7 +366,10 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to save test case. {ex.Message}";
+            _isTestCaseFormOpen = false;
+            _editingCaseId = null;
+            _editFormData = null;
+            ShowTimedError(ex.Message);
         }
     }
 
@@ -335,6 +383,9 @@
     {
         try
         {
+            var skippedDuplicates = new List<string>();
+            var createdCount = 0;
+
             foreach (var formResult in cases)
             {
                 var steps = formResult.Steps.Select(s => new CreateTestStepRequest
@@ -354,15 +405,29 @@
                     TestSteps = steps
                 };
 
-                await TestCaseService.CreateTestCaseAsync(Suite.Id, request);
+                try
+                {
+                    await TestCaseService.CreateTestCaseAsync(Suite.Id, request);
+                    createdCount++;
+                }
+                catch (InvalidOperationException)
+                {
+                    skippedDuplicates.Add(formResult.Title);
+                }
             }
 
             _isAiGenerateOpen = false;
             await OnReload.InvokeAsync();
+
+            if (skippedDuplicates.Any())
+            {
+                ShowTimedError($"Created {createdCount} test case(s). Skipped {skippedDuplicates.Count} duplicate(s): {string.Join(", ", skippedDuplicates.Select(t => $"\"{t}\""))}", 8000);
+            }
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to import AI-generated test cases. {ex.Message}";
+            _isAiGenerateOpen = false;
+            ShowTimedError($"Failed to import AI-generated test cases. {ex.Message}");
         }
     }
 
@@ -393,7 +458,8 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to import test case. {ex.Message}";
+            _isMarkdownImportOpen = false;
+            ShowTimedError(ex.Message);
         }
     }
 
@@ -410,7 +476,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to delete test case. {ex.Message}";
+            ShowTimedError($"Failed to delete test case. {ex.Message}");
         }
     }
 

@@ -31,10 +31,22 @@ namespace Testify.Client.Features.TestSuites.Services
             try
             {
                 var response = await _httpClient.PostAsJsonAsync($"api/testsuites/{suiteId}/testcases", request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                    var message = error?.GetValueOrDefault("message") ?? $"A test case named \"{request.Title}\" already exists in this suite.";
+                    throw new InvalidOperationException(message);
+                }
+
                 response.EnsureSuccessStatusCode();
 
                 var created = await response.Content.ReadFromJsonAsync<TestCaseResponse>();
                 return created ?? throw new InvalidOperationException("Failed to create test case.");
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (HttpRequestException ex)
             {
@@ -47,7 +59,19 @@ namespace Testify.Client.Features.TestSuites.Services
             try
             {
                 var response = await _httpClient.PutAsJsonAsync($"api/testcases/{id}", request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                    var message = error?.GetValueOrDefault("message") ?? $"A test case named \"{request.Title}\" already exists in this suite.";
+                    throw new InvalidOperationException(message);
+                }
+
                 return response.IsSuccessStatusCode;
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (HttpRequestException)
             {

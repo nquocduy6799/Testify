@@ -101,6 +101,15 @@ namespace Testify.Repositories
             return true;
         }
 
+        public async Task<bool> IsCaseTitleExistsAsync(int suiteId, string title, int? excludeCaseId = null)
+        {
+            return await _context.TestCases
+                .AnyAsync(c => !c.IsDeleted
+                    && c.SuiteId == suiteId
+                    && c.Title.ToLower() == title.ToLower()
+                    && (!excludeCaseId.HasValue || c.Id != excludeCaseId.Value));
+        }
+
         private static TestCaseResponse MapToResponse(TestCase c)
         {
             return new TestCaseResponse

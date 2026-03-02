@@ -35,10 +35,22 @@ namespace Testify.Client.Features.TestTemplates.Services
             {
                 // POST to suite-centric endpoint
                 var response = await _httpClient.PostAsJsonAsync($"{TestSuiteApiEndpoint}/{suiteId}/testcases", request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                    var message = error?.GetValueOrDefault("message") ?? $"A test case named \"{request.Title}\" already exists in this suite template.";
+                    throw new InvalidOperationException(message);
+                }
+
                 response.EnsureSuccessStatusCode();
 
                 var createdTemplate = await response.Content.ReadFromJsonAsync<TestCaseTemplateResponse>();
                 return createdTemplate ?? throw new InvalidOperationException("Failed to create test case template.");
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (HttpRequestException ex)
             {
@@ -51,9 +63,21 @@ namespace Testify.Client.Features.TestTemplates.Services
             try
             {
                 var response = await _httpClient.PutAsJsonAsync($"{TestCaseApiEndpoint}/{id}", request);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                {
+                    var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                    var message = error?.GetValueOrDefault("message") ?? $"A test case named \"{request.Title}\" already exists in this suite template.";
+                    throw new InvalidOperationException(message);
+                }
+
                 response.EnsureSuccessStatusCode();
    
                 return await GetTestCaseTemplateByIdAsync(id);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
             }
             catch (HttpRequestException ex)
             {

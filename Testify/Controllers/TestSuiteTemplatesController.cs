@@ -26,6 +26,15 @@ namespace Testify.Controllers
             return Ok(templates);
         }
 
+        // GET: api/TestSuiteTemplates/cloneable
+        [HttpGet("cloneable")]
+        public async Task<ActionResult<IEnumerable<TestSuiteTemplateResponse>>> GetCloneableTemplates()
+        {
+            var userId = _currentUserRepository.UserId ?? string.Empty;
+            var templates = await _testSuiteTemplateRepository.GetCloneableTemplatesAsync(userId);
+            return Ok(templates);
+        }
+
         // GET: api/TestSuiteTemplates/5
         [HttpGet("{id}")]
         public async Task<ActionResult<TestSuiteTemplateResponse>> GetTestSuiteTemplate(int id)

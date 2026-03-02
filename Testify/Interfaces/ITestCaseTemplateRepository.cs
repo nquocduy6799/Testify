@@ -8,5 +8,6 @@ namespace Testify.Interfaces
         Task<TestCaseTemplateResponse> CreateTestCaseTemplateAsync(int suiteId, CreateTestCaseTemplateRequest request, string userId);
         Task<bool> UpdateTestCaseTemplateAsync(int id, UpdateTestCaseTemplateRequest request, string userId);
         Task<bool> DeleteTestCaseTemplateAsync(int id, string userId);
+        Task<bool> IsCaseTemplateTitleExistsAsync(int suiteTemplateId, string title, int? excludeCaseId = null);
     }
 }

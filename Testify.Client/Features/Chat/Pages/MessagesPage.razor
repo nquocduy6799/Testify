@@ -1237,7 +1237,7 @@ else
             SdpAnswer = sdpAnswer
         });
 
-        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+        // Stay in Connecting state — HandleWebRtcStateChanged("connected") will set Active
         incomingCallData = null;
 
         // Start connecting timeout for callee side
@@ -2892,7 +2892,16 @@ else
         videoCallWindow?.SetCallState(VideoCallWindow.CallState.Connecting);
 
         // Initialize WebRTC
-        if (webRtcService == null) return;
+        if (webRtcService == null)
+        {
+            // Reset call state to prevent ghost "in call" state
+            isInCall = false;
+            activeCallSessionId = null;
+            hasIncomingCall = false;
+            incomingCallData = null;
+            StateHasChanged();
+            return;
+        }
         var initialized = await webRtcService.InitializeAsync(incomingCallData.CallType == CallType.Video);
         if (!initialized)
         {
@@ -2925,7 +2934,7 @@ else
             SdpAnswer = sdpAnswer
         });
 
-        videoCallWindow?.SetCallState(VideoCallWindow.CallState.Active);
+        // Stay in Connecting state — HandleWebRtcStateChanged("connected") will set Active
         incomingCallData = null;
 
         // Start connecting timeout for callee side
@@ -2949,6 +2958,14 @@ else
     private async Task HandleCallEndedUI()
     {
         _ringingTimeoutCts?.Cancel();
+        _connectingTimeoutCts?.Cancel();
+
+        // Dispose WebRTC resources if still active
+        if (webRtcService != null && isInCall)
+        {
+            try { await webRtcService.DisposeWebRtcAsync(); } catch { }
+        }
+
         isInCall = false;
         hasIncomingCall = false;
         incomingCallData = null;

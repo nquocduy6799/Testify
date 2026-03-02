@@ -28,6 +28,17 @@ namespace Testify.Controllers
             return await _context.ProjectFolders.ToListAsync();
         }
 
+        // GET: api/ProjectFolders/project/{projectId}
+        [HttpGet("project/{projectId}")]
+        public async Task<ActionResult<IEnumerable<ProjectFolder>>> GetProjectFoldersByProject(int projectId)
+        {
+            var folders = await _context.ProjectFolders
+                .Where(f => f.ProjectId == projectId)
+                .OrderBy(f => f.Name)
+                .ToListAsync();
+            return Ok(folders);
+        }
+
         // GET: api/ProjectFolders/5
         [HttpGet("{id}")]
         public async Task<ActionResult<ProjectFolder>> GetProjectFolder(int id)

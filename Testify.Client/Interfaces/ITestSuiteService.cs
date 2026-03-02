@@ -9,5 +9,7 @@ namespace Testify.Client.Interfaces
         Task<TestSuiteResponse> CreateTestSuiteAsync(CreateTestSuiteRequest request);
         Task<TestSuiteResponse> UpdateTestSuiteAsync(int id, UpdateTestSuiteRequest request);
         Task<bool> DeleteTestSuiteAsync(int id);
+        Task<bool> CheckSuiteNameExistsAsync(int projectId, string name, int? excludeId = null);
+        Task<string> SuggestUniqueNameAsync(int projectId, string baseName);
     }
 }

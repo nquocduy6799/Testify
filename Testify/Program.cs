@@ -94,10 +94,6 @@ builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();
 builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>();
 builder.Services.AddScoped<ITestRunRepository, TestRunRepository>();
 builder.Services.AddScoped<ITestRunStepAttachmentRepository, TestRunStepAttachmentRepository>();
-builder.Services.AddScoped<ITagRepository, TagRepository>();
-builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-builder.Services.AddScoped<ITemplateReviewRepository, TemplateReviewRepository>();
-
 
 // Gemini AI configuration
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
