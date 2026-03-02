@@ -481,27 +481,25 @@ namespace Testify.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     RoomId = table.Column<int>(type: "int", nullable: false),
-                    CallerUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CalleeUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CallerUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CalleeUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     CallType = table.Column<int>(type: "int", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     StartedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     AnsweredAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    EndedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CallerId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    CalleeId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    EndedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_CallSessions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_CallSessions_AspNetUsers_CalleeId",
-                        column: x => x.CalleeId,
+                        name: "FK_CallSessions_AspNetUsers_CalleeUserId",
+                        column: x => x.CalleeUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_CallSessions_AspNetUsers_CallerId",
-                        column: x => x.CallerId,
+                        name: "FK_CallSessions_AspNetUsers_CallerUserId",
+                        column: x => x.CallerUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -1261,14 +1259,14 @@ namespace Testify.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CallSessions_CalleeId",
+                name: "IX_CallSessions_CalleeUserId",
                 table: "CallSessions",
-                column: "CalleeId");
+                column: "CalleeUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CallSessions_CallerId",
+                name: "IX_CallSessions_CallerUserId",
                 table: "CallSessions",
-                column: "CallerId");
+                column: "CallerUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CallSessions_RoomId",

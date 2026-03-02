@@ -12,7 +12,7 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260224174013_Init")]
+    [Migration("20260302123621_Init")]
     partial class Init
     {
         /// <inheritdoc />
@@ -343,19 +343,13 @@ namespace Testify.Migrations
                     b.Property<int>("CallType")
                         .HasColumnType("int");
 
-                    b.Property<string>("CalleeId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("CalleeUserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CallerId")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("CallerUserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("datetime2");
@@ -371,9 +365,9 @@ namespace Testify.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CalleeId");
+                    b.HasIndex("CalleeUserId");
 
-                    b.HasIndex("CallerId");
+                    b.HasIndex("CallerUserId");
 
                     b.HasIndex("RoomId");
 
@@ -1893,11 +1887,15 @@ namespace Testify.Migrations
                 {
                     b.HasOne("Testify.Data.ApplicationUser", "Callee")
                         .WithMany()
-                        .HasForeignKey("CalleeId");
+                        .HasForeignKey("CalleeUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("Testify.Data.ApplicationUser", "Caller")
                         .WithMany()
-                        .HasForeignKey("CallerId");
+                        .HasForeignKey("CallerUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("Testify.Entities.ChatRoom", "Room")
                         .WithMany()

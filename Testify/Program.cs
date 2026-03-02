@@ -79,6 +79,7 @@ builder.Services.AddScoped(sp =>
 // Register repositories
 builder.Services.AddScoped<ICurrentUserRepository, CurrentUserRepository>();
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
+builder.Services.AddScoped<IMilestoneRepository, MilestoneRepository>();
 builder.Services.AddScoped<IKanbanTaskRepository, KanbanTaskRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<ITemplateFolderRepository, TemplateFolderRepository>();
@@ -94,6 +95,9 @@ builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();
 builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>();
 builder.Services.AddScoped<ITestRunRepository, TestRunRepository>();
 builder.Services.AddScoped<ITestRunStepAttachmentRepository, TestRunStepAttachmentRepository>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<ITagRepository, TagRepository>();
+builder.Services.AddScoped<ITemplateReviewRepository, TemplateReviewRepository>();
 
 // Gemini AI configuration
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));

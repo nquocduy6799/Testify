@@ -138,7 +138,6 @@ namespace Testify.Repositories
                 FolderId = template.FolderId,
                 Name = template.Name,
                 Description = template.Description,
-                UserId = template.UserId,
                 IsPublic = template.IsPublic,
                 CloneCount = template.CloneCount,
                 ViewCount = template.ViewCount,
