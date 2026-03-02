@@ -4359,6 +4359,13 @@
       }
     }
   }
+  .hover\:text-blue-700 {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-blue-700);
+      }
+    }
+  }
   .hover\:text-emerald-500 {
     &:hover {
       @media (hover: hover) {

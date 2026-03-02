@@ -34,6 +34,9 @@ namespace Testify.Controllers
         [HttpPost("~/api/testsuitetemplates/{suiteId}/testcases")]
         public async Task<ActionResult<TestCaseTemplateResponse>> CreateTestCaseTemplate(int suiteId, CreateTestCaseTemplateRequest request)
         {
+            if (await _repository.IsCaseTemplateTitleExistsAsync(suiteId, request.Title))
+                return Conflict(new { message = $"A test case named \"{request.Title}\" already exists in this suite template." });
+
             var userId = _currentUserRepository.UserId ?? "System";
             var template = await _repository.CreateTestCaseTemplateAsync(suiteId, request, userId);
 
@@ -44,6 +47,13 @@ namespace Testify.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTestCaseTemplate(int id, UpdateTestCaseTemplateRequest request)
         {
+            // Get the existing template to find its suiteTemplateId
+            var existing = await _repository.GetTestCaseTemplateByIdAsync(id);
+            if (existing == null) return NotFound();
+
+            if (await _repository.IsCaseTemplateTitleExistsAsync(existing.SuiteTemplateId, request.Title, excludeCaseId: id))
+                return Conflict(new { message = $"A test case named \"{request.Title}\" already exists in this suite template." });
+
             var userId = _currentUserRepository.UserId ?? "System";
             var result = await _repository.UpdateTestCaseTemplateAsync(id, request, userId);
 

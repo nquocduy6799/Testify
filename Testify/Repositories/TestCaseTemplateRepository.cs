@@ -82,6 +82,15 @@ namespace Testify.Repositories
             return true;
         }
 
+        public async Task<bool> IsCaseTemplateTitleExistsAsync(int suiteTemplateId, string title, int? excludeCaseId = null)
+        {
+            return await _context.TestCaseTemplates
+                .AnyAsync(c => !c.IsDeleted
+                    && c.SuiteTemplateId == suiteTemplateId
+                    && c.Title.ToLower() == title.ToLower()
+                    && (!excludeCaseId.HasValue || c.Id != excludeCaseId.Value));
+        }
+
         private static TestCaseTemplateResponse MapToResponse(TestCaseTemplate entity)
         {
             return new TestCaseTemplateResponse
