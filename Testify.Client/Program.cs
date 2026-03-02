@@ -41,12 +41,14 @@ builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
 builder.Services.AddScoped<ITestCaseService, TestCaseService>();
 builder.Services.AddScoped<IAiTestCaseService, AiTestCaseService>();
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IBugService, BugService>();
 builder.Services.AddScoped<ITestPlanService, TestPlanService>();
 builder.Services.AddScoped<ITestRunService, TestRunService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITemplateReviewService, TemplateReviewService>();
+
 
 // Register SignalR for real-time notifications
 builder.Services.AddScoped<NotificationHubService>();

@@ -3,9 +3,15 @@
 @using Testify.Client.Interfaces
 @using Testify.Shared.DTOs.TestPlans
 @using Testify.Shared.DTOs.TestRuns
+@using Testify.Shared.DTOs.Bugs
+@using Testify.Shared.DTOs.Projects
+@using Testify.Client.Features.TestRuns.Components
 @using Testify.Shared.Enums
 @inject ITestRunService TestRunService
 @inject ITestPlanService TestPlanService
+@inject IBugService BugService
+@inject IProjectService ProjectService
+@inject IMilestoneService MilestoneService
 @inject NavigationManager Navigation
 @rendermode InteractiveWebAssembly
 @attribute [Authorize]
@@ -14,594 +20,689 @@
 
 @if (_isLoading)
 {
-	<div class="flex flex-col items-center justify-center py-40">
-		<div class="h-12 w-12 animate-spin rounded-full border-b-4 border-[#7E96E1]"></div>
-		<p class="mt-6 text-xs font-black tracking-widest text-slate-400 uppercase">Loading Execution Hub...</p>
-	</div>
+    <div class="flex flex-col items-center justify-center py-40">
+        <div class="h-12 w-12 animate-spin rounded-full border-b-4 border-[#7E96E1]"></div>
+        <p class="mt-6 text-xs font-black tracking-widest text-slate-400 uppercase">Loading Execution Hub...</p>
+    </div>
 }
 else if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
-	<div class="rounded-[32px] border border-red-100 bg-red-50 p-8 text-center">
-		<div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-500">
-			<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-			</svg>
-		</div>
-		<h3 class="text-lg font-black text-red-900">System Error</h3>
-		<p class="mt-2 text-sm font-medium text-red-600">@_errorMessage</p>
-		<button @onclick="LoadDataAsync"
-				class="mt-6 rounded-2xl bg-red-500 px-6 py-3 text-xs font-black tracking-widest text-white uppercase transition-all hover:bg-red-600">
-			Retry
-		</button>
-	</div>
+    <div class="rounded-[32px] border border-red-100 bg-red-50 p-8 text-center">
+        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-100 text-red-500">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+        <h3 class="text-lg font-black text-red-900">System Error</h3>
+        <p class="mt-2 text-sm font-medium text-red-600">@_errorMessage</p>
+        <button @onclick="LoadDataAsync"
+                class="mt-6 rounded-2xl bg-red-500 px-6 py-3 text-xs font-black tracking-widest text-white uppercase transition-all hover:bg-red-600">
+            Retry
+        </button>
+    </div>
 }
 else if (_activeRun is not null)
 {
-	var completedSteps = _activeRun.Steps.Count(s => s.Status != TestStepStatus.Skipped);
-	var totalSteps = _activeRun.Steps.Count;
-	var progressPct = totalSteps > 0 ? completedSteps * 100 / totalSteps : 0;
+    var completedSteps = _activeRun.Steps.Count(s => s.Status != TestStepStatus.Skipped);
+    var totalSteps = _activeRun.Steps.Count;
+    var progressPct = totalSteps > 0 ? completedSteps * 100 / totalSteps : 0;
 
 
-	<div class="animate-in fade-in zoom-in-95 space-y-8 px-4 duration-500">
+    <div class="animate-in fade-in zoom-in-95 space-y-8 px-4 duration-500">
 
-		@* Header *@
-		<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-			<div class="flex items-center gap-4">
-				<button @onclick="ClearActiveRun"
-						class="rounded-2xl border border-slate-100 bg-white p-3 text-slate-400 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-800">
-					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-					</svg>
-				</button>
-				<div>
-					<div class="mb-1 flex items-center gap-2">
-						<span class="font-black tracking-widest text-[10px] text-[#7E96E1] uppercase">RUN-@_activeRun.Id</span>
-						<div class="h-1 w-1 rounded-full bg-slate-300"></div>
-						<span class="font-black tracking-widest text-[10px] text-slate-400 uppercase">@_activeRun.CreatedAt.ToString("MMM dd, yyyy")</span>
-					</div>
-					<h2 class="text-3xl font-black text-slate-800">@_activeRun.TestCaseTitle</h2>
-				</div>
-			</div>
+        @* Header *@
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div class="flex items-center gap-4">
+                <button @onclick="ClearActiveRun"
+                        class="rounded-2xl border border-slate-100 bg-white p-3 text-slate-400 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-800">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                </button>
+                <div>
+                    <div class="mb-1 flex items-center gap-2">
+                        <span class="font-black tracking-widest text-[10px] text-[#7E96E1] uppercase">RUN-@_activeRun.Id</span>
+                        <div class="h-1 w-1 rounded-full bg-slate-300"></div>
+                        <span class="font-black tracking-widest text-[10px] text-slate-400 uppercase">@_activeRun.CreatedAt.ToString("MMM dd, yyyy")</span>
+                    </div>
+                    <h2 class="text-3xl font-black text-slate-800">@_activeRun.TestCaseTitle</h2>
+                </div>
+            </div>
 
-			<div class="flex items-center gap-4">
-				<div class="text-right">
-					<p class="font-black text-[10px] text-slate-400 uppercase">Progress</p>
-					<p class="text-xl font-black text-slate-800">
-						@completedSteps<span class="font-medium text-slate-300">/@totalSteps</span>
-					</p>
-				</div>
-				<div class="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-4 border-slate-100">
-					<div class="absolute inset-0 bg-[#7E96E1]/10"></div>
-					<div class="absolute bottom-0 left-0 w-full bg-[#7E96E1] transition-all duration-500"
-						 style="height:@(progressPct)%"></div>
-				</div>
-			</div>
-		</div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p class="font-black text-[10px] text-slate-400 uppercase">Progress</p>
+                    <p class="text-xl font-black text-slate-800">
+                        @completedSteps<span class="font-medium text-slate-300">/@totalSteps</span>
+                    </p>
+                </div>
+                <div class="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-4 border-slate-100">
+                    <div class="absolute inset-0 bg-[#7E96E1]/10"></div>
+                    <div class="absolute bottom-0 left-0 w-full bg-[#7E96E1] transition-all duration-500"
+                         style="height:@(progressPct)%"></div>
+                </div>
+            </div>
+        </div>
 
-		<div class="grid grid-cols-1 gap-8 xl:grid-cols-4">
 
-			@* Left — Worklist Pipeline *@
-			<div class="xl:col-span-1">
-				<div class="flex max-h-[700px] flex-col overflow-hidden rounded-[40px] border border-slate-100 bg-white p-6 shadow-sm">
-					<p class="mb-4 px-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">Worklist Pipeline</p>
-					<div class="no-scrollbar flex-1 space-y-2 overflow-y-auto">
-						@foreach (var run in _testRunDetails)
-						{
-							<button @onclick="@(() => SetActiveRun(run))"
-									class="@WorklistItemClass(run)">
-								<div class="flex items-center gap-3">
-									<div class="@WorklistBadgeClass(run) flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl">
-										@if (run.Status == TestRunStatus.Passed)
-										{
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-										}
-										else if (run.Status == TestRunStatus.Failed)
-										{
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-										}
-										else
-										{
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-										}
-									</div>
-									<div class="min-w-0 text-left">
-										<p class="line-clamp-1 font-black text-[10px] text-slate-800">@run.TestCaseTitle</p>
-										<p class="font-bold text-[8px] text-slate-400 uppercase">RUN-@run.Id</p>
-									</div>
-								</div>
-							</button>
-						}
-					</div>
-				</div>
-			</div>
+        <div class="grid grid-cols-1 gap-8 xl:grid-cols-4">
 
-			@* Right — Step Execution Panel *@
-			<div class="xl:col-span-3">
-				<div class="@RunCardClass(_activeRun) relative overflow-hidden rounded-[48px] border p-10 shadow-sm">
+            @* Left — Worklist Pipeline *@
+            <div class="xl:col-span-1">
+                <div class="flex max-h-[700px] flex-col overflow-hidden rounded-[40px] border border-slate-100 bg-white p-6 shadow-sm">
+                    <p class="mb-4 px-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">Worklist Pipeline</p>
+                    <div class="no-scrollbar flex-1 space-y-2 overflow-y-auto">
+                        @foreach (var run in _testRunDetails)
+                        {
+                            <button @onclick="@(() => SetActiveRun(run))"
+                                    class="@WorklistItemClass(run)">
+                                <div class="flex items-center gap-3">
+                                    <div class="@WorklistBadgeClass(run) flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl">
+                                        @if (run.Status == TestRunStatus.Passed)
+                                        {
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        }
+                                        else if (run.Status == TestRunStatus.Failed)
+                                        {
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        }
+                                        else
+                                        {
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        }
+                                    </div>
+                                    <div class="min-w-0 text-left">
+                                        <p class="line-clamp-1 font-black text-[10px] text-slate-800">@run.TestCaseTitle</p>
+                                        <p class="font-bold text-[8px] text-slate-400 uppercase">RUN-@run.Id</p>
+                                    </div>
+                                </div>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
 
-					@* Case Header *@
-					<div class="mb-10 flex items-start justify-between">
-						<div class="flex-1">
-							<span class="mb-1 block font-black tracking-widest text-[10px] text-[#7E96E1] uppercase">RUN-@_activeRun.Id</span>
-							<h3 class="text-2xl leading-tight font-black text-slate-800">@_activeRun.TestCaseTitle</h3>
-						</div>
-						<div class="@StatusBadgeClass(_activeRun.Status) ml-4 flex flex-shrink-0 items-center gap-2 rounded-2xl border px-4 py-2 shadow-sm transition-all">
-							@RunStatusIcon(_activeRun.Status)
-							<span class="font-black tracking-widest text-[10px] uppercase">
-								@(_activeRun.Status == TestRunStatus.Untested ? "Untested" : _activeRun.Status.ToString())
-							</span>
-						</div>
-					</div>
+            @* Right — Step Execution Panel *@
+            <div class="xl:col-span-3">
+                <div class="@RunCardClass(_activeRun) relative overflow-hidden rounded-[48px] border p-10 shadow-sm">
 
-					@* Steps *@
-					<div class="space-y-6">
-						@foreach (var step in _activeRun.Steps)
-						{
-							<div class="@StepCardClass(step) group space-y-6 rounded-[40px] border p-8 transition-all">
-								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-3">
-										<span class="@StepNumberClass(step) flex h-8 w-8 items-center justify-center rounded-xl font-black text-[11px] shadow-sm">
-											@step.StepNumber
-										</span>
-										<span class="font-black tracking-widest text-[10px] text-slate-400 uppercase">Protocol Node</span>
-									</div>
-									<div class="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-										<button @onclick="@(() => UpdateStepStatusAsync(step.Id, TestStepStatus.Pass))"
-												class="@StepActionBtnClass(step, TestStepStatus.Pass) rounded-xl p-2 transition-all">
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-											</svg>
-										</button>
-										<button @onclick="@(() => UpdateStepStatusAsync(step.Id, TestStepStatus.Fail))"
-												class="@StepActionBtnClass(step, TestStepStatus.Fail) rounded-xl p-2 transition-all">
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-											</svg>
-										</button>
-									</div>
-								</div>
+                    @* Case Header *@
+                    <div class="mb-10 flex items-start justify-between">
+                        <div class="flex-1">
+                            <span class="mb-1 block font-black tracking-widest text-[10px] text-[#7E96E1] uppercase">RUN-@_activeRun.Id</span>
+                            <h3 class="text-2xl leading-tight font-black text-slate-800">@_activeRun.TestCaseTitle</h3>
+                        </div>
+                        <div class="@StatusBadgeClass(_activeRun.Status) ml-4 flex flex-shrink-0 items-center gap-2 rounded-2xl border px-4 py-2 shadow-sm transition-all">
+                            @RunStatusIcon(_activeRun.Status)
+                            <span class="font-black tracking-widest text-[10px] uppercase">
+                                @(_activeRun.Status == TestRunStatus.Untested ? "Untested" : _activeRun.Status.ToString())
+                            </span>
+                        </div>
+                    </div>
 
-								<div class="grid grid-cols-1 gap-10 md:grid-cols-2">
-									<div class="space-y-6">
-										<div class="space-y-2">
-											<p class="px-1 font-black tracking-widest text-[9px] text-slate-400 uppercase">Instruction</p>
-											<p class="text-sm leading-relaxed font-bold text-slate-700">@step.Action</p>
-										</div>
-										<div class="space-y-2">
-											<p class="px-1 font-black tracking-widest text-[9px] text-[#E85D3F] uppercase">Input / Test Data</p>
-											<div class="flex items-center gap-3 rounded-2xl border border-[#E85D3F]/10 bg-white px-4 py-3 shadow-inner">
-												<svg class="h-4 w-4 shrink-0 text-[#E85D3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-												</svg>
-												<code class="font-mono break-all text-[11px] text-[#E85D3F]">
-													@(string.IsNullOrWhiteSpace(step.TestData) ? "Default: SYSTEM_AUTO" : step.TestData)
-												</code>
-											</div>
-										</div>
-									</div>
-									<div class="space-y-6">
-										<div class="space-y-2">
-											<p class="px-1 font-black tracking-widest text-[9px] text-emerald-500 uppercase">Expected Outcome</p>
-											<p class="text-xs leading-relaxed font-medium text-slate-500 italic">"@step.ExpectedResult"</p>
-										</div>
-										<div class="space-y-2">
-											<p class="px-1 font-black tracking-widest text-[9px] text-slate-400 uppercase">Execution Observer Log</p>
-											<textarea @oninput="@(e => _stepActualResults[step.Id] = e.Value?.ToString() ?? string.Empty)"
-													  @onblur="@(async () => await SaveStepActualResultAsync(step.Id))"
-													  placeholder="Record observed deviation or result..."
-													  class="min-h-[80px] w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 text-xs font-medium text-slate-700 shadow-inner outline-none transition-all focus:border-[#7E96E1]">@_stepActualResults.GetValueOrDefault(step.Id, string.Empty)</textarea>
-										</div>
-									</div>
-								</div>
-							</div>
-						}
-					</div>
+                    @* Steps *@
+                    <div class="space-y-6">
+                        @foreach (var step in _activeRun.Steps)
+                        {
+                            <div class="@StepCardClass(step) group space-y-6 rounded-[40px] border p-8 transition-all">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <span class="@StepNumberClass(step) flex h-8 w-8 items-center justify-center rounded-xl font-black text-[11px] shadow-sm">
+                                            @step.StepNumber
+                                        </span>
+                                        <span class="font-black tracking-widest text-[10px] text-slate-400 uppercase">Protocol Node</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <button @onclick="@(() => UpdateStepStatusAsync(step.Id, TestStepStatus.Pass))"
+                                                class="@StepActionBtnClass(step, TestStepStatus.Pass) rounded-xl p-2 transition-all">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </button>
+                                        <button @onclick="@(() => UpdateStepStatusAsync(step.Id, TestStepStatus.Fail))"
+                                                class="@StepActionBtnClass(step, TestStepStatus.Fail) rounded-xl p-2 transition-all">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
 
-					@* Footer Actions *@
-					<div class="mt-10 flex items-center justify-end gap-3 border-t border-slate-50/50 pt-8">
-						<button @onclick="MarkRunFailedAsync"
-								class="@MarkFailedBtnClass(_activeRun.Status) rounded-2xl px-6 py-3 font-black tracking-widest text-[10px] uppercase transition-all">
-							Mark as Failed
-						</button>
-						<button @onclick="PassAllStepsAsync"
-								disabled="@(_activeRun.Status == TestRunStatus.Passed)"
-								class="@PassAllBtnClass(_activeRun.Status) rounded-2xl px-6 py-3 font-black tracking-widest text-[10px] uppercase transition-all disabled:cursor-not-allowed">
-							Pass All Steps
-						</button>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
+                                <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
+                                    <div class="space-y-6">
+                                        <div class="space-y-2">
+                                            <p class="px-1 font-black tracking-widest text-[9px] text-slate-400 uppercase">Instruction</p>
+                                            <p class="text-sm leading-relaxed font-bold text-slate-700">@step.Action</p>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <p class="px-1 font-black tracking-widest text-[9px] text-[#E85D3F] uppercase">Input / Test Data</p>
+                                            <div class="flex items-center gap-3 rounded-2xl border border-[#E85D3F]/10 bg-white px-4 py-3 shadow-inner">
+                                                <svg class="h-4 w-4 shrink-0 text-[#E85D3F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                                                </svg>
+                                                <code class="font-mono break-all text-[11px] text-[#E85D3F]">
+                                                    @(string.IsNullOrWhiteSpace(step.TestData) ? "Default: SYSTEM_AUTO" : step.TestData)
+                                                </code>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-6">
+                                        <div class="space-y-2">
+                                            <p class="px-1 font-black tracking-widest text-[9px] text-emerald-500 uppercase">Expected Outcome</p>
+                                            <p class="text-xs leading-relaxed font-medium text-slate-500 italic">"@step.ExpectedResult"</p>
+                                        </div>
+                                        <div class="space-y-2">
+                                            <p class="px-1 font-black tracking-widest text-[9px] text-slate-400 uppercase">Execution Observer Log</p>
+                                            <textarea @oninput="@(e => _stepActualResults[step.Id] = e.Value?.ToString() ?? string.Empty)"
+                                                      @onblur="@(async () => await SaveStepActualResultAsync(step.Id))"
+                                                      placeholder="Record observed deviation or result..."
+                                                      class="min-h-[80px] w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 text-xs font-medium text-slate-700 shadow-inner outline-none transition-all focus:border-[#7E96E1]">@_stepActualResults.GetValueOrDefault(step.Id, string.Empty)</textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* Footer Actions *@
+                    <div class="mt-10 flex items-center justify-end gap-3 border-t border-slate-50/50 pt-8">
+                        <button @onclick="MarkRunFailedAsync"
+                                class="@MarkFailedBtnClass(_activeRun.Status) rounded-2xl px-6 py-3 font-black tracking-widest text-[10px] uppercase transition-all">
+                            Mark as Failed
+                        </button>
+                        @if (_activeRun.Status == TestRunStatus.Failed)
+                        {
+                            <button @onclick="OpenBugReportForm"
+                                    class="flex items-center gap-2 rounded-2xl bg-red-500 px-6 py-3 font-black tracking-widest text-[10px] text-white uppercase shadow-lg shadow-red-100 transition-all hover:bg-red-600 active:scale-95">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9" />
+                                </svg>
+                                Log Bug Report
+                            </button>
+                        }
+                        <button @onclick="PassAllStepsAsync"
+                                disabled="@(_activeRun.Status == TestRunStatus.Passed)"
+                                class="@PassAllBtnClass(_activeRun.Status) rounded-2xl px-6 py-3 font-black tracking-widest text-[10px] uppercase transition-all disabled:cursor-not-allowed">
+                            Pass All Steps
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 else
 {
-	<div class="animate-in fade-in space-y-8 px-4 duration-500">
+    <div class="animate-in fade-in space-y-8 px-4 duration-500">
 
-		@* Header *@
-		<div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-			<div>
-				<h3 class="text-2xl font-black tracking-tight text-slate-800">Execution Ledger</h3>
-				<p class="mt-1 text-sm font-medium text-slate-400">
-					Audit of active and historical verification cycles for
-					<span class="text-slate-600">@(_testPlan?.Name ?? $"Plan #{TestPlanId}")</span>.
-				</p>
-			</div>
-			<button @onclick="StartNewExecutionAsync"
-					disabled="@_isStartingExecution"
-					class="group flex items-center gap-3 rounded-[24px] bg-[#E85D3F] px-8 py-4 text-xs font-black tracking-widest text-white uppercase shadow-xl shadow-orange-900/10 transition-all hover:bg-orange-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
-				@if (_isStartingExecution)
-				{
-					<div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-					<span>Initializing...</span>
-				}
-				else
-				{
-					<svg class="h-4 w-4 fill-white transition-transform group-hover:scale-110" viewBox="0 0 24 24">
-						<path d="M8 5v14l11-7z" />
-					</svg>
-					<span>Initialize Regression Run</span>
-				}
-			</button>
-		</div>
+        @* Header *@
+        <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+                <h3 class="text-2xl font-black tracking-tight text-slate-800">Execution Ledger</h3>
+                <p class="mt-1 text-sm font-medium text-slate-400">
+                    Audit of active and historical verification cycles for
+                    <span class="text-slate-600">@(_testPlan?.Name ?? $"Plan #{TestPlanId}")</span>.
+                </p>
+            </div>
+            <button @onclick="StartNewExecutionAsync"
+                    disabled="@_isStartingExecution"
+                    class="group flex items-center gap-3 rounded-[24px] bg-[#E85D3F] px-8 py-4 text-xs font-black tracking-widest text-white uppercase shadow-xl shadow-orange-900/10 transition-all hover:bg-orange-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
+                @if (_isStartingExecution)
+                {
+                    <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    <span>Initializing...</span>
+                }
+                else
+                {
+                    <svg class="h-4 w-4 fill-white transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <span>Initialize Regression Run</span>
+                }
+            </button>
+        </div>
 
-		@* Statistics Bar *@
-		@if (_statistics is not null)
-		{
-			<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-				<div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-					<p class="font-black tracking-widest text-[9px] text-slate-400 uppercase">Total</p>
-					<p class="mt-1 text-2xl font-black text-slate-800">@_statistics.TotalTests</p>
-				</div>
-				<div class="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-sm">
-					<p class="font-black tracking-widest text-[9px] text-emerald-500 uppercase">Passed</p>
-					<p class="mt-1 text-2xl font-black text-emerald-600">@_statistics.Passed</p>
-				</div>
-				<div class="rounded-3xl border border-red-100 bg-red-50 p-6 shadow-sm">
-					<p class="font-black tracking-widest text-[9px] text-red-500 uppercase">Failed</p>
-					<p class="mt-1 text-2xl font-black text-red-600">@_statistics.Failed</p>
-				</div>
-				<div class="rounded-3xl border border-slate-100 bg-slate-50 p-6 shadow-sm">
-					<p class="font-black tracking-widest text-[9px] text-slate-400 uppercase">Untested</p>
-					<p class="mt-1 text-2xl font-black text-slate-600">@_statistics.Untested</p>
-				</div>
-				<div class="rounded-3xl border border-[#7E96E1]/20 bg-[#7E96E1]/5 p-6 shadow-sm">
-					<p class="font-black tracking-widest text-[9px] text-[#7E96E1] uppercase">Pass Rate</p>
-					<p class="mt-1 text-2xl font-black text-[#7E96E1]">@_statistics.PassRate.ToString("F0")%</p>
-				</div>
-			</div>
-		}
+        @* Statistics Bar *@
+        @if (_statistics is not null)
+        {
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                <div class="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+                    <p class="font-black tracking-widest text-[9px] text-slate-400 uppercase">Total</p>
+                    <p class="mt-1 text-2xl font-black text-slate-800">@_statistics.TotalTests</p>
+                </div>
+                <div class="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-sm">
+                    <p class="font-black tracking-widest text-[9px] text-emerald-500 uppercase">Passed</p>
+                    <p class="mt-1 text-2xl font-black text-emerald-600">@_statistics.Passed</p>
+                </div>
+                <div class="rounded-3xl border border-red-100 bg-red-50 p-6 shadow-sm">
+                    <p class="font-black tracking-widest text-[9px] text-red-500 uppercase">Failed</p>
+                    <p class="mt-1 text-2xl font-black text-red-600">@_statistics.Failed</p>
+                </div>
+                <div class="rounded-3xl border border-slate-100 bg-slate-50 p-6 shadow-sm">
+                    <p class="font-black tracking-widest text-[9px] text-slate-400 uppercase">Untested</p>
+                    <p class="mt-1 text-2xl font-black text-slate-600">@_statistics.Untested</p>
+                </div>
+                <div class="rounded-3xl border border-[#7E96E1]/20 bg-[#7E96E1]/5 p-6 shadow-sm">
+                    <p class="font-black tracking-widest text-[9px] text-[#7E96E1] uppercase">Pass Rate</p>
+                    <p class="mt-1 text-2xl font-black text-[#7E96E1]">@_statistics.PassRate.ToString("F0")%</p>
+                </div>
+            </div>
+        }
 
-		@* Run Cards Grid *@
-		@if (_testRunDetails.Count > 0)
-		{
-			<div class="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
-				@foreach (var run in _testRunDetails)
-				{
-					var passedSteps = run.Steps.Count(s => s.Status == TestStepStatus.Pass);
-					var failedSteps = run.Steps.Count(s => s.Status == TestStepStatus.Fail);
-					var totalStepsCount = run.Steps.Count;
-					var stepProgressPct = totalStepsCount > 0 ? (passedSteps + failedSteps) * 100 / totalStepsCount : 0;
-					var passStepPct = totalStepsCount > 0 ? passedSteps * 100 / totalStepsCount : 0;
+        @* Run Cards Grid *@
+        @if (_testRunDetails.Count > 0)
+        {
+            <div class="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+                @foreach (var run in _testRunDetails)
+                {
+                    var passedSteps = run.Steps.Count(s => s.Status == TestStepStatus.Pass);
+                    var failedSteps = run.Steps.Count(s => s.Status == TestStepStatus.Fail);
+                    var totalStepsCount = run.Steps.Count;
+                    var stepProgressPct = totalStepsCount > 0 ? (passedSteps + failedSteps) * 100 / totalStepsCount : 0;
+                    var passStepPct = totalStepsCount > 0 ? passedSteps * 100 / totalStepsCount : 0;
 
-					<div class="group relative flex h-full flex-col overflow-hidden rounded-[48px] border border-slate-50 bg-white p-10 shadow-sm transition-all hover:shadow-2xl">
+                    <div class="group relative flex h-full flex-col overflow-hidden rounded-[48px] border border-slate-50 bg-white p-10 shadow-sm transition-all hover:shadow-2xl">
 
-						<div class="mb-8 flex items-start justify-between">
-							<div class="@RunIconClass(run.Status) flex h-14 w-14 items-center justify-center rounded-2xl">
-								@if (run.Status == TestRunStatus.Passed)
-								{
-									<svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-									</svg>
-								}
-								else
-								{
-									<svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-									</svg>
-								}
-							</div>
-							<div class="@StatusPillClass(run.Status) rounded-xl px-4 py-1.5 font-black tracking-widest text-[9px] uppercase">
-								@run.Status.ToString()
-							</div>
-						</div>
+                        <div class="mb-8 flex items-start justify-between">
+                            <div class="@RunIconClass(run.Status) flex h-14 w-14 items-center justify-center rounded-2xl">
+                                @if (run.Status == TestRunStatus.Passed)
+                                {
+                                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                }
+                            </div>
+                            <div class="@StatusPillClass(run.Status) rounded-xl px-4 py-1.5 font-black tracking-widest text-[9px] uppercase">
+                                @run.Status.ToString()
+                            </div>
+                        </div>
 
-						<div class="flex-1">
-							<h4 class="mb-2 text-xl font-black text-slate-800 transition-colors group-hover:text-[#E85D3F]">@run.TestCaseTitle</h4>
-							<div class="mb-8 flex items-center gap-4 font-bold text-[10px] text-slate-300 uppercase">
-								<span class="flex items-center gap-1.5">
-									<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-									</svg>
-									@run.CreatedAt.ToString("MMM dd, yyyy")
-								</span>
-								<div class="h-1 w-1 rounded-full bg-slate-200"></div>
-								<span>RUN-@run.Id</span>
-							</div>
+                        <div class="flex-1">
+                            <h4 class="mb-2 text-xl font-black text-slate-800 transition-colors group-hover:text-[#E85D3F]">@run.TestCaseTitle</h4>
+                            <div class="mb-8 flex items-center gap-4 font-bold text-[10px] text-slate-300 uppercase">
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    @run.CreatedAt.ToString("MMM dd, yyyy")
+                                </span>
+                                <div class="h-1 w-1 rounded-full bg-slate-200"></div>
+                                <span>RUN-@run.Id</span>
+                            </div>
 
-							<div class="space-y-6">
-								<div class="space-y-2">
-									<div class="flex items-center justify-between font-black text-[10px] uppercase">
-										<span class="text-slate-400">Pass Integrity</span>
-										<span class="text-emerald-500">@passStepPct%</span>
-									</div>
-									<div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-										<div class="h-full bg-emerald-500 transition-all duration-1000" style="width:@(passStepPct)%"></div>
-									</div>
-								</div>
-								<div class="grid grid-cols-2 gap-4">
-									<div class="rounded-2xl border border-slate-100/50 bg-slate-50 p-4">
-										<p class="mb-1 font-black text-[9px] text-slate-400 uppercase">Progress</p>
-										<p class="text-lg font-black text-slate-700">@stepProgressPct%</p>
-									</div>
-									<div class="rounded-2xl border border-slate-100/50 bg-slate-50 p-4">
-										<p class="mb-1 font-black text-[9px] text-slate-400 uppercase">Logic Units</p>
-										<p class="text-lg font-black text-slate-700">@totalStepsCount</p>
-									</div>
-								</div>
-							</div>
-						</div>
+                            <div class="space-y-6">
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between font-black text-[10px] uppercase">
+                                        <span class="text-slate-400">Pass Integrity</span>
+                                        <span class="text-emerald-500">@passStepPct%</span>
+                                    </div>
+                                    <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                                        <div class="h-full bg-emerald-500 transition-all duration-1000" style="width:@(passStepPct)%"></div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="rounded-2xl border border-slate-100/50 bg-slate-50 p-4">
+                                        <p class="mb-1 font-black text-[9px] text-slate-400 uppercase">Progress</p>
+                                        <p class="text-lg font-black text-slate-700">@stepProgressPct%</p>
+                                    </div>
+                                    <div class="rounded-2xl border border-slate-100/50 bg-slate-50 p-4">
+                                        <p class="mb-1 font-black text-[9px] text-slate-400 uppercase">Logic Units</p>
+                                        <p class="text-lg font-black text-slate-700">@totalStepsCount</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-						<button @onclick="@(() => SetActiveRun(run))"
-								class="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#1C1D2A] py-5 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95">
-							Resume Execution
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-							</svg>
-						</button>
-					</div>
-				}
-			</div>
-		}
-		else
-		{
-			<div class="flex flex-col items-center justify-center rounded-[64px] border-2 border-dashed border-slate-200 bg-white/40 py-32 text-center">
-				<div class="mb-8 flex h-24 w-24 items-center justify-center rounded-[40px] bg-white shadow-sm">
-					<svg class="h-10 w-10 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-					</svg>
-				</div>
-				<h3 class="text-3xl font-black tracking-widest text-slate-800 uppercase">No Cycles Initiated</h3>
-				<p class="mt-4 max-w-sm leading-relaxed font-medium text-slate-400">
-					The project ledger contains no recorded execution cycles. Start a new regression run to begin validation.
-				</p>
-			</div>
-		}
-	</div>
+                        <button @onclick="@(() => SetActiveRun(run))"
+                                class="mt-10 flex w-full items-center justify-center gap-3 rounded-2xl bg-[#1C1D2A] py-5 text-xs font-black uppercase tracking-[0.2em] text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95">
+                            Resume Execution
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="flex flex-col items-center justify-center rounded-[64px] border-2 border-dashed border-slate-200 bg-white/40 py-32 text-center">
+                <div class="mb-8 flex h-24 w-24 items-center justify-center rounded-[40px] bg-white shadow-sm">
+                    <svg class="h-10 w-10 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <h3 class="text-3xl font-black tracking-widest text-slate-800 uppercase">No Cycles Initiated</h3>
+                <p class="mt-4 max-w-sm leading-relaxed font-medium text-slate-400">
+                    The project ledger contains no recorded execution cycles. Start a new regression run to begin validation.
+                </p>
+            </div>
+        }
+    </div>
+}
+
+@if (_showBugReportForm && _activeMilestoneId != 0)
+{
+    <BugReportForm MilestoneId="_activeMilestoneId"
+                   TestCaseId="_activeRun.TestCaseId"
+                   TestRunId="_activeRun.Id"
+                   FailedRunStepIds="GetFailedStepIds()"
+                   StepsToReproduce="BuildStepsToReproduce()"
+                   ExistingAttachments="GetFailedStepAttachments()"
+                   CurrentUserId="_userContext?.UserId ?? string.Empty"
+                   CurrentUserName="_userContext?.UserName ?? string.Empty"
+                   CanAssignToOthers="_userContext?.IsPM ?? false"
+                   TeamMembers="_userContext?.TeamMembers ?? []"
+                   OnSave="HandleBugSavedAsync"
+                   OnClose="CloseBugReportForm" />
 }
 
 @code {
-	[Parameter] public int ProjectId { get; set; }
-	[Parameter] public int TestPlanId { get; set; }
+    [Parameter] public int ProjectId { get; set; }
+    [Parameter] public int TestPlanId { get; set; }
 
-	private TestPlanResponse? _testPlan;
-	private List<TestRunDetailResponse> _testRunDetails = [];
-	private TestRunDetailResponse? _activeRun;
-	private TestRunStatistics? _statistics;
-	private Dictionary<int, string> _stepActualResults = [];
-	private bool _isLoading = true;
-	private bool _isStartingExecution;
-	private string? _errorMessage;
+    private TestPlanResponse? _testPlan;
+    private List<TestRunDetailResponse> _testRunDetails = [];
+    private TestRunDetailResponse? _activeRun;
+    private TestRunStatistics? _statistics;
+    private Dictionary<int, string> _stepActualResults = [];
+    private bool _isLoading = true;
+    private bool _isStartingExecution;
+    private string? _errorMessage;
+    private bool _showBugReportForm;
+    private int _activeMilestoneId;
+    private ProjectUserContext? _userContext;
 
-	protected override async Task OnInitializedAsync() => await LoadDataAsync();
+    protected override async Task OnInitializedAsync() => await LoadDataAsync();
 
-	private async Task LoadDataAsync()
-	{
-		_isLoading = true;
-		_errorMessage = null;
+    private async Task LoadDataAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
 
-		try
-		{
-			var planTask = TestPlanService.GetTestPlanByIdAsync(TestPlanId);
-			var runsTask = TestRunService.GetByTestPlanIdAsync(TestPlanId);
-			var statsTask = TestRunService.GetStatisticsByTestPlanIdAsync(TestPlanId);
+        try
+        {
+            var planTask = TestPlanService.GetTestPlanByIdAsync(TestPlanId);
+            var runsTask = TestRunService.GetByTestPlanIdAsync(TestPlanId);
+            var statsTask = TestRunService.GetStatisticsByTestPlanIdAsync(TestPlanId);
+            var contextTask = ProjectService.GetProjectUserContextAsync(ProjectId);
 
-			await Task.WhenAll(planTask, runsTask, statsTask);
+            await Task.WhenAll(planTask, runsTask, statsTask, contextTask);
 
-			_testPlan = planTask.Result;
-			_statistics = statsTask.Result;
+            await LoadActiveMilestoneAsync();
 
-			var detailTasks = runsTask.Result.Select(r => TestRunService.GetDetailedByIdAsync(r.Id));
-			var details = await Task.WhenAll(detailTasks);
-			_testRunDetails = [.. details.OfType<TestRunDetailResponse>()];
-		}
-		catch (Exception ex)
-		{
-			_errorMessage = $"Failed to load execution hub: {ex.Message}";
-		}
-		finally
-		{
-			_isLoading = false;
-		}
-	}
+            _testPlan = planTask.Result;
+            _statistics = statsTask.Result;
+            _userContext = contextTask.Result;
 
-	private void SetActiveRun(TestRunDetailResponse run)
-	{
-		_activeRun = run;
-		_stepActualResults = run.Steps.ToDictionary(s => s.Id, s => s.ActualResult ?? string.Empty);
-	}
+            var detailTasks = runsTask.Result.Select(r => TestRunService.GetDetailedByIdAsync(r.Id));
+            var details = await Task.WhenAll(detailTasks);
+            _testRunDetails = [.. details.OfType<TestRunDetailResponse>()];
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load execution hub: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
 
-	private void ClearActiveRun() => _activeRun = null;
+    private async Task LoadActiveMilestoneAsync()
+    {
+        try
+        {
+            var activeMilestone = await MilestoneService.GetActiveMilestoneByProjectIdAsync(ProjectId);
+            _activeMilestoneId = activeMilestone?.Id ?? 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load active milestone: {ex.Message}");
+        }
+    }
+
+    private void SetActiveRun(TestRunDetailResponse run)
+    {
+        _activeRun = run;
+        _stepActualResults = run.Steps.ToDictionary(s => s.Id, s => s.ActualResult ?? string.Empty);
+    }
+
+    private void ClearActiveRun() => _activeRun = null;
 
 
-	private async Task UpdateStepStatusAsync(int stepId, TestStepStatus status)
-	{
-		if (_activeRun is null) return;
+    private async Task UpdateStepStatusAsync(int stepId, TestStepStatus status)
+    {
+        if (_activeRun is null) return;
 
-		var step = _activeRun.Steps.FirstOrDefault(s => s.Id == stepId);
-		if (step is null) return;
+        var step = _activeRun.Steps.FirstOrDefault(s => s.Id == stepId);
+        if (step is null) return;
 
-		step.Status = status;
-		await TestRunService.UpdateStepAsync(stepId, new UpdateTestRunStepRequest
-		{
-			Status = status,
-			ActualResult = step.ActualResult
-		});
+        step.Status = status;
+        await TestRunService.UpdateStepAsync(stepId, new UpdateTestRunStepRequest
+        {
+            Status = status,
+            ActualResult = step.ActualResult
+        });
 
-		await SyncRunStatusAsync();
-	}
+        await SyncRunStatusAsync();
+    }
 
-	private async Task SaveStepActualResultAsync(int stepId)
-	{
-		if (_activeRun is null) return;
+    private async Task SaveStepActualResultAsync(int stepId)
+    {
+        if (_activeRun is null) return;
 
-		var step = _activeRun.Steps.FirstOrDefault(s => s.Id == stepId);
-		if (step is null) return;
+        var step = _activeRun.Steps.FirstOrDefault(s => s.Id == stepId);
+        if (step is null) return;
 
-		var actualResult = _stepActualResults.GetValueOrDefault(stepId, string.Empty);
-		step.ActualResult = actualResult;
+        var actualResult = _stepActualResults.GetValueOrDefault(stepId, string.Empty);
+        step.ActualResult = actualResult;
 
-		await TestRunService.UpdateStepAsync(stepId, new UpdateTestRunStepRequest
-		{
-			Status = step.Status,
-			ActualResult = actualResult
-		});
-	}
+        await TestRunService.UpdateStepAsync(stepId, new UpdateTestRunStepRequest
+        {
+            Status = step.Status,
+            ActualResult = actualResult
+        });
+    }
 
-	private async Task SyncRunStatusAsync()
-	{
-		if (_activeRun is null || _activeRun.Steps.Count == 0) return;
+    private async Task SyncRunStatusAsync()
+    {
+        if (_activeRun is null || _activeRun.Steps.Count == 0) return;
 
-		var steps = _activeRun.Steps;
-		if (steps.All(s => s.Status == TestStepStatus.Pass))
-			await UpdateRunStatusAsync(TestRunStatus.Passed);
-		else if (steps.Any(s => s.Status == TestStepStatus.Fail))
-			await UpdateRunStatusAsync(TestRunStatus.Failed);
-	}
+        var steps = _activeRun.Steps;
+        if (steps.All(s => s.Status == TestStepStatus.Pass))
+            await UpdateRunStatusAsync(TestRunStatus.Passed);
+        else if (steps.Any(s => s.Status == TestStepStatus.Fail))
+            await UpdateRunStatusAsync(TestRunStatus.Failed);
+    }
 
-	private async Task UpdateRunStatusAsync(TestRunStatus status)
-	{
-		if (_activeRun is null) return;
+    private async Task UpdateRunStatusAsync(TestRunStatus status)
+    {
+        if (_activeRun is null) return;
 
-		_activeRun.Status = status;
-		await TestRunService.UpdateAsync(_activeRun.Id, new UpdateTestRunRequest
-		{
-			Status = status,
-			ExecutedAt = DateTime.UtcNow,
-			Comments = _activeRun.Comments
-		});
+        _activeRun.Status = status;
+        await TestRunService.UpdateAsync(_activeRun.Id, new UpdateTestRunRequest
+        {
+            Status = status,
+            ExecutedAt = DateTime.UtcNow,
+            Comments = _activeRun.Comments
+        });
 
-		var listItem = _testRunDetails.FirstOrDefault(r => r.Id == _activeRun.Id);
-		if (listItem is not null) listItem.Status = status;
+        var listItem = _testRunDetails.FirstOrDefault(r => r.Id == _activeRun.Id);
+        if (listItem is not null) listItem.Status = status;
 
-		_statistics = await TestRunService.GetStatisticsByTestPlanIdAsync(TestPlanId);
-	}
+        _statistics = await TestRunService.GetStatisticsByTestPlanIdAsync(TestPlanId);
+    }
 
-	private async Task MarkRunFailedAsync() => await UpdateRunStatusAsync(TestRunStatus.Failed);
+    private async Task MarkRunFailedAsync() => await UpdateRunStatusAsync(TestRunStatus.Failed);
 
-	private async Task PassAllStepsAsync()
-	{
-		if (_activeRun is null || _activeRun.Status == TestRunStatus.Passed) return;
+    private async Task PassAllStepsAsync()
+    {
+        if (_activeRun is null || _activeRun.Status == TestRunStatus.Passed) return;
 
-		var updates = _activeRun.Steps.ToDictionary(
-			s => s.Id,
-			s => new UpdateTestRunStepRequest { Status = TestStepStatus.Pass, ActualResult = s.ActualResult });
+        var updates = _activeRun.Steps.ToDictionary(
+            s => s.Id,
+            s => new UpdateTestRunStepRequest { Status = TestStepStatus.Pass, ActualResult = s.ActualResult });
 
-		await TestRunService.BatchUpdateStepsAsync(updates);
+        await TestRunService.BatchUpdateStepsAsync(updates);
 
-		foreach (var step in _activeRun.Steps)
-			step.Status = TestStepStatus.Pass;
+        foreach (var step in _activeRun.Steps)
+            step.Status = TestStepStatus.Pass;
 
-		await UpdateRunStatusAsync(TestRunStatus.Passed);
-	}
+        await UpdateRunStatusAsync(TestRunStatus.Passed);
+    }
 
-	private async Task StartNewExecutionAsync()
-	{
-		if (_testPlan is null) return;
-		_isStartingExecution = true;
-		try
-		{
-			var suiteIds = _testPlan.TestSuites.Select(s => s.Id).ToList();
-			var result = await TestRunService.StartExecutionAsync(TestPlanId, suiteIds);
-			if (result is not null) await LoadDataAsync();
-		}
-		catch (Exception ex)
-		{
-			_errorMessage = $"Failed to start execution: {ex.Message}";
-		}
-		finally
-		{
-			_isStartingExecution = false;
-		}
-	}
+    private async Task StartNewExecutionAsync()
+    {
+        if (_testPlan is null) return;
+        _isStartingExecution = true;
+        try
+        {
+            var suiteIds = _testPlan.TestSuites.Select(s => s.Id).ToList();
+            var result = await TestRunService.StartExecutionAsync(TestPlanId, suiteIds);
+            if (result is not null) await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to start execution: {ex.Message}";
+        }
+        finally
+        {
+            _isStartingExecution = false;
+        }
+    }
 
-	private string WorklistItemClass(TestRunDetailResponse run) =>
-		"w-full flex items-center justify-between p-4 rounded-3xl transition-all " +
-		(run.Id == _activeRun?.Id ? "ring-1 ring-[#7E96E1]/20 bg-[#7E96E1]/5" :
-		 run.Status == TestRunStatus.Passed ? "bg-emerald-50/50" :
-		 run.Status == TestRunStatus.Failed ? "bg-red-50/50" : "hover:bg-slate-50");
+    private void OpenBugReportForm()
+    {
+        Console.WriteLine("Button clicked...");
+        _showBugReportForm = true;
+    }
+    private void CloseBugReportForm() => _showBugReportForm = false;
 
-	private static string WorklistBadgeClass(TestRunDetailResponse run) =>
-		run.Status == TestRunStatus.Passed ? "bg-emerald-500 text-white" :
-		run.Status == TestRunStatus.Failed ? "bg-red-500 text-white" : "bg-slate-100 text-slate-300";
+    private List<int> GetFailedStepIds() =>
+        _activeRun?.Steps
+            .Where(s => s.Status == TestStepStatus.Fail)
+            .Select(s => s.Id)
+            .ToList() ?? [];
 
-	private static string RunCardClass(TestRunDetailResponse run) =>
-		"bg-white " + (
-		run.Status == TestRunStatus.Passed ? "border-emerald-200 bg-emerald-50/5" :
-		run.Status == TestRunStatus.Failed ? "border-red-200 bg-red-50/5" : "border-slate-100");
+    private string BuildStepsToReproduce()
+    {
+        if (_activeRun is null) return string.Empty;
+        var sb = new System.Text.StringBuilder();
+        foreach (var step in _activeRun.Steps.Where(s => s.Status == TestStepStatus.Fail))
+        {
+            sb.AppendLine($"Step {step.StepNumber}: {step.Action}");
+            if (!string.IsNullOrWhiteSpace(step.TestData))
+                sb.AppendLine($"  Test Data: {step.TestData}");
+            sb.AppendLine($"  Expected:  {step.ExpectedResult}");
+            if (!string.IsNullOrWhiteSpace(step.ActualResult))
+                sb.AppendLine($"  Actual:    {step.ActualResult}");
+            sb.AppendLine();
+        }
+        return sb.ToString().TrimEnd();
+    }
 
-	private static string StatusBadgeClass(TestRunStatus status) =>
-		status == TestRunStatus.Passed ? "bg-emerald-500 text-white border-emerald-400" :
-		status == TestRunStatus.Failed ? "bg-red-500 text-white border-red-400" : "bg-white text-slate-400 border-slate-100";
+    private List<TestRunStepAttachmentInfo> GetFailedStepAttachments() =>
+        _activeRun?.Steps
+            .Where(s => s.Status == TestStepStatus.Fail)
+            .SelectMany(s => s.Attachments.Select(a => new TestRunStepAttachmentInfo
+            {
+                Id = a.Id,
+                FileName = a.FileName,
+                FileUrl = a.FileUrl,
+                RunStepId = a.RunStepId
+            }))
+            .ToList() ?? [];
 
-	private static string StepCardClass(TestRunStepResponse step) =>
-		step.Status == TestStepStatus.Pass ? "border-emerald-100 bg-emerald-50/50" :
-		step.Status == TestStepStatus.Fail ? "border-red-100 bg-red-50/50" :
-											 "border-slate-100 bg-slate-50 hover:border-[#7E96E1]/20";
+    private async Task HandleBugSavedAsync(CreateBugFromTestRunRequest request)
+    {
+        await BugService.CreateBugFromTestRunAsync(request);
+        CloseBugReportForm();
+    }
 
-	private static string StepNumberClass(TestRunStepResponse step) =>
-		step.Status == TestStepStatus.Pass ? "bg-emerald-500 text-white" :
-		step.Status == TestStepStatus.Fail ? "bg-red-500 text-white" : "bg-white text-slate-400";
+    private string WorklistItemClass(TestRunDetailResponse run) =>
+        "w-full flex items-center justify-between p-4 rounded-3xl transition-all " +
+        (run.Id == _activeRun?.Id ? "ring-1 ring-[#7E96E1]/20 bg-[#7E96E1]/5" :
+         run.Status == TestRunStatus.Passed ? "bg-emerald-50/50" :
+         run.Status == TestRunStatus.Failed ? "bg-red-50/50" : "hover:bg-slate-50");
 
-	private static string StepActionBtnClass(TestRunStepResponse step, TestStepStatus target) =>
-		target == TestStepStatus.Pass
-			? (step.Status == TestStepStatus.Pass ? "bg-emerald-500 text-white shadow-lg" : "bg-white text-slate-300 shadow-inner hover:text-emerald-500 hover:shadow-sm")
-			: (step.Status == TestStepStatus.Fail ? "bg-red-500 text-white shadow-lg" : "bg-white text-slate-300 shadow-inner hover:text-red-500 hover:shadow-sm");
+    private static string WorklistBadgeClass(TestRunDetailResponse run) =>
+        run.Status == TestRunStatus.Passed ? "bg-emerald-500 text-white" :
+        run.Status == TestRunStatus.Failed ? "bg-red-500 text-white" : "bg-slate-100 text-slate-300";
 
-	private static string RunIconClass(TestRunStatus status) =>
-		status == TestRunStatus.Passed ? "bg-emerald-50 text-emerald-500" : "bg-blue-50 text-blue-500";
+    private static string RunCardClass(TestRunDetailResponse run) =>
+        "bg-white " + (
+        run.Status == TestRunStatus.Passed ? "border-emerald-200 bg-emerald-50/5" :
+        run.Status == TestRunStatus.Failed ? "border-red-200 bg-red-50/5" : "border-slate-100");
 
-	private static string StatusPillClass(TestRunStatus status) =>
-		status == TestRunStatus.Failed ? "bg-red-50 text-red-500" :
-		status == TestRunStatus.Passed ? "bg-emerald-50 text-emerald-500" : "bg-slate-50 text-slate-400";
+    private static string StatusBadgeClass(TestRunStatus status) =>
+        status == TestRunStatus.Passed ? "bg-emerald-500 text-white border-emerald-400" :
+        status == TestRunStatus.Failed ? "bg-red-500 text-white border-red-400" : "bg-white text-slate-400 border-slate-100";
 
-	private static string MarkFailedBtnClass(TestRunStatus status) =>
-		status == TestRunStatus.Failed
-			? "bg-red-500 text-white shadow-lg"
-			: "border border-red-100 bg-red-50 text-red-600 hover:bg-red-100";
+    private static string StepCardClass(TestRunStepResponse step) =>
+        step.Status == TestStepStatus.Pass ? "border-emerald-100 bg-emerald-50/50" :
+        step.Status == TestStepStatus.Fail ? "border-red-100 bg-red-50/50" :
+                                             "border-slate-100 bg-slate-50 hover:border-[#7E96E1]/20";
 
-	private static string PassAllBtnClass(TestRunStatus status) =>
-		status == TestRunStatus.Passed
-			? "bg-emerald-500 text-white shadow-lg"
-			: "border border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-100";
+    private static string StepNumberClass(TestRunStepResponse step) =>
+        step.Status == TestStepStatus.Pass ? "bg-emerald-500 text-white" :
+        step.Status == TestStepStatus.Fail ? "bg-red-500 text-white" : "bg-white text-slate-400";
 
-	private static RenderFragment RunStatusIcon(TestRunStatus status) => builder =>
-	{
-		string d = status switch
-		{
-			TestRunStatus.Passed => "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
-			TestRunStatus.Failed => "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
-			_ => "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-		};
-		builder.OpenElement(0, "svg");
-		builder.AddAttribute(1, "class", "h-4 w-4");
-		builder.AddAttribute(2, "fill", "none");
-		builder.AddAttribute(3, "stroke", "currentColor");
-		builder.AddAttribute(4, "viewBox", "0 0 24 24");
-		builder.OpenElement(5, "path");
-		builder.AddAttribute(6, "stroke-linecap", "round");
-		builder.AddAttribute(7, "stroke-linejoin", "round");
-		builder.AddAttribute(8, "stroke-width", "2");
-		builder.AddAttribute(9, "d", d);
-		builder.CloseElement();
-		builder.CloseElement();
-	};
+    private static string StepActionBtnClass(TestRunStepResponse step, TestStepStatus target) =>
+        target == TestStepStatus.Pass
+            ? (step.Status == TestStepStatus.Pass ? "bg-emerald-500 text-white shadow-lg" : "bg-white text-slate-300 shadow-inner hover:text-emerald-500 hover:shadow-sm")
+            : (step.Status == TestStepStatus.Fail ? "bg-red-500 text-white shadow-lg" : "bg-white text-slate-300 shadow-inner hover:text-red-500 hover:shadow-sm");
+
+    private static string RunIconClass(TestRunStatus status) =>
+        status == TestRunStatus.Passed ? "bg-emerald-50 text-emerald-500" : "bg-blue-50 text-blue-500";
+
+    private static string StatusPillClass(TestRunStatus status) =>
+        status == TestRunStatus.Failed ? "bg-red-50 text-red-500" :
+        status == TestRunStatus.Passed ? "bg-emerald-50 text-emerald-500" : "bg-slate-50 text-slate-400";
+
+    private static string MarkFailedBtnClass(TestRunStatus status) =>
+        status == TestRunStatus.Failed
+            ? "bg-red-500 text-white shadow-lg"
+            : "border border-red-100 bg-red-50 text-red-600 hover:bg-red-100";
+
+    private static string PassAllBtnClass(TestRunStatus status) =>
+        status == TestRunStatus.Passed
+            ? "bg-emerald-500 text-white shadow-lg"
+            : "border border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-100";
+
+    private static RenderFragment RunStatusIcon(TestRunStatus status) => builder =>
+    {
+        string d = status switch
+        {
+            TestRunStatus.Passed => "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+            TestRunStatus.Failed => "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
+            _ => "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        };
+        builder.OpenElement(0, "svg");
+        builder.AddAttribute(1, "class", "h-4 w-4");
+        builder.AddAttribute(2, "fill", "none");
+        builder.AddAttribute(3, "stroke", "currentColor");
+        builder.AddAttribute(4, "viewBox", "0 0 24 24");
+        builder.OpenElement(5, "path");
+        builder.AddAttribute(6, "stroke-linecap", "round");
+        builder.AddAttribute(7, "stroke-linejoin", "round");
+        builder.AddAttribute(8, "stroke-width", "2");
+        builder.AddAttribute(9, "d", d);
+        builder.CloseElement();
+        builder.CloseElement();
+    };
 }
 
 

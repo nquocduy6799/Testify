@@ -50,8 +50,7 @@ var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString, sqlOptions =>
-        sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null))
+    options.UseSqlServer(connectionString)
 );
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -90,6 +89,7 @@ builder.Services.AddScoped<ITestCaseRepository, TestCaseRepository>();
 builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>();
 builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
+builder.Services.AddScoped<IBugRepository, BugRepository>();
 builder.Services.AddScoped<ICallSessionRepository, CallSessionRepository>();
 builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();
 builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>();
@@ -126,6 +126,7 @@ builder.Services.AddScoped<ITestSuiteService, TestSuiteService>();
 builder.Services.AddScoped<ITestCaseService, TestCaseService>();
 builder.Services.AddScoped<Testify.Client.Interfaces.IAiTestCaseService, AiTestCaseService>();
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IBugService, BugService>();
 builder.Services.AddScoped<ITestPlanService, TestPlanService>();
 builder.Services.AddScoped<ITestRunService, TestRunService>();
 builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
