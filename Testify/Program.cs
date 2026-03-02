@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Testify.Client.Features.Account.Services;
 using Testify.Client.Features.Chat.Services;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
+using Testify.Client.Features.Marketplace.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
@@ -48,7 +50,8 @@ var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString)
+    options.UseSqlServer(connectionString, sqlOptions =>
+        sqlOptions.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null))
 );
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -87,11 +90,10 @@ builder.Services.AddScoped<ITaskAttachmentRepository, TaskAttachmentRepository>(
 builder.Services.AddScoped<ITaskActivityRepository, TaskActivityRepository>();
 builder.Services.AddScoped<IChatRepository, ChatRepository>();
 builder.Services.AddScoped<ICallSessionRepository, CallSessionRepository>();
-builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();           
-builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>(); 
+builder.Services.AddScoped<ITestPlanRepository, TestPlanRepository>();
+builder.Services.AddScoped<ITestPlanSuiteRepository, TestPlanSuiteRepository>();
 builder.Services.AddScoped<ITestRunRepository, TestRunRepository>();
 builder.Services.AddScoped<ITestRunStepAttachmentRepository, TestRunStepAttachmentRepository>();
-builder.Services.AddScoped<IMilestoneRepository, MilestoneRepository>();
 
 // Gemini AI configuration
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
@@ -122,6 +124,13 @@ builder.Services.AddScoped<Testify.Client.Interfaces.IAiTestCaseService, AiTestC
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ITestPlanService, TestPlanService>();
 builder.Services.AddScoped<ITestRunService, TestRunService>();
+builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
+builder.Services.AddSingleton<Testify.Shared.Interfaces.ISystemSettingsService, Testify.Services.SystemSettingsService>();
+builder.Services.AddScoped<Testify.Shared.Interfaces.IDashboardService, Testify.Services.DashboardService>();
+builder.Services.AddScoped<Testify.Client.Interfaces.IUserService, Testify.Services.UserService>();
+builder.Services.AddScoped<ITemplateReviewService, TemplateReviewService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<ITagService, TagService>();
 
 builder.Services.AddScoped<ChatHubService>();
 builder.Services.AddScoped<ModalService>();
@@ -140,6 +149,22 @@ builder.Services.AddSingleton<IUserPresenceService, UserPresenceService>();
 var app = builder.Build();
 
 // Seed users and roles
+//using (var scope = app.Services.CreateScope())
+//{
+//    var services = scope.ServiceProvider;
+//    try
+//    {
+//        await RoleSeeder.SeedRolesAsync(services);
+//        await UserSeeder.SeedUsersAsync(services);
+//    }
+//    catch (Exception ex)
+//    {
+//        var logger = services.GetRequiredService<ILogger<Program>>();
+//        logger.LogError(ex, "An error occurred while seeding the database.");
+//    }
+//}
+
+// Seed users and roles
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -147,6 +172,10 @@ using (var scope = app.Services.CreateScope())
     {
         await RoleSeeder.SeedRolesAsync(services);
         await UserSeeder.SeedUsersAsync(services);
+
+        // Seed marketplace data
+        var dbContext = services.GetRequiredService<ApplicationDbContext>();
+        await MarketplaceSeeder.SeedAsync(dbContext);
     }
     catch (Exception ex)
     {
@@ -178,6 +207,13 @@ else
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
+
+// Auth middleware must run before any middleware that checks context.User
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Maintenance Mode middleware – redirects non-admin users when maintenance is active
+app.UseMiddleware<Testify.Middleware.MaintenanceMiddleware>();
 
 app.UseAntiforgery();
 
@@ -379,14 +415,3 @@ app.Run();
 //app.MapAdditionalIdentityEndpoints();
 
 //app.Run();
-
-
-
-
-
-
-
-
-
-
-

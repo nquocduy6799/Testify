@@ -1,0 +1,65 @@
+@page "/admin/categories"
+@layout AdminLayout
+@using Blazicons
+@using Microsoft.AspNetCore.Authorization
+@using Testify.Client.Interfaces
+@using Testify.Client.Features.Marketplace.Components
+@using Testify.Shared.DTOs.Marketplace
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveWebAssembly
+@inject IMarketplaceService MarketplaceService
+
+<PageTitle>Categories - Testify Admin</PageTitle>
+
+@if (isLoading)
+{
+    <div class="flex justify-center py-20">
+        <div class="w-12 h-12 border-4 border-slate-200 border-t-purple-500 rounded-full animate-spin"></div>
+    </div>
+}
+else
+{
+    <CategoryManager Categories="categories"
+                     OnCreateCategory="HandleCreate"
+                     OnUpdateCategory="HandleUpdate"
+                     OnDeleteCategory="HandleDelete" />
+}
+
+@code {
+    private List<CategoryDto> categories = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categories = await MarketplaceService.GetCategoriesAsync();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleCreate(CategoryDto category)
+    {
+        var created = await MarketplaceService.CreateCategoryAsync(category);
+        categories.Add(created);
+        StateHasChanged();
+    }
+
+    private async Task HandleUpdate(CategoryDto category)
+    {
+        var updated = await MarketplaceService.UpdateCategoryAsync(category);
+        var idx = categories.FindIndex(c => c.Id == updated.Id);
+        if (idx >= 0) categories[idx] = updated;
+        StateHasChanged();
+    }
+
+    private async Task HandleDelete(CategoryDto category)
+    {
+        var success = await MarketplaceService.DeleteCategoryAsync(category.Id);
+        if (success) categories.RemoveAll(c => c.Id == category.Id);
+        StateHasChanged();
+    }
+}

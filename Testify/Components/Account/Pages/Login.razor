@@ -252,6 +252,14 @@
                 return;
             }
 
+            // Check if user is disabled before attempting sign-in
+            var loginUser = await UserManager.FindByEmailAsync(Input.Email);
+            if (loginUser != null && loginUser.LockoutEnabled && loginUser.LockoutEnd.HasValue && loginUser.LockoutEnd > DateTimeOffset.UtcNow)
+            {
+                errorMessage = "Error: Your account has been disabled. Please contact an administrator.";
+                return;
+            }
+
             // This doesn't count login failures towards account lockout
             // To enable password failures to trigger account lockout, set lockoutOnFailure: true
             result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
@@ -260,11 +268,24 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-
-            //
-
-            // Redirect to dashboard if no return URL, otherwise go to return URL
-            RedirectManager.RedirectTo(string.IsNullOrEmpty(ReturnUrl) ? "/dashboard" : ReturnUrl);
+            
+            if (!string.IsNullOrEmpty(ReturnUrl))
+            {
+                RedirectManager.RedirectTo(ReturnUrl);
+            }
+            else
+            {
+                // Check if user is Admin to redirect to admin page
+                var user = await UserManager.FindByEmailAsync(Input.Email);
+                if (user != null && await UserManager.IsInRoleAsync(user, "Admin"))
+                {
+                    RedirectManager.RedirectTo("/admin");
+                }
+                else
+                {
+                    RedirectManager.RedirectTo("/dashboard");
+                }
+            }
         }
         else if (result.RequiresTwoFactor)
         {

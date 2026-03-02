@@ -1,0 +1,964 @@
+﻿@page "/admin"
+@layout AdminLayout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Testify.Client.Features.Admin.Dashboard.DTOs
+@using Testify.Shared.Models
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject Testify.Shared.Interfaces.ISystemSettingsService SettingsService
+@inject Testify.Shared.Interfaces.IDashboardService DashboardService
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveServer
+
+<PageTitle>Infrastructure Dashboard - Admin</PageTitle>
+
+<div class="max-w-[1400px] mx-auto px-6 space-y-10 pb-20 animate-in fade-in duration-700">
+    <!-- Root Command Header -->
+    <div class="flex flex-col lg:flex-row gap-8 items-stretch">
+        <div class="flex-1 bg-[#1C1D2A] rounded-[48px] p-10 text-white relative overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-2xl">
+            <div class="relative z-10">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="px-3 py-1 bg-purple-500 rounded-lg text-[10px] font-black uppercase tracking-widest">Root Command</div>
+                    <span class="text-[10px] font-bold text-slate-500">System Kernel v4.2.0</span>
+                </div>
+                <h1 class="text-4xl font-black mb-2 leading-tight">Infrastructure Dashboard</h1>
+                <p class="text-slate-400 font-medium max-w-sm">You are logged in with administrative privileges. Global project overrides and user provisioning are enabled.</p>
+                
+                <div class="flex gap-4 mt-8">
+                    <button class="bg-purple-500 text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-purple-900/40">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        Global Settings
+                    </button>
+                    <button class="bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-white/10 transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                        Root Shell
+                    </button>
+                </div>
+            </div>
+            
+            <div class="hidden md:flex relative w-48 h-48 items-center justify-center z-10">
+                <div class="w-full h-full rounded-full border-4 border-dashed border-purple-500/20 animate-spin-slow flex items-center justify-center">
+                    <div class="w-32 h-32 rounded-full border-2 border-dashed border-blue-500/20"></div>
+                </div>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <svg class="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    <span class="text-[10px] font-black text-purple-400 uppercase mt-2 tracking-widest">Secure</span>
+                </div>
+            </div>
+
+            <div class="absolute -bottom-24 -right-24 w-64 h-64 bg-purple-500 rounded-full blur-[120px] opacity-10"></div>
+        </div>
+
+        <div class="lg:w-80 bg-white rounded-[48px] p-8 border border-slate-100 flex flex-col justify-center shadow-sm">
+            <div class="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center mb-6">
+                <svg class="w-7 h-7 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-black text-slate-800">Security Pulse</h3>
+            <p class="text-slate-400 text-sm mt-1">Zero vulnerabilities detected in current repository scans across @totalProjects projects.</p>
+            <div class="mt-6 flex items-center gap-2 text-[10px] font-black text-purple-600 uppercase bg-purple-50 w-fit px-3 py-1 rounded-lg">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                Shield: Active
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        @foreach (var stat in systemMetrics)
+        {
+            <div class="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm flex items-center gap-6 group hover:shadow-xl transition-all">
+                <div class="w-14 h-14 @stat.BgColor rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                    @((MarkupString)stat.Icon)
+                </div>
+                <div>
+                    <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest">@stat.Label</p>
+                    <h4 class="text-3xl font-black text-slate-800 mt-0.5">@stat.Value</h4>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Admin Management Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-10">
+        
+        <!-- User Distribution & Management -->
+        <div class="xl:col-span-8 space-y-8">
+            <div class="flex items-center justify-between px-2">
+                <h2 class="text-2xl font-black text-slate-800 flex items-center gap-3">
+                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Regional Distribution
+                </h2>
+                
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm">
+                    <h3 class="text-xl font-black text-slate-800 mb-8">Role Distribution</h3>
+                    <div class="space-y-6">
+                        @foreach (var role in roleDistribution)
+                        {
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center text-[10px] font-black uppercase">
+                                    <span class="text-slate-400">@role.Role</span>
+                                    <span class="text-slate-800">@role.Count Accounts</span>
+                                </div>
+                                <div class="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
+                                    <div class="h-full @role.Color" style="width: @role.Percentage%"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-[48px] p-10 border border-slate-100 shadow-sm flex flex-col">
+                    <h3 class="text-xl font-black text-slate-800 mb-2">Audit Stream</h3>
+                    <p class="text-xs font-medium text-slate-400 mb-8">Real-time system event logs.</p>
+                    <div class="space-y-6 flex-1">
+                        @foreach (var log in auditLogs)
+                        {
+                            <div class="flex items-center gap-4 group">
+                                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center @log.Color">
+                                    @((MarkupString)log.Icon)
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-xs font-black text-slate-800">@log.Event</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase">@log.User • @log.Time</p>
+                                </div>
+                                <svg class="w-4 h-4 text-slate-200 group-hover:text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M17 7H7M17 7v10"></path>
+                                </svg>
+                            </div>
+                        }
+                    </div>
+                    <button class="w-full mt-8 py-4 bg-slate-50 hover:bg-slate-100 rounded-2xl text-[10px] font-black text-slate-400 uppercase tracking-widest transition-all">
+                        View Full Security Log
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global Configuration Sidebar -->
+        <div class="xl:col-span-4 space-y-8">
+           
+            <div class="bg-white rounded-[48px] p-8 border border-slate-100 shadow-sm">
+                <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 px-2">Environment Controls</h4>
+                <p class="text-[10px] text-slate-400 font-bold px-2 mb-6">Changes take effect immediately across all active sessions.</p>
+                <div class="space-y-3">
+                    @foreach (var ctrl in environmentControls)
+                    {
+                        var isMaintenance = ctrl.Key == "MaintenanceMode";
+                        <div class="flex items-start justify-between p-4 rounded-3xl transition-all @(ctrl.Active && isMaintenance ? "bg-amber-50 border border-amber-200" : ctrl.Active ? "bg-purple-50 border border-purple-100" : "bg-slate-50 border border-transparent")">
+                            <div class="flex-1 mr-4">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    @if (isMaintenance)
+                                    {
+                                        <svg class="w-3.5 h-3.5 @(ctrl.Active ? "text-amber-500" : "text-slate-400")" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg class="w-3.5 h-3.5 @(ctrl.Active ? "text-purple-500" : "text-slate-400")" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                                        </svg>
+                                    }
+                                    <span class="text-xs font-black @(ctrl.Active && isMaintenance ? "text-amber-700" : ctrl.Active ? "text-purple-700" : "text-slate-700")">@ctrl.Label</span>
+                                </div>
+                                <p class="text-[10px] font-bold @(ctrl.Active && isMaintenance ? "text-amber-500" : "text-slate-400") leading-relaxed">
+                                    @if (isMaintenance)
+                                    {
+                                        @(ctrl.Active ? "⚠ Site is in maintenance. Non-admin users see the maintenance page." : "Puts the site in maintenance mode for all non-admin users.")
+                                    }
+                                    else
+                                    {
+                                        @(ctrl.Active ? "New users can register freely." : "Registration form is blocked. New sign-ups are disabled.")
+                                    }
+                                </p>
+                            </div>
+                            @if (savingKey == ctrl.Key)
+                            {
+                                <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                                    <svg class="w-4 h-4 animate-spin text-purple-500" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                    </svg>
+                                </div>
+                            }
+                            else
+                            {
+                                <button @onclick="() => OnToggleClick(ctrl)"
+                                        class="flex-shrink-0 @(ctrl.Active ? (isMaintenance ? "bg-amber-400" : "bg-purple-500") : "bg-slate-300") w-11 h-6 rounded-full relative transition-colors focus:outline-none">
+                                    <div class="@(ctrl.Active ? "left-6" : "left-1") absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"></div>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (toastMessage != null)
+                {
+                    <div class="mt-4 flex items-center gap-2 p-3 rounded-2xl @(toastIsError ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700") text-xs font-black animate-in fade-in duration-300">
+                        @if (toastIsError)
+                        {
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        }
+                        else
+                        {
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        }
+                        @toastMessage
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Maintenance Confirmation Modal *@
+@if (showMaintenanceConfirm)
+{
+    <div class="fixed inset-0 z-[300] flex items-center justify-center p-6" style="animation: fadeIn 0.2s ease-out;">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @onclick="() => showMaintenanceConfirm = false"></div>
+        <div class="relative w-full max-w-md bg-white rounded-[40px] shadow-2xl p-8" @onclick:stopPropagation="true"
+             style="animation: slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);">
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 mb-6">
+                <svg class="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 mb-2">Enable Maintenance Mode?</h3>
+            <p class="text-sm text-slate-500 font-medium mb-6 leading-relaxed">
+                All non-admin users will be redirected to the maintenance page immediately. Make sure all active sessions are aware before proceeding.
+            </p>
+            <div class="flex gap-3">
+                <button @onclick="ConfirmMaintenanceToggle"
+                        class="flex-1 py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl text-sm transition-all">
+                    Enable Maintenance
+                </button>
+                <button @onclick="() => showMaintenanceConfirm = false"
+                        class="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl text-sm transition-all">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Diagnostics Modal *@
+@if (showDiagnosticsModal && diagnosticsResult != null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" 
+         style="animation: fadeIn 0.3s ease-out;">
+        
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-purple-900/30 to-slate-900/70 backdrop-blur-md transition-opacity" 
+             @onclick="CloseDiagnosticsModal"></div>
+
+        <div class="relative w-full max-w-6xl max-h-[92vh] bg-white rounded-[48px] shadow-2xl overflow-hidden flex flex-col"
+             style="animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);"
+             @onclick:stopPropagation="true">
+
+            <div class="relative shrink-0 overflow-hidden bg-gradient-to-br from-purple-600 to-indigo-700 text-white">
+                <div class="absolute top-0 right-0 -mt-16 -mr-16 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute bottom-0 left-0 -mb-16 -ml-16 w-80 h-80 bg-purple-900/30 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="relative z-10 px-8 py-8 md:px-10 md:py-10">
+                    <div class="flex items-start justify-between">
+                        <div class="flex gap-5">
+                            <div class="hidden sm:flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md border border-white/20 shadow-xl">
+                                <svg class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl md:text-3xl font-black tracking-tight text-white">System Diagnostics</h2>
+                                <p class="mt-2 text-sm text-purple-100 font-bold flex items-center gap-2 flex-wrap">
+                                    <span>Exec: @diagnosticsResult.ExecutedAt.ToLocalTime().ToString("MMM dd • HH:mm:ss")</span>
+                                    <span class="w-1 h-1 rounded-full bg-purple-300"></span>
+                                    <span class="text-white">Duration: @diagnosticsResult.DiagnosticDurationMs.ToString("F0")ms</span>
+                                </p>
+                            </div>
+                        </div>
+                        <button @onclick="CloseDiagnosticsModal" class="rounded-2xl p-2.5 text-white/70 hover:bg-white/20 hover:text-white transition-all hover:scale-110">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="mt-8 flex flex-wrap gap-3">
+                        <div class="inline-flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/20 px-4 py-2 backdrop-blur-md shadow-lg">
+                            <span class="text-xs font-black uppercase text-purple-100 tracking-widest">System Status</span>
+                            @if (diagnosticsResult.OverallStatus == "Healthy")
+                            {
+                                <span class="flex items-center gap-2 text-sm font-black text-white">
+                                    <span class="relative flex h-2.5 w-2.5">
+                                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+                                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+                                    </span>
+                                    Healthy
+                                </span>
+                            }
+                            else if (diagnosticsResult.OverallStatus == "Degraded")
+                            {
+                                <span class="flex items-center gap-2 text-sm font-black text-white">
+                                    <span class="h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse"></span> Degraded
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="flex items-center gap-2 text-sm font-black text-white">
+                                    <span class="h-2.5 w-2.5 rounded-full bg-rose-400 animate-pulse"></span> Critical
+                                </span>
+                            }
+                        </div>
+                        
+                        <div class="inline-flex items-center gap-2.5 rounded-2xl bg-white/10 border border-white/20 px-4 py-2 backdrop-blur-md shadow-lg">
+                            <span class="text-xs font-black uppercase text-purple-100 tracking-widest">Issues</span>
+                            <span class="text-sm font-black text-white">@diagnosticsResult.TotalIssuesFound</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-8 md:p-10 space-y-10 custom-scrollbar bg-slate-50">
+                
+                <section>
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="text-2xl">⚡</span>
+                        <h3 class="text-xl font-black text-slate-800">Performance Metrics</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        <div class="group relative overflow-hidden bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                            <div class="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <svg class="w-20 h-20 text-purple-500" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
+                            </div>
+                            <p class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">AI Efficiency</p>
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-4xl font-black text-slate-800">@diagnosticsResult.Performance.AiProcessingEfficiency.ToString("F1")</span>
+                                <span class="text-sm font-black text-slate-400">%</span>
+                            </div>
+                            <div class="mt-4">
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-black @(diagnosticsResult.Performance.Status == "Optimal" ? "bg-emerald-50 text-emerald-700 ring-2 ring-inset ring-emerald-600/20" : "bg-amber-50 text-amber-700 ring-2 ring-inset ring-amber-600/20")">
+                                    @diagnosticsResult.Performance.Status
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                            <p class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">DB Query</p>
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-4xl font-black text-slate-800">@diagnosticsResult.Performance.DatabaseQueryTimeMs.ToString("F0")</span>
+                                <span class="text-sm font-black text-slate-400">ms</span>
+                            </div>
+                             <div class="w-full bg-slate-100 rounded-full h-2 mt-4">
+                                <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-1000" style="width: 45%"></div> </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                            <p class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">API Latency</p>
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-4xl font-black text-slate-800">@diagnosticsResult.Performance.AverageApiResponseTimeMs.ToString("F0")</span>
+                                <span class="text-sm font-black text-slate-400">ms</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2 mt-4">
+                                <div class="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-1000" style="width: 30%"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                            <p class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Traffic</p>
+                            <div class="flex items-baseline gap-1.5">
+                                <span class="text-4xl font-black text-slate-800">@diagnosticsResult.Performance.RequestsPerSecond</span>
+                                <span class="text-sm font-black text-slate-400">req/s</span>
+                            </div>
+                             <div class="mt-4 text-xs text-slate-500 font-bold">Current Load Level</div>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <section class="flex flex-col">
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="text-2xl">📊</span>
+                            <h3 class="text-xl font-black text-slate-800">Capacity</h3>
+                        </div>
+                        <div class="flex-1 bg-white rounded-[40px] p-8 shadow-sm border border-slate-100">
+                            <div class="mb-10">
+                                <div class="flex justify-between items-end mb-3">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-black uppercase text-slate-400 mb-2 tracking-widest">Neural Capacity Load</span>
+                                        <span class="text-3xl font-black text-slate-800">@diagnosticsResult.Capacity.NeuralCapacityPercentage.ToString("F1")%</span>
+                                    </div>
+                                    <span class="text-xs font-black px-3 py-1.5 rounded-2xl bg-slate-100 text-slate-600 border-2 border-slate-200">
+                                        @diagnosticsResult.Capacity.LoadStatus
+                                    </span>
+                                </div>
+                                <div class="w-full h-5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                    <div class="h-full rounded-full transition-all duration-1000 ease-out @(diagnosticsResult.Capacity.LoadStatus == "High" ? "bg-gradient-to-r from-amber-400 via-orange-500 to-red-500" : "bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500")" 
+                                         style="width: @diagnosticsResult.Capacity.NeuralCapacityPercentage%"></div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-8">
+                                <div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="text-xs font-black text-slate-500 uppercase tracking-wider">Memory</span>
+                                        <span class="text-xs font-black text-slate-700">@diagnosticsResult.Capacity.MemoryUsagePercentage.ToString("F0")%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                        <div class="bg-gradient-to-r from-blue-500 to-cyan-500 h-2.5 rounded-full transition-all duration-1000" style="width: @diagnosticsResult.Capacity.MemoryUsagePercentage%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="text-xs font-black text-slate-500 uppercase tracking-wider">CPU</span>
+                                        <span class="text-xs font-black text-slate-700">@diagnosticsResult.Capacity.CpuUsagePercentage.ToString("F0")%</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                                        <div class="bg-gradient-to-r from-sky-500 to-blue-500 h-2.5 rounded-full transition-all duration-1000" style="width: @diagnosticsResult.Capacity.CpuUsagePercentage%"></div>
+                                    </div>
+                                </div>
+                                <div class="col-span-2">
+                                    <div class="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border-2 border-slate-100">
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                            <span class="text-xs font-black text-slate-600 uppercase tracking-wider">Active Connections</span>
+                                        </div>
+                                        <div class="text-sm font-black text-slate-800">
+                                            @diagnosticsResult.Capacity.ActiveConnections <span class="text-slate-400 font-black">/ @diagnosticsResult.Capacity.MaxConnections</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="flex flex-col">
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="text-2xl">🏥</span>
+                            <h3 class="text-xl font-black text-slate-800">Health Checks</h3>
+                        </div>
+                        <div class="flex-1 space-y-4">
+                            @foreach (var check in diagnosticsResult.HealthChecks)
+                            {
+                                <div class="group flex items-center gap-5 p-5 bg-white rounded-[28px] shadow-sm border border-slate-100 hover:border-purple-100 hover:shadow-lg transition-all">
+                                    <div class="flex-shrink-0">
+                                        @if (check.Status == "Healthy")
+                                        {
+                                            <div class="h-12 w-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 ring-2 ring-inset ring-emerald-600/20">
+                                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                            </div>
+                                        }
+                                        else if (check.Status == "Warning")
+                                        {
+                                            <div class="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 ring-2 ring-inset ring-amber-600/20">
+                                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="h-12 w-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 ring-2 ring-inset ring-rose-600/20">
+                                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex justify-between items-center mb-1">
+                                            <p class="text-sm font-black text-slate-800">@check.Component</p>
+                                            <span class="text-xs font-mono font-bold text-slate-400">@check.ResponseTimeMs.ToString("F0")ms</span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 truncate group-hover:text-slate-700 transition-colors font-medium">@check.Message</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </section>
+                </div>
+
+                @if (diagnosticsResult.Recommendations.Any())
+                {
+                    <section>
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="text-2xl">💡</span>
+                            <h3 class="text-xl font-black text-slate-800">Recommendations</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            @foreach (var rec in diagnosticsResult.Recommendations)
+                            {
+                                var borderColor = rec.Priority == "Critical" ? "border-l-rose-500" : 
+                                                  rec.Priority == "High" ? "border-l-amber-500" : 
+                                                  rec.Priority == "Medium" ? "border-l-yellow-400" : "border-l-emerald-400";
+                                var badgeColor = rec.Priority == "Critical" ? "bg-rose-50 text-rose-700 ring-rose-600/20" : 
+                                                 rec.Priority == "High" ? "bg-amber-50 text-amber-700 ring-amber-600/20" : 
+                                                 "bg-slate-100 text-slate-600 ring-slate-500/10";
+
+                                <div class="bg-white p-6 rounded-r-[28px] rounded-l-lg shadow-sm border border-slate-100 border-l-[6px] @borderColor hover:translate-x-1 hover:shadow-lg transition-all">
+                                    <div class="flex gap-4">
+                                        <span class="text-3xl">@rec.Icon</span>
+                                        <div class="flex-1">
+                                            <div class="flex items-center justify-between mb-3">
+                                                <h4 class="text-sm font-black text-slate-800">@rec.Title</h4>
+                                                <span class="inline-flex items-center rounded-xl px-2.5 py-1 text-xs font-black ring-2 ring-inset @badgeColor">
+                                                    @rec.Priority
+                                                </span>
+                                            </div>
+                                            <p class="text-xs text-slate-600 leading-relaxed mb-4 font-medium">@rec.Description</p>
+                                            <button class="text-xs font-black text-purple-600 hover:text-purple-700 flex items-center gap-1.5 group">
+                                                @rec.Action
+                                                <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+
+            <div class="p-6 bg-white border-t-2 border-slate-100 flex justify-end">
+                 <button @onclick="CloseDiagnosticsModal" class="px-8 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black rounded-[24px] text-sm hover:from-purple-700 hover:to-indigo-700 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-purple-900/20">
+                    Close Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        @@keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px) scale(0.96); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+        @@keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* Custom scrollbar for webkit */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { 
+            background-color: #cbd5e1; 
+            border-radius: 20px; 
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { 
+            background-color: #94a3b8; 
+        }
+    </style>
+}
+}
+
+@code {
+    private int totalUsers = 0;
+    private int totalProjects = 0;
+    private int activeServers = 0;
+    private string systemUptime = "99.998%";
+
+    private List<SystemMetric> systemMetrics = new();
+    private List<RoleDistribution> roleDistribution = new();
+    private List<AuditLog> auditLogs = new();
+    private List<EnvironmentControl> environmentControls = new();
+
+    private bool isLoading = true;
+    private string? errorMessage = null;
+
+    // System Diagnostics state
+    private bool isRunningDiagnostics = false;
+    private bool showDiagnosticsModal = false;
+    private SystemDiagnosticsDto? diagnosticsResult = null;
+
+    // Toggle state
+    private string? savingKey = null;
+    private string? toastMessage = null;
+    private bool toastIsError = false;
+    private bool showMaintenanceConfirm = false;
+    private EnvironmentControl? pendingToggle = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardDataAsync();
+        await InitializeEnvironmentControlsAsync();
+    }
+
+    private async Task LoadDashboardDataAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+
+            // Fetch statistics directly via server-side service (avoids HTTP auth issues)
+            var stats = await DashboardService.GetStatisticsAsync();
+
+            totalUsers = stats.TotalUsers;
+            totalProjects = stats.TotalProjects;
+            activeServers = stats.ActiveTestRuns;
+            systemUptime = stats.SystemUptime;
+
+            // Initialize system metrics with real data
+            InitializeSystemMetrics(stats);
+
+            // Initialize role distribution with real data
+            InitializeRoleDistribution(stats.UsersByRole, stats.TotalUsers);
+
+            // Fetch recent activity - wrapped separately so failure doesn't affect stats
+            try
+            {
+                var activityResponse = await Http.GetFromJsonAsync<List<RecentActivityDto>>("/api/admin/dashboard/recent-activity");
+                if (activityResponse != null)
+                {
+                    auditLogs = activityResponse.Select(a => new AuditLog
+                    {
+                        Event = a.Event,
+                        User = a.User,
+                        Time = a.Time,
+                        Icon = a.Icon,
+                        Color = a.Color
+                    }).ToList();
+                }
+                else
+                {
+                    InitializeAuditLogs();
+                }
+            }
+            catch
+            {
+                InitializeAuditLogs();
+            }
+
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            isLoading = false;
+            errorMessage = $"Failed to load dashboard data: {ex.Message}";
+            Console.WriteLine($"Error loading dashboard: {ex}");
+            
+            // Fallback to mock data if stats service also fails
+            InitializeSystemMetrics(null);
+            InitializeRoleDistribution(null);
+            InitializeAuditLogs();
+        }
+    }
+
+    private async Task RunSystemDiagnosticsAsync()
+    {
+        Console.WriteLine("🔍 RunSystemDiagnosticsAsync called!");
+        try
+        {
+            isRunningDiagnostics = true;
+            StateHasChanged();
+            Console.WriteLine("✅ Loading state set to true");
+
+            // Call diagnostics API
+            Console.WriteLine("📡 Calling API: /api/admin/system/diagnostics");
+            var response = await Http.PostAsync("/api/admin/system/diagnostics", null);
+            Console.WriteLine($"📨 API Response Status: {response.StatusCode}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                diagnosticsResult = await response.Content.ReadFromJsonAsync<SystemDiagnosticsDto>();
+                Console.WriteLine($"✅ Diagnostics data received: {diagnosticsResult != null}");
+                Console.WriteLine($"   - Overall Status: {diagnosticsResult?.OverallStatus}");
+                Console.WriteLine($"   - Total Issues: {diagnosticsResult?.TotalIssuesFound}");
+                Console.WriteLine($"   - Health Checks: {diagnosticsResult?.HealthChecks?.Count}");
+                
+                showDiagnosticsModal = true;
+                Console.WriteLine($"✅ Modal flag set to: {showDiagnosticsModal}");
+                StateHasChanged();
+                Console.WriteLine("✅ StateHasChanged called");
+            }
+            else
+            {
+                Console.WriteLine($"❌ Diagnostics API failed with status: {response.StatusCode}");
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"❌ Error content: {errorContent}");
+                errorMessage = "Failed to run system diagnostics";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error running diagnostics: {ex}");
+            Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
+            errorMessage = $"Error running diagnostics: {ex.Message}";
+        }
+        finally
+        {
+            isRunningDiagnostics = false;
+            Console.WriteLine($"✅ Finally block - isRunningDiagnostics: {isRunningDiagnostics}, showDiagnosticsModal: {showDiagnosticsModal}");
+            StateHasChanged();
+        }
+    }
+
+    private void CloseDiagnosticsModal()
+    {
+        showDiagnosticsModal = false;
+        diagnosticsResult = null;
+    }
+
+    private void InitializeSystemMetrics(DashboardStatisticsResult? stats)
+    {
+        var totalUsersValue = stats?.TotalUsers ?? 0;
+        var totalProjectsValue = stats?.TotalProjects ?? 0;
+        var activeTestRunsValue = stats?.ActiveTestRuns ?? 0;
+        var uptimeValue = stats?.SystemUptime ?? "99.998%";
+        var apiCallsValue = stats?.TotalApiCalls ?? "1.2M";
+
+        systemMetrics = new List<SystemMetric>
+        {
+            new SystemMetric 
+            { 
+                Label = "Global Users", 
+                Value = totalUsersValue.ToString(), 
+                Icon = @"<svg class=""w-7 h-7 text-purple-500"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z""></path></svg>",
+                BgColor = "bg-purple-50"
+            },
+            new SystemMetric 
+            { 
+                Label = "Total Projects", 
+                Value = totalProjectsValue.ToString(), 
+                Icon = @"<svg class=""w-7 h-7 text-blue-500"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z""></path></svg>",
+                BgColor = "bg-blue-50"
+            },
+            new SystemMetric 
+            { 
+                Label = "Active Test Runs", 
+                Value = activeTestRunsValue.ToString(), 
+                Icon = @"<svg class=""w-7 h-7 text-emerald-500"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4""></path></svg>",
+                BgColor = "bg-emerald-50"
+            },
+            new SystemMetric 
+            { 
+                Label = "System Uptime", 
+                Value = uptimeValue, 
+                Icon = @"<svg class=""w-7 h-7 text-orange-500"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z""></path></svg>",
+                BgColor = "bg-orange-50"
+            }
+        };
+    }
+
+    private void InitializeRoleDistribution(Dictionary<string, int>? usersByRole, int totalUniqueUsers = 0)
+    {
+        if (usersByRole == null || !usersByRole.Any())
+        {
+            // Fallback to mock data
+            var totalRoles = 86;
+            roleDistribution = new List<RoleDistribution>
+            {
+                new RoleDistribution { Role = "Developers", Count = 42, Color = "bg-blue-500", Percentage = (42.0 / totalRoles * 100) },
+                new RoleDistribution { Role = "Testers", Count = 28, Color = "bg-emerald-500", Percentage = (28.0 / totalRoles * 100) },
+                new RoleDistribution { Role = "Managers", Count = 12, Color = "bg-orange-500", Percentage = (12.0 / totalRoles * 100) },
+                new RoleDistribution { Role = "Admins", Count = 4, Color = "bg-purple-500", Percentage = (4.0 / totalRoles * 100) }
+            };
+            return;
+        }
+
+        // Use actual unique user count as denominator to avoid double-counting
+        // users who may have multiple roles assigned
+        var denominator = totalUniqueUsers > 0 ? totalUniqueUsers : usersByRole.Values.Sum();
+        if (denominator == 0) denominator = 1; // Avoid division by zero
+
+        roleDistribution = new List<RoleDistribution>
+        {
+            new RoleDistribution 
+            { 
+                Role = "Developers", 
+                Count = usersByRole.GetValueOrDefault("Dev", 0), 
+                Color = "bg-blue-500", 
+                Percentage = (usersByRole.GetValueOrDefault("Dev", 0) / (double)denominator * 100) 
+            },
+            new RoleDistribution 
+            { 
+                Role = "Testers", 
+                Count = usersByRole.GetValueOrDefault("Tester", 0), 
+                Color = "bg-emerald-500", 
+                Percentage = (usersByRole.GetValueOrDefault("Tester", 0) / (double)denominator * 100) 
+            },
+            new RoleDistribution 
+            { 
+                Role = "Managers (PM)", 
+                Count = usersByRole.GetValueOrDefault("PM", 0), 
+                Color = "bg-orange-500", 
+                Percentage = (usersByRole.GetValueOrDefault("PM", 0) / (double)denominator * 100) 
+            },
+            new RoleDistribution 
+            { 
+                Role = "Admins", 
+                Count = usersByRole.GetValueOrDefault("Admin", 0), 
+                Color = "bg-purple-500", 
+                Percentage = (usersByRole.GetValueOrDefault("Admin", 0) / (double)denominator * 100) 
+            }
+        };
+    }
+
+    private void InitializeAuditLogs()
+    {
+        // Fallback mock data
+        auditLogs = new List<AuditLog>
+        {
+            new AuditLog 
+            { 
+                Event = "Root Login Detected", 
+                User = "Admin Rivera", 
+                Time = "2m ago",
+                Icon = @"<svg class=""w-5 h-5"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z""></path></svg>",
+                Color = "text-purple-500"
+            },
+            new AuditLog 
+            { 
+                Event = "Cluster Expansion", 
+                User = "System", 
+                Time = "14m ago",
+                Icon = @"<svg class=""w-5 h-5"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01""></path></svg>",
+                Color = "text-blue-500"
+            },
+            new AuditLog 
+            { 
+                Event = "Bulk Export Success", 
+                User = "PM Sarah", 
+                Time = "1h ago",
+                Icon = @"<svg class=""w-5 h-5"" fill=""none"" stroke=""currentColor"" viewBox=""0 0 24 24""><path stroke-linecap=""round"" stroke-linejoin=""round"" stroke-width=""2"" d=""M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4""></path></svg>",
+                Color = "text-emerald-500"
+            }
+        };
+    }
+
+    private async Task InitializeEnvironmentControlsAsync()
+    {
+        var maintenanceMode = await SettingsService.GetBoolSettingAsync("MaintenanceMode", false);
+        var openRegistration = await SettingsService.GetBoolSettingAsync("OpenRegistration", true);
+
+        environmentControls = new List<EnvironmentControl>
+        {
+            new EnvironmentControl { Label = "Maintenance Mode", Key="MaintenanceMode", Active = maintenanceMode },
+            new EnvironmentControl { Label = "Open Registration", Key="OpenRegistration", Active = openRegistration }
+        };
+    }
+
+    private async Task ToggleSetting(EnvironmentControl control)
+    {
+        try
+        {
+            savingKey = control.Key;
+            toastMessage = null;
+            StateHasChanged();
+
+            control.Active = !control.Active;
+            await SettingsService.SetBoolSettingAsync(control.Key, control.Active);
+
+            toastMessage = $"{control.Label} {(control.Active ? "enabled" : "disabled")} successfully.";
+            toastIsError = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error toggling setting {control.Label}: {ex.Message}");
+            control.Active = !control.Active; // revert
+            toastMessage = $"Error: {ex.Message}";
+            toastIsError = true;
+        }
+        finally
+        {
+            savingKey = null;
+            StateHasChanged();
+            // auto-dismiss toast after 3 s
+            _ = Task.Delay(3000).ContinueWith(_ => { toastMessage = null; InvokeAsync(StateHasChanged); });
+        }
+    }
+
+    private void OnToggleClick(EnvironmentControl ctrl)
+    {
+        // Enabling Maintenance Mode requires confirmation
+        if (ctrl.Key == "MaintenanceMode" && !ctrl.Active)
+        {
+            pendingToggle = ctrl;
+            showMaintenanceConfirm = true;
+        }
+        else
+        {
+            _ = ToggleSetting(ctrl);
+        }
+    }
+
+    private void ConfirmMaintenanceToggle()
+    {
+        showMaintenanceConfirm = false;
+        if (pendingToggle != null)
+            _ = ToggleSetting(pendingToggle);
+        pendingToggle = null;
+    }
+
+    // DTOs matching the backend
+    private class DashboardStatisticsDto
+    {
+        public int TotalUsers { get; set; }
+        public Dictionary<string, int> UsersByRole { get; set; } = new();
+        public int TotalProjects { get; set; }
+        public int ActiveTestRuns { get; set; }
+        public string SystemUptime { get; set; } = string.Empty;
+        public string TotalApiCalls { get; set; } = string.Empty;
+    }
+
+    private class RecentActivityDto
+    {
+        public string Event { get; set; } = string.Empty;
+        public string User { get; set; } = string.Empty;
+        public string Time { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string Color { get; set; } = string.Empty;
+    }
+
+    private class SystemMetric
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Value { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string BgColor { get; set; } = string.Empty;
+    }
+
+    private class RoleDistribution
+    {
+        public string Role { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public string Color { get; set; } = string.Empty;
+        public double Percentage { get; set; }
+    }
+
+    private class AuditLog
+    {
+        public string Event { get; set; } = string.Empty;
+        public string User { get; set; } = string.Empty;
+        public string Time { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string Color { get; set; } = string.Empty;
+    }
+
+    private class EnvironmentControl
+    {
+        public string Label { get; set; } = string.Empty;
+        public string Key { get; set; } = string.Empty;
+        public bool Active { get; set; }
+    }
+}

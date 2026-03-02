@@ -1,0 +1,398 @@
+@using Blazicons
+
+<div class="w-full mx-auto px-10 space-y-8 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+    @* ══════ Header ══════ *@
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-3 mb-1">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-purple-200" style="font-size:20px;">
+                    <Blazicon Svg="@Lucide.Archive" />
+                </div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight">Category Registry</h1>
+            </div>
+            <p class="text-slate-400 text-xs font-medium pl-[52px]">Orchestrating global organizational nodes for the shared template ecosystem.</p>
+        </div>
+
+        <div class="flex items-center gap-3 flex-shrink-0">
+            <div class="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-full">
+                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest">@Folders.Count Nodes Provisioned</span>
+            </div>
+            <button @onclick="OpenCreateForm"
+                    class="bg-[#1C1D2A] text-white px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg active:scale-95">
+                <span style="font-size:16px;"><Blazicon Svg="@Lucide.FolderPlus" /></span>
+                Initialize Category
+            </button>
+        </div>
+    </div>
+
+    @* ══════ KPI Stats ══════ *@
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        @foreach (var kpi in KpiStats)
+        {
+            <div class="bg-white px-6 py-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 group hover:shadow-md transition-all">
+                <div class="@($"w-12 h-12 {kpi.BgClass} rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform {kpi.ColorClass}")" style="font-size:22px;">
+                    <Blazicon Svg="@kpi.Icon" />
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">@kpi.Label</p>
+                    <h4 class="text-xl font-black text-slate-800">@kpi.Value</h4>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* ══════ Search & Filter ══════ *@
+    <div class="flex flex-nowrap items-center justify-between gap-6">
+        <div class="relative group flex-shrink-0" style="width:260px;">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-purple-500 transition-colors">
+                <Blazicon Svg="@Lucide.Search" Size="15px" />
+            </span>
+            <input type="text"
+                   placeholder="Search nodes by identifier..."
+                   @bind="searchQuery"
+                   @bind:event="oninput"
+                   class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-full shadow-sm text-xs text-slate-600 placeholder:text-slate-300 font-medium outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-400 transition-all" />
+        </div>
+
+        <div class="flex items-center gap-0.5 bg-white border border-slate-200 p-0.5 rounded-full flex-shrink-0 shadow-sm">
+            @foreach (var type in new[] { "All", "Root", "Custom" })
+            {
+                <button @onclick="() => typeFilter = type"
+                        class="@($"px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all {(typeFilter == type ? "bg-[#1C1D2A] text-white shadow-md" : "text-slate-400 hover:text-slate-600")}")">
+                    @type
+                </button>
+            }
+        </div>
+    </div>
+
+    @* ══════ Category Table ══════ *@
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/60 border-b border-slate-100">
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Category Node</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Architect</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Population</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Actions</th>
+                    </tr>
+                </thead>
+
+                @if (FilteredFolders.Any())
+                {
+                    <tbody class="divide-y divide-slate-50">
+                        @foreach (var folder in FilteredFolders)
+                        {
+                            var suiteCount = Suites.Count(s => s.Folder == folder.Name);
+                            var isSystem = folder.CreatedBy == "u1" || folder.CreatedBy == "Admin";
+
+                            <tr class="group transition-colors hover:bg-slate-50/50">
+                                <td class="px-8 py-5 whitespace-nowrap">
+                                    <div class="flex items-center gap-4">
+                                        <div class="@($"w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 {(isSystem ? "bg-purple-50 text-purple-500" : "bg-blue-50 text-blue-500")}")">
+                                            <Blazicon Svg="@Lucide.FolderOpen" Size="20px" />
+                                        </div>
+                                        <div class="overflow-hidden">
+                                            <p class="text-sm font-bold text-slate-800 truncate">@folder.Name</p>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight">ID: @folder.Id</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                            <span class="text-[9px] font-black text-slate-500">@(isSystem ? "S" : folder.CreatedBy.FirstOrDefault().ToString().ToUpper())</span>
+                                        </div>
+                                        <span class="text-xs font-black text-purple-600 uppercase tracking-wide">@(isSystem ? "Root System" : folder.CreatedBy)</span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+                                            <Blazicon Svg="@Lucide.Layers" Size="14px" class="text-slate-400" />
+                                            <span class="text-sm font-black text-slate-700">@suiteCount</span>
+                                        </div>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Templates</span>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-5 whitespace-nowrap text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button @onclick="() => StartEdit(folder)"
+                                                class="p-2.5 rounded-xl text-slate-300 hover:text-purple-600 hover:bg-purple-50 transition-all"
+                                                title="Edit">
+                                            <Blazicon Svg="@Lucide.Pencil" Size="16px" />
+                                        </button>
+                                        <button @onclick="() => OpenDeleteModal(folder)"
+                                                class="p-2.5 rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                                title="Delete">
+                                            <Blazicon Svg="@Lucide.Trash2" Size="16px" />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                }
+            </table>
+        </div>
+
+        @if (!FilteredFolders.Any())
+        {
+            <div class="py-24 text-center flex flex-col items-center">
+                <div class="w-20 h-20 bg-slate-50 rounded-[32px] flex items-center justify-center mb-5 text-slate-200">
+                    <Blazicon Svg="@Lucide.FolderOpen" Size="40px" />
+                </div>
+                <h3 class="text-lg font-black text-slate-800 uppercase tracking-widest">No Registry Matches</h3>
+                <p class="text-slate-400 max-w-sm mt-2 text-sm font-medium">Your current filter parameters yielded zero organizational nodes.</p>
+                <button @onclick="ResetFilters"
+                        class="mt-6 px-8 py-3 bg-[#1C1D2A] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                    Reset Filters
+                </button>
+            </div>
+        }
+    </div>
+
+</div>
+
+@* ══════ Delete Confirmation Modal ══════ *@
+@if (isDeleteModalOpen && deletingFolder != null)
+{
+    <div class="fixed inset-0 z-[250] flex items-center justify-center p-6">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md" @onclick="() => isDeleteModalOpen = false"></div>
+        <div class="relative bg-white w-full max-w-md rounded-[36px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            <div class="p-8 border-b border-slate-50 flex items-start justify-between bg-slate-50/50">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center">
+                        <span class="text-red-500" style="font-size:24px;"><Blazicon Svg="@Lucide.Trash2" /></span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-slate-800">Decommission Node</h2>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Registry Governance</p>
+                    </div>
+                </div>
+                <button @onclick="() => isDeleteModalOpen = false" class="p-2 hover:bg-white rounded-xl text-slate-400 transition-all" style="font-size:18px;">
+                    <Blazicon Svg="@Lucide.X" />
+                </button>
+            </div>
+
+            <div class="p-8 space-y-6">
+                <div class="p-5 bg-red-50 border border-red-100 rounded-2xl space-y-2">
+                    <p class="text-sm font-bold text-slate-700">
+                        Are you sure you want to delete <span class="font-black text-slate-800">"@deletingFolder.Name"</span>?
+                    </p>
+                    @{
+                        var suitesInDeleteFolder = Suites.Count(s => s.Folder == deletingFolder.Name);
+                    }
+                    @if (suitesInDeleteFolder > 0)
+                    {
+                        <p class="text-xs text-red-600 font-medium mt-1">
+                            This category contains @suitesInDeleteFolder template(s). They will become uncategorized.
+                        </p>
+                    }
+                </div>
+
+                <div class="flex gap-3 pt-1">
+                    <button @onclick="() => isDeleteModalOpen = false"
+                            class="flex-1 py-3.5 bg-slate-100 text-slate-700 font-black text-sm rounded-xl hover:bg-slate-200 transition-all">
+                        Cancel
+                    </button>
+                    <button @onclick="ConfirmDelete"
+                            class="flex-1 py-3.5 bg-red-500 text-white font-black text-sm rounded-xl hover:bg-red-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-200">
+                        <span style="font-size:16px;"><Blazicon Svg="@Lucide.Trash2" /></span>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ══════ Create/Edit Modal ══════ *@
+@if (isFormOpen)
+{
+    <div class="fixed inset-0 z-[250] flex items-center justify-center p-6">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md" @onclick="() => isFormOpen = false"></div>
+        <div class="relative bg-white w-full max-w-md rounded-[36px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+            <div class="p-8 border-b border-slate-50 flex items-start justify-between bg-slate-50/50">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-[#1C1D2A] rounded-xl flex items-center justify-center">
+                        <span class="text-purple-400" style="font-size:24px;"><Blazicon Svg="@Lucide.Archive" /></span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-black text-slate-800">@(editingFolder != null ? "Refactor Node" : "Initialize Node")</h2>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Registry Governance</p>
+                    </div>
+                </div>
+                <button @onclick="() => isFormOpen = false" class="p-2 hover:bg-white rounded-xl text-slate-400 transition-all" style="font-size:18px;">
+                    <Blazicon Svg="@Lucide.X" />
+                </button>
+            </div>
+
+            <EditForm Model="@formModel" OnValidSubmit="HandleSave" class="p-8 space-y-6">
+                <div class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Node Identifier</label>
+                        <InputText @bind-Value="formModel.Name"
+                                   placeholder="e.g. Cloud Security Cluster"
+                                   class="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 focus:border-purple-500 focus:bg-white rounded-xl outline-none transition-all font-semibold text-slate-800 text-sm" />
+                    </div>
+                    <div class="p-4 bg-blue-50/50 border border-blue-100 rounded-xl flex items-start gap-3">
+                        <span class="text-blue-400 mt-0.5" style="font-size:14px;"><Blazicon Svg="@Lucide.Zap" /></span>
+                        <p class="text-[11px] text-blue-500 font-medium leading-relaxed">
+                            Nodes represent top-level semantic domains. Choose descriptive titles to assist global discoverability.
+                        </p>
+                    </div>
+                </div>
+
+                <button type="submit"
+                        class="w-full py-4 bg-[#1C1D2A] text-white font-black text-sm rounded-xl hover:bg-slate-800 hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 shadow-lg shadow-slate-200">
+                    <span class="text-emerald-400" style="font-size:18px;"><Blazicon Svg="@Lucide.Check" /></span>
+                    @(editingFolder != null ? "Apply Registry Update" : "Initialize Node Instance")
+                </button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public List<TemplateFolderViewModel> Folders { get; set; } = new();
+    [Parameter] public List<TestSuiteViewModel> Suites { get; set; } = new();
+    [Parameter] public EventCallback<List<TemplateFolderViewModel>> OnUpdateFolders { get; set; }
+    [Parameter] public EventCallback<List<TestSuiteViewModel>> OnUpdateSuites { get; set; }
+
+    private string searchQuery = "";
+    private string typeFilter = "All";
+    private bool isFormOpen;
+    private bool isDeleteModalOpen;
+    private TemplateFolderViewModel? deletingFolder;
+    private TemplateFolderViewModel? editingFolder;
+    private FolderFormModel formModel = new();
+
+    private IEnumerable<TemplateFolderViewModel> FilteredFolders => Folders.Where(f =>
+    {
+        var matchesSearch = string.IsNullOrWhiteSpace(searchQuery) ||
+            f.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase);
+        var isSystem = f.CreatedBy == "u1" || f.CreatedBy == "Admin";
+
+        return typeFilter switch
+        {
+            "Root" => matchesSearch && isSystem,
+            "Custom" => matchesSearch && !isSystem,
+            _ => matchesSearch
+        };
+    });
+
+    private List<KpiModel> KpiStats => new()
+    {
+        new() { Label = "Registry Load", Value = Folders.Count.ToString(), Icon = Lucide.Layers, ColorClass = "text-purple-500", BgClass = "bg-purple-50" },
+        new() { Label = "System Nodes", Value = Folders.Count(f => f.CreatedBy == "u1" || f.CreatedBy == "Admin").ToString(), Icon = Lucide.ShieldCheck, ColorClass = "text-emerald-500", BgClass = "bg-emerald-50" },
+        new() { Label = "Utilization", Value = "84%", Icon = Lucide.Activity, ColorClass = "text-blue-500", BgClass = "bg-blue-50" },
+        new() { Label = "Status", Value = "Optimized", Icon = Lucide.TrendingUp, ColorClass = "text-orange-500", BgClass = "bg-orange-50" },
+    };
+
+    private void ResetFilters()
+    {
+        searchQuery = "";
+        typeFilter = "All";
+    }
+
+    private void OpenCreateForm()
+    {
+        editingFolder = null;
+        formModel = new FolderFormModel();
+        isFormOpen = true;
+    }
+
+    private void StartEdit(TemplateFolderViewModel folder)
+    {
+        editingFolder = folder;
+        formModel = new FolderFormModel { Name = folder.Name };
+        isFormOpen = true;
+    }
+
+    private async Task HandleSave()
+    {
+        if (string.IsNullOrWhiteSpace(formModel.Name)) return;
+
+        var updatedFolders = new List<TemplateFolderViewModel>(Folders);
+
+        if (editingFolder != null)
+        {
+            var oldName = editingFolder.Name;
+            var target = updatedFolders.FirstOrDefault(f => f.Id == editingFolder.Id);
+            if (target != null) target.Name = formModel.Name.Trim();
+
+            var updatedSuites = Suites.Select(s =>
+                s.Folder == oldName ? new TestSuiteViewModel { Id = s.Id, Name = s.Name, Folder = formModel.Name.Trim() } : s
+            ).ToList();
+            await OnUpdateSuites.InvokeAsync(updatedSuites);
+        }
+        else
+        {
+            updatedFolders.Add(new TemplateFolderViewModel
+            {
+                Id = $"TF-{Guid.NewGuid().ToString("N")[..8].ToUpper()}",
+                Name = formModel.Name.Trim(),
+                CreatedBy = "Admin"
+            });
+        }
+
+        await OnUpdateFolders.InvokeAsync(updatedFolders);
+        isFormOpen = false;
+        editingFolder = null;
+        formModel = new();
+    }
+
+    private void OpenDeleteModal(TemplateFolderViewModel folder)
+    {
+        deletingFolder = folder;
+        isDeleteModalOpen = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (deletingFolder == null) return;
+        var folder = deletingFolder;
+        isDeleteModalOpen = false;
+        deletingFolder = null;
+
+        var updatedFolders = Folders.Where(f => f.Id != folder.Id).ToList();
+        var updatedSuites = Suites.Select(s =>
+            s.Folder == folder.Name ? new TestSuiteViewModel { Id = s.Id, Name = s.Name, Folder = null } : s
+        ).ToList();
+
+        await OnUpdateFolders.InvokeAsync(updatedFolders);
+        await OnUpdateSuites.InvokeAsync(updatedSuites);
+    }
+
+    // ── View Models ──
+    public class TemplateFolderViewModel
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string CreatedBy { get; set; } = "";
+    }
+
+    public class TestSuiteViewModel
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string? Folder { get; set; }
+    }
+
+    public class FolderFormModel
+    {
+        public string Name { get; set; } = "";
+    }
+
+    private class KpiModel
+    {
+        public string Label { get; set; } = "";
+        public string Value { get; set; } = "";
+        public SvgIcon Icon { get; set; } = Lucide.Layers;
+        public string ColorClass { get; set; } = "";
+        public string BgClass { get; set; } = "";
+    }
+}

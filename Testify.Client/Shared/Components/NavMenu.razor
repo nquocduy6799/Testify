@@ -5,7 +5,7 @@
 
 <ConfirmModal />
 
-<header class="relative z-[100] bg-transparent p-2.5 px-8">
+<header class="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm p-2.5 px-8">
     <div class="mx-auto flex max-w-[1400px] items-center justify-between">
 
         @* --- LOGO SECTION --- *@
@@ -50,6 +50,11 @@
             <NavLink class="group relative py-1 text-sm font-bold text-slate-400 transition-all hover:text-slate-600"
                      href="projects">
                 Project
+                <span class="absolute -bottom-1 left-0 hidden h-1 w-full rounded-full bg-[#E85D3F] group-[.active]:animate-in group-[.active]:fade-in group-[.active]:zoom-in group-[.active]:block"></span>
+            </NavLink>
+            <NavLink class="group relative py-1 text-sm font-bold text-slate-400 transition-all hover:text-slate-600"
+                     href="marketplace">
+                Marketplace
                 <span class="absolute -bottom-1 left-0 hidden h-1 w-full rounded-full bg-[#E85D3F] group-[.active]:animate-in group-[.active]:fade-in group-[.active]:zoom-in group-[.active]:block"></span>
             </NavLink>
             <NavLink class="group relative py-1 text-sm font-bold text-slate-400 transition-all hover:text-slate-600"

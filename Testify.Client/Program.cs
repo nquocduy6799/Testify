@@ -11,6 +11,7 @@ using Testify.Client.Features.TestSuites.Services;
 using Testify.Client.Interfaces;
 using Testify.Client.Shared.Services;
 using Testify.Client.Features.Chat.Services;
+using Testify.Client.Features.Marketplace.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -41,6 +42,7 @@ builder.Services.AddScoped<IAiTestCaseService, AiTestCaseService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<ITestPlanService, TestPlanService>();
 builder.Services.AddScoped<ITestRunService, TestRunService>();
+builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 
 
 // Register SignalR for real-time notifications
