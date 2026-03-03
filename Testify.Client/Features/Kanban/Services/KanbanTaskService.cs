@@ -125,5 +125,19 @@ namespace Testify.Client.Features.Kanban.Services
                 return new List<TaskAttachmentResponse>();
             }
         }
+
+        public async Task<byte[]> ExportAuditTrailPdfAsync(int taskId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"{ApiEndpoint}/{taskId}/export-audit-pdf");
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new InvalidOperationException($"Failed to export audit trail for task {taskId}.", ex);
+            }
+        }
     }
 }

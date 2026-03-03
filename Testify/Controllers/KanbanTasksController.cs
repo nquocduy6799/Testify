@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
 using System.Net.Mail;
 using System.Security.Claims;
 using Testify.Interfaces;
+using Testify.Services;
 using Testify.Shared.DTOs.KanbanTasks;
 using Testify.Shared.DTOs.TaskActivity;
 using Testify.Shared.DTOs.TaskAttachments;
@@ -120,6 +123,22 @@ namespace Testify.Controllers
             }
 
             return Ok(activities);
+        }
+
+        [HttpGet("{id}/export-audit-pdf")]
+        public async Task<IActionResult> ExportAuditTrailPdf(int id)
+        {
+            var task = await _kanbanTaskRepository.GetTaskByTaskIdAsync(id);
+            if (task == null) return NotFound();
+
+            var activities = await _kanbanTaskRepository.GetTaskActivityResponsesAsync(id);
+
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var document = new AuditTrailPdfDocument(task, activities ?? []);
+            var pdfBytes = document.GeneratePdf();
+
+            return File(pdfBytes, "application/pdf", $"audit-trail-TASK-{id}.pdf");
         }
     }
 }

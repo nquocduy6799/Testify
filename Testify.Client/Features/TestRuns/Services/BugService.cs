@@ -28,7 +28,7 @@ namespace Testify.Client.Features.TestRuns.Services
             }
             catch (HttpRequestException)
             {
-                return null;
+                return new BugResponse();
             }
         }
 
@@ -41,7 +41,7 @@ namespace Testify.Client.Features.TestRuns.Services
             }
             catch (HttpRequestException)
             {
-                return null;
+                return new BugResponse();
             }
         }
 

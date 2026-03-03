@@ -15,5 +15,6 @@ namespace Testify.Client.Interfaces
         Task<List<TaskActivityResponse>> GetTaskActivitiesAsync(int taskId);
         Task<IEnumerable<TaskAttachmentResponse>> GetTaskAttachmentsAsync(int taskId);
         Task<bool> DeleteTaskAsync(int id);
+        Task<byte[]> ExportAuditTrailPdfAsync(int taskId);  
     }
 }

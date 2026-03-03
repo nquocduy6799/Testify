@@ -401,10 +401,10 @@ else
                    FailedRunStepIds="GetFailedStepIds()"
                    StepsToReproduce="BuildStepsToReproduce()"
                    ExistingAttachments="GetFailedStepAttachments()"
-                   CurrentUserId="_userContext?.UserId ?? string.Empty"
-                   CurrentUserName="_userContext?.UserName ?? string.Empty"
-                   CanAssignToOthers="_userContext?.IsPM ?? false"
-                   TeamMembers="_userContext?.TeamMembers ?? []"
+                   CurrentUserId="_currentUser?.UserId ?? string.Empty"
+                   CurrentUserName="_currentUser?.UserName ?? string.Empty"
+                   CanAssignToOthers="true"
+                   TeamMembers="_teamMembers"
                    OnSave="HandleBugSavedAsync"
                    OnClose="CloseBugReportForm" />
 }
@@ -423,9 +423,16 @@ else
     private string? _errorMessage;
     private bool _showBugReportForm;
     private int _activeMilestoneId;
-    private ProjectUserContext? _userContext;
+    private ProjectUserContext? _currentUser;
+    private List<TeamMemberResponse> _teamMembers = new();
 
-    protected override async Task OnInitializedAsync() => await LoadDataAsync();
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadDataAsync();
+        await LoadUserInfoAsync();
+        await LoadTeamMembersAsync();
+        await LoadActiveMilestoneAsync();
+    }
 
     private async Task LoadDataAsync()
     {
@@ -437,15 +444,12 @@ else
             var planTask = TestPlanService.GetTestPlanByIdAsync(TestPlanId);
             var runsTask = TestRunService.GetByTestPlanIdAsync(TestPlanId);
             var statsTask = TestRunService.GetStatisticsByTestPlanIdAsync(TestPlanId);
-            var contextTask = ProjectService.GetProjectUserContextAsync(ProjectId);
 
-            await Task.WhenAll(planTask, runsTask, statsTask, contextTask);
+            await Task.WhenAll(planTask, runsTask, statsTask);
 
-            await LoadActiveMilestoneAsync();
 
             _testPlan = planTask.Result;
             _statistics = statsTask.Result;
-            _userContext = contextTask.Result;
 
             var detailTasks = runsTask.Result.Select(r => TestRunService.GetDetailedByIdAsync(r.Id));
             var details = await Task.WhenAll(detailTasks);
@@ -460,6 +464,10 @@ else
             _isLoading = false;
         }
     }
+    private async Task LoadUserInfoAsync()
+    {
+        _currentUser = await ProjectService.GetProjectUserContextAsync(ProjectId);
+    }
 
     private async Task LoadActiveMilestoneAsync()
     {
@@ -471,6 +479,18 @@ else
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to load active milestone: {ex.Message}");
+        }
+    }
+
+    private async Task LoadTeamMembersAsync()
+    {
+        try
+        {
+            _teamMembers = await ProjectService.GetMembersAsync(ProjectId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load team members: {ex.Message}");
         }
     }
 
@@ -626,9 +646,9 @@ else
             }))
             .ToList() ?? [];
 
-    private async Task HandleBugSavedAsync(CreateBugFromTestRunRequest request)
+    private async Task HandleBugSavedAsync((CreateBugFromTestRunRequest Request, List<IBrowserFile> Files) args)
     {
-        await BugService.CreateBugFromTestRunAsync(request);
+        await BugService.CreateBugFromTestRunAsync(args.Request);
         CloseBugReportForm();
     }
 

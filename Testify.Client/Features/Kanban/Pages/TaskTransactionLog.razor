@@ -6,6 +6,7 @@
 @inject IKanbanTaskService KanbanTaskService
 @inject NavigationManager Navigation
 @attribute [Authorize]
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveWebAssembly
 
 <PageTitle>Audit Trail</PageTitle>
@@ -45,11 +46,22 @@
                 </div>
             </div>
 
-            <button class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 text-xs font-black tracking-widest text-slate-800 uppercase shadow-sm transition-all hover:bg-slate-50">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Export Ledger
+            <button @onclick="ExportLedgerAsync"
+                    disabled="@_isExporting"
+                    class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-8 py-4 text-xs font-black tracking-widest text-slate-800 uppercase shadow-sm transition-all hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                @if (_isExporting)
+                {
+                    <div class="h-4 w-4 animate-spin rounded-full border-b-2 border-slate-800"></div>
+                    <span>Exporting...</span>
+                }
+                else
+                {
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span>Export Ledger</span>
+                }
             </button>
         </div>
 
@@ -229,6 +241,31 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private bool _isExporting = false;
+
+    private async Task ExportLedgerAsync()
+    {
+        if (_task == null) return;
+        _isExporting = true;
+        try
+        {
+            var pdfBytes = await KanbanTaskService.ExportAuditTrailPdfAsync(TaskId);
+            await JSRuntime.InvokeVoidAsync(
+                "downloadFileFromBytes",
+                $"audit-trail-TASK-{TaskId}.pdf",
+                "application/pdf",
+                pdfBytes);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Export failed: {ex.Message}");
+        }
+        finally
+        {
+            _isExporting = false;
         }
     }
 
