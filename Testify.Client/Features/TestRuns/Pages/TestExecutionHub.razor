@@ -393,20 +393,20 @@ else
     </div>
 }
 
-@if (_showBugReportForm && _activeMilestoneId != 0)
+@if (_showBugReportForm && _activeMilestoneId != 0 && _activeRun is not null)
 {
     <BugReportForm MilestoneId="_activeMilestoneId"
                    TestCaseId="_activeRun.TestCaseId"
                    TestRunId="_activeRun.Id"
-                   FailedRunStepIds="GetFailedStepIds()"
-                   StepsToReproduce="BuildStepsToReproduce()"
-                   ExistingAttachments="GetFailedStepAttachments()"
-                   CurrentUserId="_currentUser?.UserId ?? string.Empty"
-                   CurrentUserName="_currentUser?.UserName ?? string.Empty"
+                   FailedRunStepIds="@GetFailedStepIds()"
+                   StepsToReproduce="@(BuildStepsToReproduce())"
+                   ExistingAttachments="@GetFailedStepAttachments()"
+                   CurrentUserId="@(_currentUser?.UserId ?? string.Empty)"
+                   CurrentUserName="@(_currentUser?.UserName ?? string.Empty)"
                    CanAssignToOthers="true"
                    TeamMembers="_teamMembers"
-                   OnSave="HandleBugSavedAsync"
-                   OnClose="CloseBugReportForm" />
+                   OnSave="@HandleBugSavedAsync"
+                   OnClose="@CloseBugReportForm" />
 }
 
 @code {
@@ -648,6 +648,7 @@ else
 
     private async Task HandleBugSavedAsync((CreateBugFromTestRunRequest Request, List<IBrowserFile> Files) args)
     {
+        Console.WriteLine("Hello");
         await BugService.CreateBugFromTestRunAsync(args.Request);
         CloseBugReportForm();
     }

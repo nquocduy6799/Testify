@@ -207,99 +207,96 @@
     {
         <div class="fixed inset-0 z-[100] flex items-center justify-center p-6">
             <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in" @onclick="CloseModal"></div>
-            <div class="relative bg-white w-full max-w-xl rounded-[48px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95">
-                <div class="p-10 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                    <h2 class="text-3xl font-black text-slate-800">@(isEditMode ? "Edit Project" : "New Project")</h2>
+            <div class="relative bg-white w-full max-w-3xl rounded-[40px] shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[90vh]">
+
+                @* Header — fixed, never scrolls *@
+                <div class="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0 rounded-t-[40px]">
+                    <h2 class="text-2xl font-black text-slate-800">@(isEditMode ? "Edit Project" : "New Project")</h2>
                     <button @onclick="CloseModal" class="p-2 hover:bg-white rounded-full text-slate-400 shadow-sm transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" x2="6" y1="6" y2="18" /><line x1="6" x2="18" y1="6" y2="18" />
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" x2="6" y1="6" y2="18" />
+                            <line x1="6" x2="18" y1="6" y2="18" />
                         </svg>
                     </button>
                 </div>
-                <EditForm Model="@projectForm" OnValidSubmit="HandleSubmit" class="p-10 space-y-6">
+
+                @* Body — scrollable *@
+                <EditForm Model="@projectForm" OnValidSubmit="HandleSubmit" class="px-8 py-6 space-y-5 overflow-y-auto">
                     <DataAnnotationsValidator />
-                    
+
                     @if (!string.IsNullOrEmpty(formErrorMessage))
                     {
-                        <div class="mb-6 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-600">@formErrorMessage</div>
+                        <div class="rounded-xl bg-red-50 p-3 text-xs font-bold text-red-600">@formErrorMessage</div>
                     }
 
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Project Name</label>
-                        <InputText 
-                            @bind-Value="projectForm.Name"
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-200 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800"
-                            placeholder="e.g. Phoenix Overhaul"
-                        />
-                        <ValidationMessage For="@(() => projectForm.Name)" class="text-xs text-red-500" />
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Project Name</label>
+                            <InputText @bind-Value="projectForm.Name"
+                                       class="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-slate-200 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800 text-sm"
+                                       placeholder="e.g. Phoenix Overhaul" />
+                            <ValidationMessage For="@(() => projectForm.Name)" class="text-xs text-red-500" />
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Client / Department</label>
+                            <InputText @bind-Value="projectForm.Client"
+                                       class="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-slate-200 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800 text-sm"
+                                       placeholder="e.g. Finance Dept" />
+                        </div>
                     </div>
-                    
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Client / Department</label>
-                        <InputText 
-                            @bind-Value="projectForm.Client"
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-200 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800"
-                            placeholder="e.g. Finance Dept"
-                        />
-                    </div>
-                    
+
                     <div class="space-y-1.5">
                         <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Description</label>
-                        <InputTextArea 
-                            @bind-Value="projectForm.Description"
-                            rows="3"
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-200 focus:bg-white rounded-2xl outline-none transition-all font-medium text-slate-600 resize-none"
-                            placeholder="Brief project summary..."
-                        />
+                        <InputTextArea @bind-Value="projectForm.Description"
+                                       rows="3"
+                                       class="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-slate-200 focus:bg-white rounded-2xl outline-none transition-all font-medium text-slate-600 text-sm resize-none"
+                                       placeholder="Brief project summary..." />
                     </div>
 
                     <div class="space-y-1.5">
                         <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Deadline</label>
-                        <InputDate 
-                            @bind-Value="projectForm.Deadline" 
-                            class="w-full px-6 py-4 bg-slate-50 border-2 border-transparent focus:border-slate-200 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800"
-                        />
+                        <InputDate @bind-Value="projectForm.Deadline"
+                                   class="w-full px-5 py-3 bg-slate-50 border-2 border-transparent focus:border-slate-200 focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800 text-sm" />
                     </div>
-                    
-                    <div class="space-y-3">
+
+                    <div class="space-y-2">
                         <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Theme Color</label>
-                        <div class="flex gap-3">
+                        <div class="flex flex-wrap gap-3">
                             @foreach (var color in themeColors)
                             {
-                                <button
-                                    type="button"
-                                    @onclick="() => projectForm.Color = color"
-                                    class="@(projectForm.Color == color ? "scale-125 ring-4 ring-slate-100" : "") w-10 h-10 rounded-xl transition-all"
-                                    style="background-color: @color"
-                                ></button>
+                                <button type="button"
+                                        @onclick="() => projectForm.Color = color"
+                                        class="@(projectForm.Color == color ? "scale-110 ring-4 ring-slate-100" : "hover:scale-105") w-10 h-10 rounded-xl transition-all"
+                                        style="background-color: @color"></button>
                             }
                         </div>
                     </div>
 
                     @if (isEditMode)
                     {
-                        <div class="space-y-2">
+                        <div class="space-y-1.5">
                             <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Progress (@projectForm.Progress%)</label>
-                            <input type="range" @bind="projectForm.Progress" min="0" max="100" class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-100 accent-[#E85D3F]" />
+                            <input type="range" @bind="projectForm.Progress" min="0" max="100"
+                                   class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-100 accent-[#E85D3F]" />
                         </div>
                     }
-                    
-                    <button 
-                        type="submit" 
-                        disabled="@isSubmitting"
-                        class="w-full py-5 bg-[#E85D3F] text-white font-black text-lg rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-orange-100 active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        @if (isSubmitting)
-                        {
-                            <div class="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-                        }
-                        @(isEditMode ? "Save Changes" : "Create Project")
-                    </button>
+
+                    <div class="pt-2 pb-2">
+                        <button type="submit"
+                                disabled="@isSubmitting"
+                                class="w-full py-4 bg-[#E85D3F] text-white font-black text-base rounded-2xl hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 active:scale-95 flex items-center justify-center gap-2">
+                            @if (isSubmitting)
+                            {
+                                <div class="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                            }
+                            @(isEditMode ? "Save Changes" : "Create Project")
+                        </button>
+                    </div>
                 </EditForm>
             </div>
         </div>
     }
-
     @* --- DELETE MODAL --- *@
     @if (showDeleteModal)
     {

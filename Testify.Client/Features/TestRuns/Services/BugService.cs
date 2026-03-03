@@ -20,7 +20,7 @@ namespace Testify.Client.Features.TestRuns.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync($"{ApiEndpoint}/from-testrun", request);
+                var response = await _httpClient.PostAsJsonAsync($"{ApiEndpoint}/fromtestrun", request);
                 response.EnsureSuccessStatusCode();
 
                 var createdBug = await response.Content.ReadFromJsonAsync<BugResponse>();
