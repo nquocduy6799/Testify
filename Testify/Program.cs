@@ -210,6 +210,8 @@ else
     app.UseHsts();
 }
 
+app.UseMiddleware<Testify.Middleware.GlobalExceptionMiddleware>();
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
