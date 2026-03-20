@@ -1,32 +1,36 @@
 ﻿@using System.ComponentModel.DataAnnotations
+@using Testify.Shared.DTOs
 @using Testify.Shared.DTOs.TestTemplates
+@using Testify.Shared.DTOs.Categories
+@using Testify.Shared.DTOs.Tags
+@using Testify.Shared.Enums
 
-<div class="fixed inset-0 z-[150] flex items-center justify-center p-6">
+<div class="fixed inset-0 z-[150] flex items-center justify-center p-4">
     <div class="animate-in fade-in absolute inset-0 bg-slate-900/40 backdrop-blur-sm duration-300"
          @onclick="Close"></div>
 
-    <div class="animate-in zoom-in-95 relative flex w-full max-w-md flex-col overflow-hidden rounded-[48px] bg-white shadow-2xl duration-300">
-        <div class="flex items-start justify-between border-b border-slate-50 bg-slate-50/50 p-10">
-            <div class="flex items-center gap-4">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7E96E1] text-white shadow-lg shadow-blue-100">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+    <div class="animate-in zoom-in-95 relative flex w-full max-w-3xl max-h-[90vh] flex-col overflow-hidden rounded-[32px] bg-white shadow-2xl duration-300">
+        <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-8 py-5 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7E96E1] text-white shadow-lg shadow-blue-100">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5" />
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-2xl font-black text-slate-800">@HeaderTitle</h2>
+                    <h2 class="text-xl font-black text-slate-800">@HeaderTitle</h2>
                     <p class="mt-0.5 font-black tracking-widest text-[10px] text-slate-400 uppercase">@HeaderSubtitle</p>
                 </div>
             </div>
             <button @onclick="Close"
-                    class="rounded-2xl p-3 text-slate-400 shadow-sm transition-all hover:bg-white">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    class="rounded-xl p-2 text-slate-400 shadow-sm transition-all hover:bg-white">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
 
-        <EditForm Model="_formData" OnValidSubmit="HandleSubmit" class="space-y-6 p-10">
+        <EditForm Model="_formData" OnValidSubmit="HandleSubmit" class="space-y-4 px-8 py-6 overflow-y-auto flex-1">
             <DataAnnotationsValidator />
 
             <div class="space-y-1.5">
@@ -37,7 +41,7 @@
                     Suite Name
                 </label>
                 <InputText @bind-Value="_formData.Name"
-                           class="w-full rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-bold text-slate-800 transition-all outline-none focus:border-[#7E96E1] focus:bg-white"
+                           class="w-full rounded-2xl border-2 border-transparent bg-slate-50 px-4 py-3 font-bold text-slate-800 transition-all outline-none focus:border-[#7E96E1] focus:bg-white"
                            placeholder="e.g. Authentication & Security"
                            autofocus />
                 <ValidationMessage For="@(() => _formData.Name)" class="text-xs text-red-500 mt-1" />
@@ -60,7 +64,7 @@
                            @oninput="HandleFolderSearch"
                            @onfocus="() => _isDropdownOpen = true"
                            placeholder="Search or create category..."
-                           class="w-full pl-11 pr-10 py-4 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800 text-xs" />
+                           class="w-full pl-11 pr-10 py-3 bg-slate-50 border-2 border-transparent focus:border-[#7E96E1] focus:bg-white rounded-2xl outline-none transition-all font-bold text-slate-800 text-xs" />
                     <svg class="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-slate-300 transition-transform @(_isDropdownOpen ? "rotate-180" : "")" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
@@ -156,14 +160,153 @@
                     Description
                 </label>
                 <InputTextArea @bind-Value="_formData.Description"
-                               rows="3"
-                               class="w-full resize-none rounded-2xl border-2 border-transparent bg-slate-50 px-6 py-4 font-medium text-slate-600 transition-all outline-none focus:border-[#7E96E1] focus:bg-white"
+                               rows="2"
+                               class="w-full resize-none rounded-2xl border-2 border-transparent bg-slate-50 px-4 py-3 font-medium text-slate-600 transition-all outline-none focus:border-[#7E96E1] focus:bg-white"
                                placeholder="What logical group of features does this suite cover?" />
             </div>
 
-            <div class="pt-6">
+            @* Category Selector *@
+            @if (AvailableCategories.Count > 0)
+            {
+                <div class="space-y-1.5">
+                    <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                        <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                        </svg>
+                        Category
+                    </label>
+                    <div class="relative">
+                        <select @bind="_selectedCategoryId"
+                                class="w-full appearance-none rounded-2xl border-2 border-transparent bg-slate-50 px-4 py-3 font-bold text-slate-800 outline-none transition-all focus:border-[#7E96E1] focus:bg-white">
+                            <option value="">— No category —</option>
+                            @foreach (var cat in AvailableCategories)
+                            {
+                                <option value="@cat.Id">@cat.Name</option>
+                            }
+                        </select>
+                        <svg class="pointer-events-none absolute right-5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
+            }
+
+            @* Tags Selector *@
+            @if (AvailableTags.Count > 0)
+            {
+                <div class="space-y-1.5">
+                    <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                        <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                        </svg>
+                        Tags
+                    </label>
+                    <div class="flex flex-wrap gap-2 rounded-2xl border-2 border-transparent bg-slate-50 px-4 py-3 focus-within:border-[#7E96E1] focus-within:bg-white transition-all min-h-[52px]">
+                        @foreach (var tag in AvailableTags)
+                        {
+                            var isSelected = _selectedTagIds.Contains(tag.Id);
+                            <button type="button"
+                                    @onclick="() => ToggleTag(tag.Id)"
+                                    class="@($"px-3 py-1 rounded-full text-[10px] font-bold transition-all {(isSelected ? "bg-[#7E96E1] text-white" : "bg-white border border-slate-200 text-slate-500 hover:border-[#7E96E1]")}")">
+                                #@tag.TagName
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* IsPublic Toggle *@
+            <div class="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                <div>
+                    <p class="text-xs font-black text-slate-700 uppercase tracking-wide">Make Public</p>
+                    <p class="text-[10px] text-slate-400 font-medium mt-0.5">Visible in the Marketplace</p>
+                </div>
+                <button type="button"
+                        @onclick="() => _isPublic = !_isPublic"
+                        class="@($"relative inline-flex h-6 w-11 items-center rounded-full transition-colors {(_isPublic ? "bg-[#7E96E1]" : "bg-slate-300")}")">
+                    <span class="@($"inline-block h-4 w-4 transform rounded-full bg-white transition-transform {(_isPublic ? "translate-x-6" : "translate-x-1")}")"></span>
+                </button>
+            </div>
+
+            @* Test Cases *@
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center gap-2 font-black tracking-widest text-[10px] text-slate-400 uppercase">
+                        <svg class="h-3.5 w-3.5 text-[#7E96E1]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Test Cases (@_testCases.Count)
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <button type="button" @onclick="() => _showMarkdownImport = true"
+                                class="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase transition-all hover:bg-slate-200">
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                            </svg>
+                            Import MD
+                        </button>
+                        <button type="button" @onclick="AddTestCase"
+                                class="flex items-center gap-1.5 rounded-xl bg-[#7E96E1]/10 px-3 py-1.5 text-[10px] font-black text-[#7E96E1] uppercase transition-all hover:bg-[#7E96E1]/20">
+                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                            Add Case
+                        </button>
+                    </div>
+                </div>
+
+                @foreach (var (tc, idx) in _testCases.Select((t, i) => (t, i)))
+                {
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <input type="text"
+                                   value="@tc.Title"
+                                   @oninput="e => tc.Title = e.Value?.ToString() ?? string.Empty"
+                                   placeholder="Test case title..."
+                                   class="flex-1 rounded-xl border-0 bg-white px-4 py-2 text-xs font-bold text-slate-800 outline-none ring-1 ring-slate-200 focus:ring-[#7E96E1]" />
+                            <button type="button" @onclick="() => RemoveTestCase(idx)"
+                                    class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" @onclick="() => AddStep(tc)"
+                                    class="text-[9px] font-black uppercase text-[#7E96E1] hover:underline">
+                                + Step (@tc.TestStepTemplates.Count)
+                            </button>
+                        </div>
+                        @foreach (var (step, si) in tc.TestStepTemplates.Select((s, i) => (s, i)))
+                        {
+                            <div class="flex items-center gap-2 pl-3">
+                                <span class="text-[9px] font-bold text-slate-400 w-4">@(si + 1).</span>
+                                <input type="text"
+                                       value="@step.Action"
+                                       @oninput="e => step.Action = e.Value?.ToString() ?? string.Empty"
+                                       placeholder="Action..."
+                                       class="flex-1 rounded-lg border-0 bg-white px-3 py-1.5 text-[10px] font-medium text-slate-700 outline-none ring-1 ring-slate-100 focus:ring-[#7E96E1]" />
+                                <input type="text"
+                                       value="@step.ExpectedResult"
+                                       @oninput="e => step.ExpectedResult = e.Value?.ToString() ?? string.Empty"
+                                       placeholder="Expected..."
+                                       class="flex-1 rounded-lg border-0 bg-white px-3 py-1.5 text-[10px] font-medium text-slate-700 outline-none ring-1 ring-slate-100 focus:ring-[#7E96E1]" />
+                                <button type="button" @onclick="() => RemoveStep(tc, si)"
+                                        class="p-1 rounded text-slate-300 hover:text-red-400 transition-all">
+                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="pt-1 pb-1">
                 <button type="submit"
-                        class="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#1C1D2A] py-5 text-lg font-black text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl active:scale-95">
+                        class="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#1C1D2A] py-4 text-base font-black text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl active:scale-95">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7" />
                     </svg>
@@ -174,22 +317,36 @@
     </div>
 </div>
 
+@if (_showMarkdownImport)
+{
+    <MarkdownImportModal OnClose="() => _showMarkdownImport = false"
+                         OnImport="HandleMarkdownImport" />
+}
+
 @code {
     [Parameter] public EventCallback<CreateTestSuiteTemplateRequest> OnSave { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public Dictionary<int, string> AvailableFolders { get; set; } = new(); 
     [Parameter] public int? InitialFolderId { get; set; }
     [Parameter] public string Type { get; set; } = "Library";
+    [Parameter] public List<CategoryResponse> AvailableCategories { get; set; } = new();
+    [Parameter] public List<TagResponse> AvailableTags { get; set; } = new();
+    [Parameter] public TestSuiteTemplateResponse? ExistingSuite { get; set; }
 
     private readonly FormModel _formData = new();
     private bool _isDropdownOpen;
     private string _folderSearch = string.Empty;
     private int? _selectedFolderId;
     private string? _newFolderName;
+    private int? _selectedCategoryId;
+    private readonly List<int> _selectedTagIds = new();
+    private bool _isPublic;
+    private bool _showMarkdownImport;
+    private readonly List<TestCaseFormModel> _testCases = new();
 
-    private string HeaderTitle => Type == "Library" ? "Library Suite" : "New Suite";
-    private string HeaderSubtitle => Type == "Library" ? "Reusable testing asset" : "Categorize your test repository";
-    private string SubmitLabel => Type == "Library" ? "Add to Library" : "Initialize Suite";
+    private string HeaderTitle => ExistingSuite != null ? "Edit Suite" : (Type == "Library" ? "Library Suite" : "New Suite");
+    private string HeaderSubtitle => ExistingSuite != null ? "Update template details" : (Type == "Library" ? "Reusable testing asset" : "Categorize your test repository");
+    private string SubmitLabel => ExistingSuite != null ? "Save Changes" : (Type == "Library" ? "Add to Library" : "Initialize Suite");
 
     private IReadOnlyList<KeyValuePair<int, string>> FilteredFolders =>
         AvailableFolders
@@ -203,6 +360,82 @@
         if (_selectedFolderId.HasValue && AvailableFolders.TryGetValue(_selectedFolderId.Value, out var folderName))
         {
             _folderSearch = folderName;
+        }
+
+        if (ExistingSuite != null)
+        {
+            _formData.Name = ExistingSuite.Name;
+            _formData.Description = ExistingSuite.Description;
+            _selectedCategoryId = ExistingSuite.CategoryId;
+            _isPublic = ExistingSuite.IsPublic;
+            _selectedTagIds.Clear();
+            _selectedTagIds.AddRange(ExistingSuite.Tags.Select(t => t.Id));
+            _testCases.Clear();
+            _testCases.AddRange(ExistingSuite.TestCaseTemplates.Select(tc => new TestCaseFormModel
+            {
+                Title = tc.Title,
+                TestStepTemplates = tc.TestStepTemplates.Select(s => new StepFormModel
+                {
+                    Action = s.Action,
+                    ExpectedResult = s.ExpectedResult,
+                    TestData = s.TestData,
+                    StepNumber = s.StepNumber
+                }).ToList()
+            }));
+        }
+    }
+
+    private void ToggleTag(int tagId)
+    {
+        if (_selectedTagIds.Contains(tagId))
+            _selectedTagIds.Remove(tagId);
+        else
+            _selectedTagIds.Add(tagId);
+    }
+
+    private void HandleMarkdownImport(TestCaseFormResult result)
+    {
+        _testCases.Add(new TestCaseFormModel
+        {
+            Title = result.Title,
+            Priority = result.Priority,
+            TestStepTemplates = result.Steps.Select(s => new StepFormModel
+            {
+                StepNumber = s.StepNumber,
+                Action = s.Action,
+                ExpectedResult = s.ExpectedResult,
+                TestData = s.TestData
+            }).ToList()
+        });
+        _showMarkdownImport = false;
+    }
+
+    private void AddTestCase()
+    {
+        _testCases.Add(new TestCaseFormModel { Title = string.Empty });
+    }
+
+    private void RemoveTestCase(int index)
+    {
+        if (index >= 0 && index < _testCases.Count)
+            _testCases.RemoveAt(index);
+    }
+
+    private void AddStep(TestCaseFormModel tc)
+    {
+        tc.TestStepTemplates.Add(new StepFormModel
+        {
+            StepNumber = tc.TestStepTemplates.Count + 1
+        });
+    }
+
+    private void RemoveStep(TestCaseFormModel tc, int stepIndex)
+    {
+        if (stepIndex >= 0 && stepIndex < tc.TestStepTemplates.Count)
+        {
+            tc.TestStepTemplates.RemoveAt(stepIndex);
+            for (int i = 0; i < tc.TestStepTemplates.Count; i++)
+                tc.TestStepTemplates[i].StepNumber = i + 1;
         }
     }
 
@@ -246,7 +479,26 @@
             Name = _formData.Name.Trim(),
             Description = string.IsNullOrWhiteSpace(_formData.Description) ? null : _formData.Description.Trim(),
             FolderId = _selectedFolderId,
-            NewFolderName = _newFolderName
+            NewFolderName = _newFolderName,
+            CategoryId = _selectedCategoryId,
+            TagIds = new List<int>(_selectedTagIds),
+            IsPublic = _isPublic,
+            TestCaseTemplates = _testCases
+                .Where(tc => !string.IsNullOrWhiteSpace(tc.Title))
+                .Select(tc => new Testify.Shared.DTOs.TestCases.CreateTestCaseTemplateRequest
+                {
+                    Title = tc.Title.Trim(),
+                    Priority = tc.Priority,
+                    TestStepTemplates = tc.TestStepTemplates
+                        .Where(s => !string.IsNullOrWhiteSpace(s.Action))
+                        .Select(s => new Testify.Shared.DTOs.TestCases.CreateTestStepTemplateRequest
+                        {
+                            StepNumber = s.StepNumber,
+                            Action = s.Action.Trim(),
+                            ExpectedResult = s.ExpectedResult.Trim(),
+                            TestData = string.IsNullOrWhiteSpace(s.TestData) ? null : s.TestData.Trim()
+                        }).ToList()
+                }).ToList()
         };
 
         await OnSave.InvokeAsync(request);
@@ -265,5 +517,20 @@
 
         [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
         public string? Description { get; set; }
+    }
+
+    private class TestCaseFormModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public TestCasePriority Priority { get; set; } = TestCasePriority.Medium;
+        public List<StepFormModel> TestStepTemplates { get; set; } = new();
+    }
+
+    private class StepFormModel
+    {
+        public int StepNumber { get; set; }
+        public string Action { get; set; } = string.Empty;
+        public string ExpectedResult { get; set; } = string.Empty;
+        public string? TestData { get; set; }
     }
 }

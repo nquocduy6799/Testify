@@ -1,12 +1,15 @@
 @page "/marketplace"
 @using Blazicons
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
 @using Testify.Data
 @using Testify.Entities
 @rendermode InteractiveServer
 @inject ApplicationDbContext DbContext
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Marketplace - Testify</PageTitle>
 
@@ -27,7 +30,7 @@
                 Browse, sync, and deploy industry-standard test architectures directly to your workspace. Powered by community intelligence.
             </p>
             <div class="flex gap-4">
-                <button class="bg-white text-[#1C1D2A] px-10 py-5 rounded-[24px] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-white/5">
+                <button @onclick='() => Navigation.NavigateTo("/test-templates/suite-library")' class="bg-white text-[#1C1D2A] px-10 py-5 rounded-[24px] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-white/5">
                     Publish Your Logic
                 </button>
                 <div class="flex items-center gap-6 pl-6 border-l border-white/10">
@@ -98,10 +101,10 @@
                             </div>
                         }
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-amber-400" style="font-size:16px;"><Blazicon Svg="@Lucide.Star" /></span>
-                        <span class="text-xs font-black text-slate-800">@item.Stars.ToString("0.0")</span>
-                    </div>
+                    <button @onclick="() => ToggleStar(item)" class="flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-amber-50 transition-all group">
+                        <span class="@(_userStarredIds.Contains(item.Id) ? "text-amber-400" : "text-slate-300 group-hover:text-amber-400")" style="font-size:16px;"><Blazicon Svg="@Lucide.Star" /></span>
+                        <span class="text-xs font-black text-slate-800">@item.Stars</span>
+                    </button>
                 </div>
 
                 @* Title & Description *@
@@ -224,13 +227,54 @@
                     </p>
                 </div>
 
+                @* Project Selector *@
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Select Target Project</label>
+                    @if (_userProjects.Count == 0)
+                    {
+                        <p class="text-xs text-red-400 font-medium">You have no projects. Please create a project first.</p>
+                    }
+                    else
+                    {
+                        <div class="relative">
+                            <select @bind="_selectedProjectId"
+                                    class="w-full appearance-none border border-slate-200 bg-white rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-700 outline-none focus:border-[#1C1D2A] focus:ring-2 focus:ring-[#1C1D2A]/10 transition-all">
+                                <option value="">— Choose a project —</option>
+                                @foreach (var project in _userProjects)
+                                {
+                                    <option value="@project.Id">@project.Name</option>
+                                }
+                            </select>
+                            <svg class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(_cloneMessage))
+                {
+                    <div class="@(_cloneSuccess ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700") border rounded-2xl px-5 py-3 text-xs font-bold">
+                        @_cloneMessage
+                    </div>
+                }
+
                 <div class="flex gap-3">
                     <button @onclick="ConfirmClone"
-                            class="flex-1 py-5 bg-[#1C1D2A] text-white font-black text-lg rounded-2xl hover:bg-slate-800 hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-slate-200">
-                        <span class="text-emerald-400" style="font-size:20px;"><Blazicon Svg="@Lucide.Check" /></span>
-                        Confirm Sync
+                            disabled="@(_selectedProjectId == null || _isCloning || _userProjects.Count == 0)"
+                            class="flex-1 py-5 bg-[#1C1D2A] text-white font-black text-lg rounded-2xl hover:bg-slate-800 hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100">
+                        @if (_isCloning)
+                        {
+                            <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <span class="text-sm">Cloning...</span>
+                        }
+                        else
+                        {
+                            <span class="text-emerald-400" style="font-size:20px;"><Blazicon Svg="@Lucide.Check" /></span>
+                            <span class="text-sm">Confirm Sync</span>
+                        }
                     </button>
-                    <button @onclick="() => stagedItem = null"
+                    <button @onclick="() => { stagedItem = null; _cloneMessage = null; _selectedProjectId = null; }"
                             class="px-8 py-5 border border-slate-100 text-slate-400 font-black text-sm rounded-2xl hover:bg-slate-50 transition-all">
                         Cancel
                     </button>
@@ -250,6 +294,14 @@
     private List<string> categories = new() { "All" };
     private int totalClones;
     private int totalAuthors;
+    private readonly HashSet<int> _userStarredIds = new();
+
+    // Clone state
+    private List<(int Id, string Name)> _userProjects = new();
+    private int? _selectedProjectId = null;
+    private bool _isCloning = false;
+    private string? _cloneMessage = null;
+    private bool _cloneSuccess = false;
 
     private IEnumerable<TemplateViewModel> FilteredItems => allTemplates.Where(item =>
     {
@@ -270,6 +322,7 @@
             .Include(t => t.Category)
             .Include(t => t.Tags).ThenInclude(tt => tt.Tag)
             .Include(t => t.TestCaseTemplates)
+            .Include(t => t.Reviews)
             .AsNoTracking()
             .ToListAsync();
 
@@ -280,11 +333,11 @@
             Description = t.Description ?? "",
             AuthorName = t.User?.UserName ?? "Unknown",
             CategoryName = t.Category?.Name ?? "Uncategorized",
-            Stars = t.TotalStarred > 0 ? Math.Round((double)t.TotalStarred / Math.Max(t.Reviews?.Count ?? 1, 1), 1) : 0,
+            Stars = t.TotalStarred,
             Clones = t.CloneCount,
             Views = t.ViewCount,
             CasesCount = t.TestCaseTemplates?.Count ?? 0,
-            IsVerified = t.CloneCount > 10 || t.TotalStarred > 5,
+            IsVerified = t.Reviews.Count(r => r.IsStarred) >= 3 && t.CloneCount >= 3,
             Tags = t.Tags?.Select(tt => tt.Tag?.TagName ?? "").Where(x => !string.IsNullOrEmpty(x)).ToList() ?? new()
         }).ToList();
 
@@ -301,38 +354,188 @@
         // Stats
         totalClones = templates.Sum(t => t.CloneCount);
         totalAuthors = templates.Select(t => t.UserId).Distinct().Count();
+
+        // Load user's starred template IDs
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var starredIds = await DbContext.TemplateReviews
+                .Where(r => r.UserId == userId && r.IsStarred)
+                .Select(r => r.TemplateId)
+                .ToListAsync();
+            _userStarredIds.UnionWith(starredIds);
+
+            _userProjects = await DbContext.ProjectTeamMembers
+                .Where(m => m.UserId == userId)
+                .Include(m => m.Project)
+                .Select(m => new { m.Project.Id, m.Project.Name })
+                .AsNoTracking()
+                .ToListAsync()
+                .ContinueWith(t => t.Result.Select(p => (p.Id, p.Name)).ToList());
+        }
     }
 
     private void OpenCloneModal(TemplateViewModel item)
     {
         stagedItem = item;
+        _selectedProjectId = null;
+        _cloneMessage = null;
+        _cloneSuccess = false;
     }
 
     private async Task ConfirmClone()
     {
-        if (stagedItem == null) return;
+        if (stagedItem == null || _selectedProjectId == null) return;
 
-        var template = await DbContext.TestSuiteTemplates.FindAsync(stagedItem.Id);
-        if (template != null)
+        _isCloning = true;
+        _cloneMessage = null;
+        StateHasChanged();
+
+        try
         {
-            template.CloneCount++;
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                _cloneMessage = "You must be logged in to clone a template.";
+                _cloneSuccess = false;
+                return;
+            }
+
+            // Load template with full test data
+            var templateSuite = await DbContext.TestSuiteTemplates
+                .Include(t => t.TestCaseTemplates)
+                    .ThenInclude(tc => tc.TestStepTemplates)
+                .FirstOrDefaultAsync(t => t.Id == stagedItem.Id);
+
+            if (templateSuite == null)
+            {
+                _cloneMessage = "Template not found.";
+                _cloneSuccess = false;
+                return;
+            }
+
+            // Tạo TestSuite thực trong project đích
+            var newSuite = new TestSuite
+            {
+                ProjectId = _selectedProjectId.Value,
+                Name = templateSuite.Name,
+                Description = templateSuite.Description,
+                SourceTemplateId = templateSuite.Id,
+                CreatedBy = userId,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            DbContext.TestSuites.Add(newSuite);
             await DbContext.SaveChangesAsync();
 
-            // Update local view
+            // Copy TestCases và TestSteps
+            foreach (var templateCase in templateSuite.TestCaseTemplates)
+            {
+                var newCase = new TestCase
+                {
+                    SuiteId = newSuite.Id,
+                    Title = templateCase.Title,
+                    Priority = templateCase.Priority,
+                    Preconditions = templateCase.Preconditions,
+                    Postconditions = templateCase.Postconditions,
+                    CreatedBy = userId,
+                    CreatedAt = DateTime.UtcNow
+                };
+                DbContext.TestCases.Add(newCase);
+                await DbContext.SaveChangesAsync();
+
+                foreach (var templateStep in templateCase.TestStepTemplates)
+                {
+                    DbContext.TestSteps.Add(new TestStep
+                    {
+                        TestCaseId = newCase.Id,
+                        StepNumber = templateStep.StepNumber,
+                        Action = templateStep.Action,
+                        TestData = templateStep.TestData,
+                        ExpectedResult = templateStep.ExpectedResult
+                    });
+                }
+            }
+
+            // Tăng CloneCount
+            templateSuite.CloneCount++;
+            await DbContext.SaveChangesAsync();
+
+            // Cập nhật view
             var local = allTemplates.FirstOrDefault(t => t.Id == stagedItem.Id);
-            if (local != null) local.Clones = template.CloneCount;
+            if (local != null) local.Clones = templateSuite.CloneCount;
+            totalClones++;
+
+            var projectName = _userProjects.FirstOrDefault(p => p.Id == _selectedProjectId.Value).Name ?? "selected project";
+            _cloneMessage = $"✓ Cloned successfully into \"{projectName}\" with {templateSuite.TestCaseTemplates.Count} test case(s).";
+            _cloneSuccess = true;
+
+            // Đóng modal sau 2 giây
+            await Task.Delay(2000);
+            stagedItem = null;
+            _selectedProjectId = null;
+            _cloneMessage = null;
         }
-        stagedItem = null;
+        catch (Exception ex)
+        {
+            _cloneMessage = $"Clone failed: {ex.Message}";
+            _cloneSuccess = false;
+        }
+        finally
+        {
+            _isCloning = false;
+            StateHasChanged();
+        }
     }
 
     private async Task CopyShareLink(int itemId)
     {
-        var shareLink = $"{Navigation.BaseUri}marketplace/template/{itemId}";
+        var shareLink = $"{Navigation.BaseUri}marketplace?template={itemId}";
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", shareLink);
         copiedId = itemId;
         StateHasChanged();
         await Task.Delay(2000);
         copiedId = null;
+        StateHasChanged();
+    }
+
+    private async Task ToggleStar(TemplateViewModel item)
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId)) return;
+
+        var template = await DbContext.TestSuiteTemplates.FindAsync(item.Id);
+        if (template == null) return;
+
+        var review = await DbContext.TemplateReviews
+            .FirstOrDefaultAsync(r => r.TemplateId == item.Id && r.UserId == userId);
+
+        if (review == null)
+        {
+            DbContext.TemplateReviews.Add(new TemplateReview { TemplateId = item.Id, UserId = userId, IsStarred = true });
+            template.TotalStarred++;
+            _userStarredIds.Add(item.Id);
+            item.Stars++;
+        }
+        else if (review.IsStarred)
+        {
+            review.IsStarred = false;
+            template.TotalStarred = Math.Max(0, template.TotalStarred - 1);
+            _userStarredIds.Remove(item.Id);
+            item.Stars = Math.Max(0, item.Stars - 1);
+        }
+        else
+        {
+            review.IsStarred = true;
+            template.TotalStarred++;
+            _userStarredIds.Add(item.Id);
+            item.Stars++;
+        }
+
+        await DbContext.SaveChangesAsync();
         StateHasChanged();
     }
 
@@ -352,7 +555,7 @@
         public string Description { get; set; } = "";
         public string AuthorName { get; set; } = "";
         public string CategoryName { get; set; } = "";
-        public double Stars { get; set; }
+        public int Stars { get; set; }
         public int Clones { get; set; }
         public int Views { get; set; }
         public int CasesCount { get; set; }

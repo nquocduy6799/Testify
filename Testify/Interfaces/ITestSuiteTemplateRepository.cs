@@ -12,6 +12,10 @@ namespace Testify.Interfaces
         Task<TestSuiteTemplateResponse> CreateTestSuiteTemplateAsync(CreateTestSuiteTemplateRequest request, string userName, string userId);
         Task<bool> UpdateTestSuiteTemplateAsync(int id, UpdateTestSuiteTemplateRequest request, string userName);
         Task<bool> DeleteTestSuiteTemplateAsync(int id, string userName);
+        Task<bool> IncrementViewCountAsync(int id);
+        Task<bool> IncrementCloneCountAsync(int id);
+        Task<(int deleted, int failed)> BulkDeleteAsync(List<int> ids, string userName);
+        Task<(int moved, int failed)> BulkMoveAsync(List<int> ids, int? targetFolderId, string userName);
     }
 }
 

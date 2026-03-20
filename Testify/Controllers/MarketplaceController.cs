@@ -31,20 +31,25 @@ namespace Testify.Controllers
                 .Include(t => t.Category)
                 .Include(t => t.Tags)
                     .ThenInclude(tt => tt.Tag)
+                .Include(t => t.Reviews)
+                .Include(t => t.TestCaseTemplates)
                 .Select(t => new TemplateDto
                 {
                     Id = t.Id,
                     Title = t.Name,
                     Description = t.Description ?? string.Empty,
                     AuthorName = t.User.UserName ?? "Unknown",
-                    AuthorAvatar = "", // TODO: Add avatar URL from User
+                    AuthorAvatar = "",
                     CategoryName = t.Category != null ? t.Category.Name ?? "Uncategorized" : "Uncategorized",
                     Stars = t.TotalStarred,
                     Clones = t.CloneCount,
                     Views = t.ViewCount,
-                    PriceType = "Free", // TODO: Add pricing logic when needed
+                    CasesCount = t.TestCaseTemplates.Count,
+                    IsVerified = t.Reviews.Count(r => r.IsStarred) >= 3 && t.CloneCount >= 3,
+                    IsStarredByUser = userId != null && t.Reviews.Any(r => r.UserId == userId && r.IsStarred),
+                    PriceType = "Free",
                     PriceAmount = 0,
-                    IsOwned = false, // TODO: Check user purchases
+                    IsOwned = false,
                     Tags = t.Tags.Select(tt => tt.Tag.TagName ?? string.Empty).ToList(),
                     UpdatedAt = t.UpdatedAt ?? t.CreatedAt
                 })
@@ -57,11 +62,15 @@ namespace Testify.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<TemplateDto>> GetTemplate(int id)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var template = await _context.TestSuiteTemplates
                 .Include(t => t.User)
                 .Include(t => t.Category)
                 .Include(t => t.Tags)
                     .ThenInclude(tt => tt.Tag)
+                .Include(t => t.Reviews)
+                .Include(t => t.TestCaseTemplates)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (template == null) return NotFound();
@@ -80,6 +89,9 @@ namespace Testify.Controllers
                 Stars = template.TotalStarred,
                 Clones = template.CloneCount,
                 Views = template.ViewCount,
+                CasesCount = template.TestCaseTemplates?.Count ?? 0,
+                IsVerified = template.Reviews.Count(r => r.IsStarred) >= 3 && template.CloneCount >= 3,
+                IsStarredByUser = userId != null && template.Reviews.Any(r => r.UserId == userId && r.IsStarred),
                 Tags = template.Tags.Select(tt => tt.Tag.TagName ?? string.Empty).ToList(),
                 UpdatedAt = template.UpdatedAt ?? template.CreatedAt
             };
@@ -179,12 +191,36 @@ namespace Testify.Controllers
             var template = await _context.TestSuiteTemplates.FindAsync(id);
             if (template == null) return NotFound();
 
-            // TODO: Implement UserTemplateStars table for proper star tracking
-            // For now, just increment the count
-            template.TotalStarred++;
-            await _context.SaveChangesAsync();
+            var review = await _context.TemplateReviews
+                .FirstOrDefaultAsync(r => r.TemplateId == id && r.UserId == userId);
 
-            return Ok(new { Stars = template.TotalStarred });
+            bool isNowStarred;
+            if (review == null)
+            {
+                _context.TemplateReviews.Add(new TemplateReview
+                {
+                    TemplateId = id,
+                    UserId = userId,
+                    IsStarred = true
+                });
+                template.TotalStarred++;
+                isNowStarred = true;
+            }
+            else if (review.IsStarred)
+            {
+                review.IsStarred = false;
+                template.TotalStarred = Math.Max(0, template.TotalStarred - 1);
+                isNowStarred = false;
+            }
+            else
+            {
+                review.IsStarred = true;
+                template.TotalStarred++;
+                isNowStarred = true;
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { Stars = template.TotalStarred, IsStarred = isNowStarred });
         }
 
         // ============ ADMIN TEMPLATE CRUD ============

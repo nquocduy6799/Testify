@@ -1,3 +1,4 @@
+
 @page "/admin/marketplace"
 @using Blazicons
 @using Microsoft.AspNetCore.Authorization
@@ -28,7 +29,7 @@
                 Browse, sync, and deploy industry-standard test architectures directly to your workspace. Powered by community intelligence.
             </p>
             <div class="flex gap-4">
-                <button class="bg-white text-[#1C1D2A] px-10 py-5 rounded-[24px] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-white/5">
+                <button @onclick='() => Navigation.NavigateTo("/test-templates/suite-library")' class="bg-white text-[#1C1D2A] px-10 py-5 rounded-[24px] font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-white/5">
                     Publish Your Logic
                 </button>
                 <div class="flex items-center gap-6 pl-6 border-l border-white/10">
@@ -99,7 +100,7 @@
                     <div class="flex justify-between items-start mb-8">
                         <div class="flex flex-wrap gap-2">
                             <span class="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-[9px] font-black uppercase tracking-widest">@item.CategoryName</span>
-                            @if (item.Stars > 5)
+                            @if (item.IsVerified)
                             {
                                 <div class="flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100">
                                     <span style="font-size:12px;"><Blazicon Svg="@Lucide.ShieldCheck" /></span>
@@ -144,7 +145,7 @@
                         </div>
 
                         <div class="flex gap-3">
-                            <button class="flex-1 py-5 bg-[#1C1D2A] text-white rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 shadow-slate-100">
+                            <button @onclick='() => Navigation.NavigateTo("/marketplace")' class="flex-1 py-5 bg-[#1C1D2A] text-white rounded-[24px] font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 shadow-slate-100">
                                 <span class="text-[#E85D3F]" style="font-size:16px;"><Blazicon Svg="@Lucide.Zap" /></span>
                                 Sync to Library
                             </button>
@@ -275,7 +276,7 @@
 
     private async Task CopyShareLink(int itemId)
     {
-        var shareLink = $"{Navigation.BaseUri}marketplace/template/{itemId}";
+        var shareLink = $"{Navigation.BaseUri}marketplace?template={itemId}";
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", shareLink);
         copiedId = itemId;
         StateHasChanged();
