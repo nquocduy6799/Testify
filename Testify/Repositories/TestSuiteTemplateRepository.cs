@@ -20,7 +20,10 @@ namespace Testify.Repositories
         {
             var templates = await _context.TestSuiteTemplates
                 .Include(t => t.TestCaseTemplates)
-                .ThenInclude(tc => tc.TestStepTemplates)
+                    .ThenInclude(tc => tc.TestStepTemplates)
+                .Include(t => t.Category)
+                .Include(t => t.Tags)
+                    .ThenInclude(tt => tt.Tag)
                 .Where(t => !t.IsDeleted)
                 .ToListAsync();
 
@@ -32,6 +35,9 @@ namespace Testify.Repositories
             var templates = await _context.TestSuiteTemplates
                 .Include(t => t.TestCaseTemplates)
                     .ThenInclude(tc => tc.TestStepTemplates)
+                .Include(t => t.Category)
+                .Include(t => t.Tags)
+                    .ThenInclude(tt => tt.Tag)
                 .Where(t => !t.IsDeleted && (t.IsPublic || t.UserId == userId))
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
@@ -43,7 +49,10 @@ namespace Testify.Repositories
         {
             var template = await _context.TestSuiteTemplates
                 .Include(t => t.TestCaseTemplates)
-                .ThenInclude(tc => tc.TestStepTemplates)
+                    .ThenInclude(tc => tc.TestStepTemplates)
+                .Include(t => t.Category)
+                .Include(t => t.Tags)
+                    .ThenInclude(tt => tt.Tag)
                 .FirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted);
 
             return template != null ? MapToResponse(template) : null;
@@ -56,6 +65,8 @@ namespace Testify.Repositories
                 Name = request.Name,
                 Description = request.Description,
                 FolderId = request.FolderId,
+                CategoryId = request.CategoryId,
+                IsPublic = request.IsPublic,
                 UserId = userId,
                 TestCaseTemplates = request.TestCaseTemplates
                     .Select(MapToEntity)
@@ -67,7 +78,27 @@ namespace Testify.Repositories
             _context.TestSuiteTemplates.Add(template);
             await _context.SaveChangesAsync();
 
-            return MapToResponse(template);
+            foreach (var tagId in request.TagIds)
+            {
+                _context.TestSuiteTemplateTags.Add(new TestSuiteTemplateTag
+                {
+                    TemplateId = template.Id,
+                    TagId = tagId
+                });
+            }
+
+            if (request.TagIds.Count > 0)
+                await _context.SaveChangesAsync();
+
+            var savedTemplate = await _context.TestSuiteTemplates
+                .Include(t => t.TestCaseTemplates)
+                    .ThenInclude(tc => tc.TestStepTemplates)
+                .Include(t => t.Category)
+                .Include(t => t.Tags)
+                    .ThenInclude(tt => tt.Tag)
+                .FirstAsync(t => t.Id == template.Id);
+
+            return MapToResponse(savedTemplate);
         }
 
         public async Task<bool> UpdateTestSuiteTemplateAsync(int id, UpdateTestSuiteTemplateRequest request, string userName)
@@ -75,6 +106,7 @@ namespace Testify.Repositories
             var template = await _context.TestSuiteTemplates
                 .Include(t => t.TestCaseTemplates)
                 .ThenInclude(tc => tc.TestStepTemplates)
+                .Include(t => t.Tags)
                 .FirstOrDefaultAsync(t => t.Id == id && !t.IsDeleted);
 
             if (template == null)
@@ -83,6 +115,8 @@ namespace Testify.Repositories
             template.Name = request.Name;
             template.Description = request.Description;
             template.FolderId = request.FolderId;
+            template.CategoryId = request.CategoryId;
+            template.IsPublic = request.IsPublic;
             template.MarkAsUpdated(userName);
 
             var existingSteps = template.TestCaseTemplates
@@ -98,6 +132,16 @@ namespace Testify.Repositories
             template.TestCaseTemplates = request.TestCaseTemplates
                 .Select(MapToEntity)
                 .ToList();
+
+            _context.TestSuiteTemplateTags.RemoveRange(template.Tags);
+            foreach (var tagId in request.TagIds)
+            {
+                _context.TestSuiteTemplateTags.Add(new TestSuiteTemplateTag
+                {
+                    TemplateId = template.Id,
+                    TagId = tagId
+                });
+            }
 
             try
             {
@@ -125,6 +169,50 @@ namespace Testify.Repositories
             return true;
         }
 
+        public async Task<bool> IncrementViewCountAsync(int id)
+        {
+            var template = await _context.TestSuiteTemplates.FindAsync(id);
+            if (template == null || template.IsDeleted) return false;
+            template.ViewCount++;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> IncrementCloneCountAsync(int id)
+        {
+            var template = await _context.TestSuiteTemplates.FindAsync(id);
+            if (template == null || template.IsDeleted) return false;
+            template.CloneCount++;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<(int deleted, int failed)> BulkDeleteAsync(List<int> ids, string userName)
+        {
+            int deleted = 0, failed = 0;
+            foreach (var id in ids)
+            {
+                var ok = await DeleteTestSuiteTemplateAsync(id, userName);
+                if (ok) deleted++; else failed++;
+            }
+            return (deleted, failed);
+        }
+
+        public async Task<(int moved, int failed)> BulkMoveAsync(List<int> ids, int? targetFolderId, string userName)
+        {
+            int moved = 0, failed = 0;
+            foreach (var id in ids)
+            {
+                var template = await _context.TestSuiteTemplates.FindAsync(id);
+                if (template == null || template.IsDeleted) { failed++; continue; }
+                template.FolderId = targetFolderId;
+                template.MarkAsUpdated(userName);
+                moved++;
+            }
+            await _context.SaveChangesAsync();
+            return (moved, failed);
+        }
+
         private async Task<bool> TestSuiteTemplateExistsAsync(int id)
         {
             return await _context.TestSuiteTemplates.AnyAsync(t => t.Id == id && !t.IsDeleted);
@@ -136,16 +224,28 @@ namespace Testify.Repositories
             {
                 Id = template.Id,
                 FolderId = template.FolderId,
+                CategoryId = template.CategoryId,
                 Name = template.Name,
                 Description = template.Description,
                 IsPublic = template.IsPublic,
                 CloneCount = template.CloneCount,
                 ViewCount = template.ViewCount,
                 TotalStarred = template.TotalStarred,
+                ShareCode = template.ShareCode,
                 CreatedAt = template.CreatedAt,
                 CreatedBy = template.CreatedBy,
                 UpdatedAt = template.UpdatedAt,
                 UpdatedBy = template.UpdatedBy,
+                Category = template.Category != null ? new Testify.Shared.DTOs.Categories.CategoryResponse
+                {
+                    Id = template.Category.Id,
+                    Name = template.Category.Name ?? string.Empty
+                } : null,
+                Tags = template.Tags.Select(tt => new Testify.Shared.DTOs.Tags.TagResponse
+                {
+                    Id = tt.Tag.Id,
+                    TagName = tt.Tag.TagName ?? string.Empty
+                }).ToList(),
                 TestCaseTemplates = template.TestCaseTemplates.Select(tc => new TestCaseTemplateResponse
                 {
                     Id = tc.Id,

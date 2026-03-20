@@ -653,6 +653,8 @@
                        OnClose="CloseSuiteForm"
                        AvailableFolders="_folders"
                        InitialFolderId="_selectedFolderId"
+                       AvailableCategories="_categories"
+                       AvailableTags="_tags"
                        Type="Library" />
     }
 
@@ -663,6 +665,8 @@
                        OnClose="CloseEditForm"
                        AvailableFolders="_folders"
                        InitialFolderId="_editingSuite.FolderId"
+                       AvailableCategories="_categories"
+                       AvailableTags="_tags"
                        ExistingSuite="_editingSuite"
                        Type="Library" />
     }
@@ -929,6 +933,28 @@
     {
         await LoadDataAsync();
         await LoadStarredTemplatesAsync();
+
+        var query = new Uri(Navigation.Uri).Query.TrimStart('?');
+        var queryParams = query.Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('=', 2))
+            .Where(p => p.Length == 2)
+            .ToDictionary(p => Uri.UnescapeDataString(p[0]), p => Uri.UnescapeDataString(p[1]));
+
+        if (queryParams.TryGetValue("editId", out var editIdStr) && int.TryParse(editIdStr, out var editId))
+        {
+            var suite = _suites.FirstOrDefault(s => s.Id == editId);
+            if (suite != null)
+            {
+                _editingSuite = suite;
+                _isEditFormOpen = true;
+            }
+        }
+        else if (queryParams.TryGetValue("cloneId", out var cloneIdStr) && int.TryParse(cloneIdStr, out var cloneId))
+        {
+            var suite = _suites.FirstOrDefault(s => s.Id == cloneId);
+            if (suite != null)
+                await CloneSuite(suite.Id);
+        }
     }
 
     private async Task LoadDataAsync()
@@ -1220,7 +1246,7 @@
             }
             else
             {
-                _errorMessage = "Unable to delete folder.";
+                _errorMessage = $"Cannot delete folder \"@_deleteFolderTargetName\". Please remove any subfolders first, then try again.";
             }
 
             CloseDeleteFolderConfirmation();
@@ -1324,6 +1350,9 @@
                 Name = request.Name,
                 Description = request.Description,
                 FolderId = request.FolderId,
+                IsPublic = request.IsPublic,
+                CategoryId = request.CategoryId,
+                TagIds = request.TagIds,
                 TestCaseTemplates = request.TestCaseTemplates.Select(tc => new UpdateTestCaseTemplateRequest
                 {
                     Title = tc.Title,
@@ -1489,8 +1518,12 @@
     private string GetShareLink()
     {
         if (!_shareTargetId.HasValue) return string.Empty;
+        var suite = _suites.FirstOrDefault(s => s.Id == _shareTargetId.Value);
         var baseUrl = Navigation.BaseUri.TrimEnd('/');
-        return $"{baseUrl}/test-templates/suite-library/{_shareTargetId}";
+        // If the suite is public, link to Marketplace; otherwise link to the library view
+        if (suite?.IsPublic == true)
+            return $"{baseUrl}/marketplace?template={_shareTargetId}";
+        return $"{baseUrl}/test-templates/suite-library?highlight={_shareTargetId}";
     }
 
     private async Task CopyShareLink()
@@ -1498,18 +1531,10 @@
         try
         {
             var link = GetShareLink();
-            var success = await JSRuntime.InvokeAsync<bool>("clipboardHelper.copyText", link);
-            
-            if (success)
-            {
-                _shareLinkCopied = true;
-                await Task.Delay(2000);
-                _shareLinkCopied = false;
-            }
-            else
-            {
-                _errorMessage = "Unable to copy link to clipboard";
-            }
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", link);
+            _shareLinkCopied = true;
+            await Task.Delay(2000);
+            _shareLinkCopied = false;
         }
         catch (Exception ex)
         {
@@ -1721,7 +1746,8 @@
             });
 
             var fileName = $"test-templates-{DateTime.Now:yyyy-MM-dd-HHmmss}.json";
-            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/json", json);
+            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+            await JSRuntime.InvokeVoidAsync("downloadFileFromBytes", fileName, "application/json", bytes);
         }
         catch (Exception ex)
         {

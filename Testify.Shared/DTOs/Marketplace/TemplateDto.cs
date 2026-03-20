@@ -19,6 +19,10 @@ namespace Testify.Shared.DTOs.Marketplace
         public decimal PriceAmount { get; set; } = 0;
         public bool IsOwned { get; set; } = false; // User đã mua/tải chưa?
 
+        public bool IsVerified { get; set; } = false;
+        public bool IsStarredByUser { get; set; } = false;
+        public int CasesCount { get; set; } = 0;
+
         public List<string> Tags { get; set; } = new();
         public DateTime UpdatedAt { get; set; }
     }

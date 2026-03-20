@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Testify.Interfaces;
 using Testify.Shared.DTOs.TestTemplates;
 
@@ -6,7 +7,7 @@ namespace Testify.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize]
+    [Authorize]
     public class TestSuiteTemplatesController : ControllerBase
     {
         private readonly ITestSuiteTemplateRepository _testSuiteTemplateRepository;
@@ -90,5 +91,51 @@ namespace Testify.Controllers
 
             return NoContent();
         }
+
+        // POST: api/TestSuiteTemplates/{id}/view
+        [HttpPost("{id}/view")]
+        public async Task<IActionResult> IncrementViewCount(int id)
+        {
+            await _testSuiteTemplateRepository.IncrementViewCountAsync(id);
+            return Ok();
+        }
+
+        // POST: api/TestSuiteTemplates/{id}/clone
+        [HttpPost("{id}/clone")]
+        public async Task<IActionResult> IncrementCloneCount(int id)
+        {
+            var ok = await _testSuiteTemplateRepository.IncrementCloneCountAsync(id);
+            if (!ok) return NotFound();
+            return Ok();
+        }
+
+        // POST: api/TestSuiteTemplates/bulk-delete
+        [HttpPost("bulk-delete")]
+        public async Task<IActionResult> BulkDelete([FromBody] BulkIdsRequest request)
+        {
+            var userName = _currentUserRepository.UserName ?? "System";
+            var (deleted, failed) = await _testSuiteTemplateRepository.BulkDeleteAsync(request.TemplateIds, userName);
+            return Ok(new { Deleted = deleted, Failed = failed });
+        }
+
+        // POST: api/TestSuiteTemplates/bulk-move
+        [HttpPost("bulk-move")]
+        public async Task<IActionResult> BulkMove([FromBody] BulkMoveRequest request)
+        {
+            var userName = _currentUserRepository.UserName ?? "System";
+            var (moved, failed) = await _testSuiteTemplateRepository.BulkMoveAsync(request.TemplateIds, request.TargetFolderId, userName);
+            return Ok(new { Moved = moved, Failed = failed });
+        }
+    }
+
+    public class BulkIdsRequest
+    {
+        public List<int> TemplateIds { get; set; } = new();
+    }
+
+    public class BulkMoveRequest
+    {
+        public List<int> TemplateIds { get; set; } = new();
+        public int? TargetFolderId { get; set; }
     }
 }

@@ -82,7 +82,8 @@ else if (_suite is not null)
                     </svg>
                 </button>
                 <button 
-                    class="px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200">
+                    @onclick="OnCloneToRun"
+                    class="px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 bg-[#7E96E1] text-white hover:bg-[#6b84d4] hover:shadow-md cursor-pointer border border-[#7E96E1]">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z" />
                     </svg>
@@ -520,10 +521,12 @@ else if (_suite is not null)
 
     private void OnEditSuite()
     {
+        Navigation.NavigateTo($"/test-templates/suite-library?editId={TestSuiteId}");
+    }
 
-        // TODO: Implement edit suite functionality
-		Navigation.NavigateTo($"/test-templates/suite-library/{TestSuiteId}/edit");
-		
+    private void OnCloneToRun()
+    {
+        Navigation.NavigateTo($"/test-templates/suite-library?cloneId={TestSuiteId}");
     }
 
     private void OnAddTestCase()
