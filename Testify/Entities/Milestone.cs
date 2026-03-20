@@ -27,6 +27,7 @@ namespace Testify.Entities
         public virtual Project Project { get; set; } = null!;
         public virtual ICollection<KanbanTask> KanbanTasks { get; set; } = new List<KanbanTask>();
         public virtual ICollection<TestPlan> TestPlans { get; set; } = new List<TestPlan>();
+        public virtual ICollection<PrintBacklog> PrintBacklogs { get; set; } = new List<PrintBacklog>();
 
         public bool IsValidDateRange()
         {

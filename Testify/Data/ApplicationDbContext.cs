@@ -17,6 +17,11 @@ namespace Testify.Data
 
         public DbSet<KanbanTask> KanbanTasks { get; set; }
 
+        // Backlogs
+        public DbSet<ProductBacklogItem> ProductBacklogItems { get; set; }
+        public DbSet<PrintBacklog> PrintBacklogs { get; set; }
+        public DbSet<PrintBacklogItem> PrintBacklogItems { get; set; }
+
         // Templates
         public DbSet<TemplateCategory> TemplateCategories { get; set; }
         public DbSet<TemplateFolder> TemplateFolders { get; set; }
@@ -182,6 +187,19 @@ namespace Testify.Data
                 .WithMany()
                 .HasForeignKey(c => c.RoomId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Backlogs - prevent multiple cascade paths
+            builder.Entity<PrintBacklogItem>()
+                .HasOne(pbi => pbi.ProductBacklogItem)
+                .WithMany(pb => pb.PrintBacklogItems)
+                .HasForeignKey(pbi => pbi.ProductBacklogItemId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<PrintBacklogItem>()
+                .HasOne(pbi => pbi.Assignee)
+                .WithMany()
+                .HasForeignKey(pbi => pbi.AssigneeId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

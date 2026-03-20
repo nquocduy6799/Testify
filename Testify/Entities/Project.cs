@@ -24,5 +24,6 @@ namespace Testify.Entities
         public virtual ICollection<TestSuite> TestSuites { get; set; } = new List<TestSuite>();
         public virtual ICollection<TestPlan> TestPlans { get; set; } = new List<TestPlan>();
         public virtual ICollection<ChatRoom> ChatRooms { get; set; } = new List<ChatRoom>();
+        public virtual ICollection<ProductBacklogItem> ProductBacklogItems { get; set; } = new List<ProductBacklogItem>();
     }
 }
