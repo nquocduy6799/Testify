@@ -19,7 +19,9 @@ namespace Testify.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class KanbanTasksController(IKanbanTaskRepository kanbanTaskRepository) : ControllerBase
+    public class KanbanTasksController(
+        IKanbanTaskRepository kanbanTaskRepository,
+        ILogger<KanbanTasksController> logger) : ControllerBase
     {
         #region Kanban Tasks
 
@@ -69,8 +71,12 @@ namespace Testify.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult<KanbanTaskResponse>> GetTask(int id)
         {
-            var task = await kanbanTaskRepository.GetTaskByTaskIdAsync(id)
-                ?? throw new NotFoundException($"Kanban task with ID {id} was not found.");
+            var task = await kanbanTaskRepository.GetTaskByTaskIdAsync(id);
+            if (task is null)
+            {
+                logger.LogWarning("Kanban task {TaskId} was not found", id);
+                throw new NotFoundException($"Kanban task with ID {id} was not found.");
+            }
 
             return Ok(task);
         }
@@ -94,6 +100,8 @@ namespace Testify.Controllers
             var userName = User.Identity?.Name ?? "System";
 
             var task = await kanbanTaskRepository.CreateTaskAsync(request, userName, userId);
+
+            logger.LogInformation("Kanban task {TaskId} created by user {UserId}", task.Id, userId);
 
             return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
         }
@@ -122,7 +130,12 @@ namespace Testify.Controllers
             var updated = await kanbanTaskRepository.UpdateTaskAsync(id, request, userName, userId);
 
             if (!updated)
+            {
+                logger.LogWarning("Kanban task {TaskId} was not found for update", id);
                 throw new NotFoundException($"Kanban task with ID {id} was not found.");
+            }
+
+            logger.LogInformation("Kanban task {TaskId} updated successfully", id);
 
             return NoContent();
         }
@@ -142,10 +155,16 @@ namespace Testify.Controllers
         public async Task<IActionResult> DeleteTask(int id)
         {
             var userName = User.Identity?.Name ?? "System";
+
             var deleted = await kanbanTaskRepository.DeleteTaskAsync(id, userName);
 
             if (!deleted)
+            {
+                logger.LogWarning("Kanban task {TaskId} was not found for deletion", id);
                 throw new NotFoundException($"Kanban task with ID {id} was not found.");
+            }
+
+            logger.LogInformation("Kanban task {TaskId} deleted successfully", id);
 
             return NoContent();
         }
@@ -205,8 +224,12 @@ namespace Testify.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> ExportAuditTrailPdf(int id)
         {
-            var task = await kanbanTaskRepository.GetTaskByTaskIdAsync(id)
-                ?? throw new NotFoundException($"Kanban task with ID {id} was not found.");
+            var task = await kanbanTaskRepository.GetTaskByTaskIdAsync(id);
+            if (task is null)
+            {
+                logger.LogWarning("Kanban task {TaskId} was not found for PDF export", id);
+                throw new NotFoundException($"Kanban task with ID {id} was not found.");
+            }
 
             var activities = await kanbanTaskRepository.GetTaskActivityResponsesAsync(id);
 
@@ -214,6 +237,8 @@ namespace Testify.Controllers
 
             var document = new AuditTrailPdfDocument(task, activities);
             var pdfBytes = document.GeneratePdf();
+
+            logger.LogInformation("Audit trail PDF generated for Kanban task {TaskId} ({Bytes} bytes)", id, pdfBytes.Length);
 
             return File(pdfBytes, "application/pdf", $"audit-trail-TASK-{id}.pdf");
         }
