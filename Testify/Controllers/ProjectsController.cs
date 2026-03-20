@@ -12,172 +12,179 @@ namespace Testify.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class ProjectsController : ControllerBase
+    public class ProjectsController(
+        IProjectRepository projectRepository,
+        IHubContext<NotificationHub> hubContext) : ControllerBase
     {
-        private readonly IProjectRepository _projectRepository;
-        private readonly IHubContext<NotificationHub> _hubContext;
-
-        public ProjectsController(IProjectRepository projectRepository, IHubContext<NotificationHub> hubContext)
-        {
-            _projectRepository = projectRepository;
-            _hubContext = hubContext;
-        }
-
-        // GET: api/Projects
+        /// <summary>
+        /// Retrieves all projects that belong to the authenticated user.
+        /// </summary>
+        /// <returns>A list of projects associated with the current user.</returns>
+        /// <response code="200">Returns the list of user projects.</response>
+        /// <response code="401">User is not authenticated.</response>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ProjectResponse>>> GetProjects()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            var projects = await _projectRepository.GetUserProjectsAsync(userId);
+            var projects = await projectRepository.GetUserProjectsAsync(userId);
             return Ok(projects);
         }
 
-        // GET: api/Projects/5
+        /// <summary>
+        /// Retrieves a specific project by its ID.
+        /// </summary>
+        /// <param name="id">The ID of the project to retrieve.</param>
+        /// <returns>The project with the specified ID.</returns>
+        /// <response code="200">Returns the requested project.</response>
+        /// <response code="404">Project with the given ID was not found.</response>
         [HttpGet("{id}")]
         public async Task<ActionResult<ProjectResponse>> GetProject(int id)
         {
-            var project = await _projectRepository.GetProjectByIdAsync(id);
-
-            if (project == null)
-            {
-                return NotFound();
-            }
+            var project = await projectRepository.GetProjectByIdAsync(id)
+                ?? throw new NotFoundException($"Project with id {id} was not found.");
 
             return Ok(project);
         }
 
-        // PUT: api/Projects/5
+        /// <summary>
+        /// Updates an existing project.
+        /// </summary>
+        /// <param name="id">The ID of the project to update.</param>
+        /// <param name="request">The updated project data.</param>
+        /// <returns>No content if the update is successful.</returns>
+        /// <response code="204">Project updated successfully.</response>
+        /// <response code="404">Project with the given ID was not found.</response>
         [HttpPut("{id}")]
         public async Task<IActionResult> PutProject(int id, UpdateProjectRequest request)
         {
             var userName = User.Identity?.Name ?? "System";
-            var updated = await _projectRepository.UpdateProjectAsync(id, request, userName);
+            var updated = await projectRepository.UpdateProjectAsync(id, request, userName);
 
             if (!updated)
-            {
-                return NotFound();
-            }
+                throw new NotFoundException($"Project with id {id} was not found.");
 
             return NoContent();
         }
 
-        // POST: api/Projects
+        /// <summary>
+        /// Creates a new project for the authenticated user.
+        /// </summary>
+        /// <param name="request">The project creation data.</param>
+        /// <returns>The newly created project.</returns>
+        /// <response code="201">Project created successfully.</response>
+        /// <response code="401">User is not authenticated.</response>
         [HttpPost]
         public async Task<ActionResult<ProjectResponse>> PostProject(CreateProjectRequest request)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User is not authenticated.");
+
             var userName = User.Identity?.Name ?? "System";
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            var project = await _projectRepository.CreateProjectAsync(request, userId, userName);
+            var project = await projectRepository.CreateProjectAsync(request, userId, userName);
 
             return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
         }
 
-        // DELETE: api/Projects/5
+        /// <summary>
+        /// Deletes a project by its ID.
+        /// </summary>
+        /// <param name="id">The ID of the project to delete.</param>
+        /// <returns>No content if deletion is successful.</returns>
+        /// <response code="204">Project deleted successfully.</response>
+        /// <response code="404">Project with the given ID was not found.</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
             var userName = User.Identity?.Name ?? "System";
-            var deleted = await _projectRepository.DeleteProjectAsync(id, userName);
+            var deleted = await projectRepository.DeleteProjectAsync(id, userName);
 
             if (!deleted)
-            {
-                return NotFound();
-            }
+                throw new NotFoundException($"Project with id {id} was not found.");
 
             return NoContent();
         }
 
-        // GET: api/Projects/5/my-role
+        /// <summary>
+        /// Retrieves the authenticated user's role within a specific project.
+        /// </summary>
+        /// <param name="projectId">The ID of the project.</param>
+        /// <returns>The user's role in the project.</returns>
+        /// <response code="200">Returns the user's project role.</response>
+        /// <response code="401">User is not authenticated.</response>
         [HttpGet("{projectId}/my-role")]
         public async Task<ActionResult<ProjectRole?>> GetMyRoleInProject(int projectId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            var role = await _projectRepository.GetUserRoleInProjectAsync(projectId, userId);
-
+            var role = await projectRepository.GetUserRoleInProjectAsync(projectId, userId);
             return Ok(role);
         }
 
-
+        /// <summary>
+        /// Retrieves contextual information about the authenticated user's involvement in a project.
+        /// </summary>
+        /// <param name="projectId">The ID of the project.</param>
+        /// <returns>The user's project context.</returns>
+        /// <response code="200">Returns the project user context.</response>
+        /// <response code="404">Project context was not found.</response>
+        /// <response code="401">User is not authenticated.</response>
         [HttpGet("{projectId}/my-context")]
         public async Task<ActionResult<ProjectUserContext?>> GetProjectUserContext(int projectId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized();
-            }
-
-            var context = await _projectRepository.GetProjectUserContextAsync(projectId, userId);
-
-            if (context == null)
-            {
-                return NotFound();
-            }
+            var context = await projectRepository.GetProjectUserContextAsync(projectId, userId)
+                ?? throw new NotFoundException($"Project context for project {projectId} was not found.");
 
             return Ok(context);
         }
 
-
-        // GET: api/Projects/5/members
+        /// <summary>
+        /// Retrieves all members of a specific project.
+        /// </summary>
+        /// <param name="projectId">The ID of the project.</param>
+        /// <returns>A list of project members.</returns>
+        /// <response code="200">Returns the list of project members.</response>
         [HttpGet("{projectId}/members")]
         public async Task<ActionResult<IEnumerable<TeamMemberResponse>>> GetProjectMembers(int projectId)
         {
-            var members = await _projectRepository.GetProjectMembersAsync(projectId);
+            var members = await projectRepository.GetProjectMembersAsync(projectId);
             return Ok(members);
         }
 
-        // DELETE: api/Projects/5/members/{memberId}
+        /// <summary>
+        /// Removes a member from a project. Only Project Managers can perform this action.
+        /// </summary>
+        /// <param name="projectId">The ID of the project.</param>
+        /// <param name="memberId">The ID of the member to remove.</param>
+        /// <returns>A success message if the member is removed.</returns>
+        /// <response code="200">Member removed successfully.</response>
+        /// <response code="403">User is not authorized to remove members.</response>
+        /// <response code="404">Member was not found or cannot be removed.</response>
         [HttpDelete("{projectId}/members/{memberId}")]
         public async Task<IActionResult> RemoveMember(int projectId, int memberId)
         {
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? throw new UnauthorizedAccessException("User is not authenticated.");
 
-            if (string.IsNullOrEmpty(currentUserId))
-            {
-                return Unauthorized();
-            }
-
-            // Check if current user is PM
-            var currentUserRole = await _projectRepository.GetUserRoleInProjectAsync(projectId, currentUserId);
+            var currentUserRole = await projectRepository.GetUserRoleInProjectAsync(projectId, currentUserId);
             if (currentUserRole != ProjectRole.PM)
-            {
-                return StatusCode(403, new { message = "Only Project Managers can remove members" });
-            }
+                throw new ForbiddenException("Only Project Managers can remove members.");
 
-            // Get member info before removing
-            var members = await _projectRepository.GetProjectMembersAsync(projectId);
+            var members = await projectRepository.GetProjectMembersAsync(projectId);
             var memberToRemove = members.FirstOrDefault(m => m.Id == memberId);
-            
-            var removed = await _projectRepository.RemoveMemberAsync(projectId, memberId, currentUserId);
 
+            var removed = await projectRepository.RemoveMemberAsync(projectId, memberId, currentUserId);
             if (!removed)
-            {
-                return NotFound(new { message = "Member not found or cannot be removed" });
-            }
+                throw new NotFoundException($"Member with id {memberId} was not found or cannot be removed.");
 
-            // Broadcast team member removed via SignalR
             if (memberToRemove != null)
             {
-                await _hubContext.Clients.All.SendAsync("TeamMemberRemoved", projectId, memberToRemove.UserId);
+                await hubContext.Clients.All.SendAsync("TeamMemberRemoved", projectId, memberToRemove.UserId);
                 Console.WriteLine($"[ProjectsController] Broadcast TeamMemberRemoved - Project {projectId}, User {memberToRemove.UserId}");
             }
 

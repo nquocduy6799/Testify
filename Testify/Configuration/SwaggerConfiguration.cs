@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 namespace Testify.Configuration;
 
@@ -10,6 +11,11 @@ public static class SwaggerConfiguration
         services.AddSwaggerGen(options =>
         {
             options.CustomSchemaIds(type => type.FullName);
+
+            // Include XML comments generated from C# doc comments on controllers/actions.
+            var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+            options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
 
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
