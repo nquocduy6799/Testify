@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Testify.Data;
 
@@ -11,9 +12,11 @@ using Testify.Data;
 namespace Testify.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402125930_Update_20260402")]
+    partial class Update_20260402
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -739,139 +742,6 @@ namespace Testify.Migrations
                     b.HasIndex("TestedById");
 
                     b.ToTable("KanbanTasks");
-                });
-
-            modelBuilder.Entity("Testify.Entities.Meeting", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("EndedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("HostUserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("MaxDurationMinutes")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ProjectId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("StartedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("SummaryContent")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("SummaryGeneratedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HostUserId");
-
-                    b.HasIndex("ProjectId");
-
-                    b.ToTable("Meetings");
-                });
-
-            modelBuilder.Entity("Testify.Entities.MeetingParticipant", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("HasAttended")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("JoinedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("LeftAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("MeetingId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("MeetingId", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("MeetingParticipants");
-                });
-
-            modelBuilder.Entity("Testify.Entities.MeetingTranscript", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("MeetingId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MeetingId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("MeetingTranscripts");
                 });
 
             modelBuilder.Entity("Testify.Entities.Milestone", b =>
@@ -2387,63 +2257,6 @@ namespace Testify.Migrations
                     b.Navigation("TestedBy");
                 });
 
-            modelBuilder.Entity("Testify.Entities.Meeting", b =>
-                {
-                    b.HasOne("Testify.Data.ApplicationUser", "Host")
-                        .WithMany()
-                        .HasForeignKey("HostUserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("Testify.Entities.Project", "Project")
-                        .WithMany()
-                        .HasForeignKey("ProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Host");
-
-                    b.Navigation("Project");
-                });
-
-            modelBuilder.Entity("Testify.Entities.MeetingParticipant", b =>
-                {
-                    b.HasOne("Testify.Entities.Meeting", "Meeting")
-                        .WithMany("Participants")
-                        .HasForeignKey("MeetingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Testify.Data.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Meeting");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Testify.Entities.MeetingTranscript", b =>
-                {
-                    b.HasOne("Testify.Entities.Meeting", "Meeting")
-                        .WithMany("Transcripts")
-                        .HasForeignKey("MeetingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Testify.Data.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Meeting");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Testify.Entities.Milestone", b =>
                 {
                     b.HasOne("Testify.Entities.Project", "Project")
@@ -2876,13 +2689,6 @@ namespace Testify.Migrations
                     b.Navigation("LinkedRunSteps");
 
                     b.Navigation("TestPlans");
-                });
-
-            modelBuilder.Entity("Testify.Entities.Meeting", b =>
-                {
-                    b.Navigation("Participants");
-
-                    b.Navigation("Transcripts");
                 });
 
             modelBuilder.Entity("Testify.Entities.Milestone", b =>

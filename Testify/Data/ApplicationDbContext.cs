@@ -62,6 +62,11 @@ namespace Testify.Data
         // Call System
         public DbSet<CallSession> CallSessions { get; set; }
 
+        // Meeting System
+        public DbSet<Meeting> Meetings { get; set; }
+        public DbSet<MeetingParticipant> MeetingParticipants { get; set; }
+        public DbSet<MeetingTranscript> MeetingTranscripts { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -193,12 +198,41 @@ namespace Testify.Data
                 .HasOne(pbi => pbi.ProductBacklogItem)
                 .WithMany(pb => pb.PrintBacklogItems)
                 .HasForeignKey(pbi => pbi.ProductBacklogItemId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<PrintBacklogItem>()
                 .HasOne(pbi => pbi.Assignee)
                 .WithMany()
                 .HasForeignKey(pbi => pbi.AssigneeId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Meeting System - prevent cascade delete conflicts
+            builder.Entity<Meeting>()
+                .HasOne(m => m.Host)
+                .WithMany()
+                .HasForeignKey(m => m.HostUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Meeting>()
+                .HasOne(m => m.Project)
+                .WithMany()
+                .HasForeignKey(m => m.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MeetingParticipant>()
+                .HasOne(mp => mp.User)
+                .WithMany()
+                .HasForeignKey(mp => mp.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<MeetingParticipant>()
+                .HasIndex(mp => new { mp.MeetingId, mp.UserId })
+                .IsUnique();
+
+            builder.Entity<MeetingTranscript>()
+                .HasOne(mt => mt.User)
+                .WithMany()
+                .HasForeignKey(mt => mt.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }
