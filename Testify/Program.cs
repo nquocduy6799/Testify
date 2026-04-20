@@ -6,6 +6,7 @@ using Testify.Client.Features.Chat.Services;
 using Testify.Client.Features.Invitations.Services;
 using Testify.Client.Features.Kanban.Services;
 using Testify.Client.Features.Marketplace.Services;
+using Testify.Client.Features.Meetings.Services;
 using Testify.Client.Features.Milestones.Services;
 using Testify.Client.Features.Notifications.Services;
 using Testify.Client.Features.Projects.Services;
@@ -65,7 +66,10 @@ builder
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+// Email service
+builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.SectionName));
+builder.Services.AddSingleton<IAppEmailService, Testify.Services.SmtpEmailService>();
+builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentitySmtpEmailSender>();
 
 // Add HttpClient for server-side rendering
 builder.Services.AddScoped(sp =>
@@ -98,8 +102,10 @@ builder.Services.AddScoped<ITestRunStepAttachmentRepository, TestRunStepAttachme
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<ITemplateReviewRepository, TemplateReviewRepository>();
+builder.Services.AddScoped<IMeetingRepository, MeetingRepository>();
+builder.Services.AddScoped<IMeetingNotificationService, Testify.Services.MeetingNotificationService>();
 
-// Gemini AI configuration
+// Gemini AI configuration (test case generation only)
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.AddHttpClient<Testify.Interfaces.IAiTestCaseService, GeminiTestCaseService>();
 
@@ -136,8 +142,10 @@ builder.Services.AddScoped<Testify.Client.Interfaces.IUserService, Testify.Servi
 builder.Services.AddScoped<ITemplateReviewService, TemplateReviewService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<IMeetingService, MeetingService>();
 
 builder.Services.AddScoped<ChatHubService>();
+builder.Services.AddScoped<MeetingHubService>();
 builder.Services.AddScoped<ModalService>();
 
 // Add controllers for API endpoints
@@ -236,6 +244,7 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapHub<CallHub>("/hubs/call");
+app.MapHub<MeetingHub>("/hubs/meeting");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()

@@ -13,6 +13,7 @@ using Testify.Client.Shared.Services;
 using Testify.Client.Features.Chat.Services;
 using Testify.Client.Features.Marketplace.Services;
 using Testify.Client.Features.Account.Services;
+using Testify.Client.Features.Meetings.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -48,6 +49,7 @@ builder.Services.AddScoped<IMarketplaceService, MarketplaceService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITemplateReviewService, TemplateReviewService>();
+builder.Services.AddScoped<IMeetingService, MeetingService>();
 
 
 // Register SignalR for real-time notifications
@@ -55,6 +57,7 @@ builder.Services.AddScoped<NotificationHubService>();
 builder.Services.AddScoped<ChatHubService>();
 builder.Services.AddScoped<CallHubService>();
 builder.Services.AddScoped<WebRtcService>();
+builder.Services.AddScoped<MeetingHubService>();
 
 builder.Services.AddScoped<ModalService>();
 

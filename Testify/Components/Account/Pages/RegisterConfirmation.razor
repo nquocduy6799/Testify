@@ -55,9 +55,10 @@ else
             HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
             statusMessage = "Error finding user for unspecified email";
         }
-        else if (EmailSender is IdentityNoOpEmailSender)
+        else if (EmailSender is Components.Account.IdentitySmtpEmailSender)
         {
-            // Once you add a real email sender, you should remove this code that lets you confirm the account
+            // Real email sender is configured - email has been sent
+            // For development, also show the link in UI
             var userId = await UserManager.GetUserIdAsync(user);
             var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
             code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));

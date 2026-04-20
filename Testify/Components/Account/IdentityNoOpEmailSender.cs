@@ -1,21 +1,28 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Testify.Data;
+using Testify.Interfaces;
 
 namespace Testify.Components.Account
 {
-    // Remove the "else if (EmailSender is IdentityNoOpEmailSender)" block from RegisterConfirmation.razor after updating with a real implementation.
-    internal sealed class IdentityNoOpEmailSender : IEmailSender<ApplicationUser>
+    internal sealed class IdentitySmtpEmailSender : IEmailSender<ApplicationUser>
     {
-        private readonly IEmailSender emailSender = new NoOpEmailSender();
+        private readonly IAppEmailService _emailService;
+
+        public IdentitySmtpEmailSender(IAppEmailService emailService)
+        {
+            _emailService = emailService;
+        }
 
         public Task SendConfirmationLinkAsync(ApplicationUser user, string email, string confirmationLink) =>
-            emailSender.SendEmailAsync(email, "Confirm your email", $"Please confirm your account by <a href='{confirmationLink}'>clicking here</a>.");
+            _emailService.SendEmailAsync(email, "Confirm your email",
+                $"<h2>Welcome to Testify!</h2><p>Please confirm your account by <a href='{confirmationLink}'>clicking here</a>.</p>");
 
         public Task SendPasswordResetLinkAsync(ApplicationUser user, string email, string resetLink) =>
-            emailSender.SendEmailAsync(email, "Reset your password", $"Please reset your password by <a href='{resetLink}'>clicking here</a>.");
+            _emailService.SendEmailAsync(email, "Reset your password",
+                $"<h2>Password Reset</h2><p>Please reset your password by <a href='{resetLink}'>clicking here</a>.</p>");
 
         public Task SendPasswordResetCodeAsync(ApplicationUser user, string email, string resetCode) =>
-            emailSender.SendEmailAsync(email, "Reset your password", $"Please reset your password using the following code: {resetCode}");
+            _emailService.SendEmailAsync(email, "Reset your password",
+                $"<h2>Password Reset</h2><p>Your password reset code is: <strong>{resetCode}</strong></p>");
     }
 }
