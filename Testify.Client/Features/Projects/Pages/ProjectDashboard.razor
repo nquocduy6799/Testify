@@ -4,6 +4,7 @@
 @using Testify.Client.Features.TestSuites.Components
 @using Testify.Shared.DTOs.Projects
 @using Testify.Client.Features.Milestones.Components
+@using Testify.Client.Features.Meetings.Components
 @using Testify.Client.Features.Projects.Components
 @using Testify.Client.Interfaces
 @using Testify.Shared.Enums
@@ -130,6 +131,15 @@
                     </svg>
                     Team
                 </button>
+
+                @* Tab Meetings *@
+                <button @onclick='() => activeTab = "Meetings"'
+                        class="@(activeTab == "Meetings" ? "bg-[#1C1D2A] text-white shadow-lg" : "text-slate-400 hover:text-slate-600 hover:bg-white") flex items-center gap-2 px-6 py-3 rounded-3xl text-sm font-black transition-all whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/>
+                    </svg>
+                    Meetings
+                </button>
             </div>
 
             @* Render Active View *@
@@ -156,7 +166,11 @@
                 }
                 else if (activeTab == "Team")
                 {
-                    <TeamManagement ProjectId="@Id" />
+                    <TeamManagement ProjectId="@Id" PendingMeetingId="@_pendingMeetingId" />
+                }
+                else if (activeTab == "Meetings")
+                {
+                    <MeetingHistory ProjectId="@Id" />
                 }
             </div>
         }
@@ -167,10 +181,15 @@
     [Parameter] 
     public int Id { get; set; }
 
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "meetingId")]
+    public int? MeetingId { get; set; }
+
     private ProjectResponse? project;
     private bool isLoading = true;
     private string activeTab = "Overview";
     private ProjectRole? currentUserRole;
+    private int? _pendingMeetingId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -187,6 +206,15 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (MeetingId.HasValue && MeetingId != _pendingMeetingId)
+        {
+            _pendingMeetingId = MeetingId;
+            activeTab = "Team";
         }
     }
 

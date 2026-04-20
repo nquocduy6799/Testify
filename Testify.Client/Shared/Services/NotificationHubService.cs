@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.SignalR.Client;
+using Testify.Shared.DTOs.Meetings;
 using Testify.Shared.DTOs.Notifications;
 
 namespace Testify.Client.Shared.Services
@@ -18,6 +19,7 @@ namespace Testify.Client.Shared.Services
         public event Action<int>? OnMilestoneCreated; // (projectId)
         public event Action<int>? OnMilestoneUpdated; // (projectId)
         public event Action<int, int>? OnMilestoneDeleted; // (projectId, milestoneId)
+        public event Action<MeetingResponse>? OnMeetingStarted;
 
         public bool IsConnected => _hubConnection?.State == HubConnectionState.Connected;
         public IReadOnlySet<string> OnlineUsers => _onlineUsers;
@@ -104,6 +106,13 @@ namespace Testify.Client.Shared.Services
                 {
                     Console.WriteLine($"[SignalR] MilestoneDeleted - Project {projectId}, Milestone {milestoneId}");
                     OnMilestoneDeleted?.Invoke(projectId, milestoneId);
+                });
+
+                // Listen for meeting started (broadcast to all project members)
+                _hubConnection.On<MeetingResponse>("MeetingStarted", meeting =>
+                {
+                    Console.WriteLine($"[SignalR] MeetingStarted - Meeting {meeting.Id}, Project {meeting.ProjectId}");
+                    OnMeetingStarted?.Invoke(meeting);
                 });
 
                 // Reconnect event

@@ -1,11 +1,15 @@
 @using Testify.Client.Interfaces
 @using Testify.Client.Features.Invitations.Components
+@using Testify.Client.Features.Meetings.Components
+@using Testify.Client.Features.Meetings.Services
 @using Testify.Client.Shared.Services
 @using Testify.Shared.DTOs.Projects
 @using Testify.Shared.DTOs.Invitations
+@using Testify.Shared.DTOs.Meetings
 @using Testify.Shared.Enums
 @inject IProjectService ProjectService
 @inject IInvitationService InvitationService
+@inject IMeetingService MeetingService
 @inject IServiceProvider ServiceProvider
 @implements IAsyncDisposable
 <div class="space-y-8 pb-12">
@@ -17,11 +21,18 @@
                 Monitoring bandwidth and allocation across <span class="font-bold text-[#1C1D2A]">@ProjectId</span> contributors.
             </p>
         </div>
-        <button @onclick="OpenInviteModal" class="flex items-center gap-3 rounded-[32px] bg-[#1C1D2A] px-8 py-4 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95"
-                style="font-size:20px;">
-            <Blazicon Svg="Lucide.UserPlus" />
-            <span class="text-sm">Invite Member</span>
-        </button>
+        <div class="flex items-center gap-3">
+            <button @onclick="OpenMeetingModal" class="flex items-center gap-3 rounded-[32px] bg-[#E85D3F] px-8 py-4 text-sm font-black text-white shadow-xl transition-all hover:bg-[#d4502f] active:scale-95"
+                    style="font-size:20px;">
+                <Blazicon Svg="Lucide.Video" />
+                <span class="text-sm">Start Meeting</span>
+            </button>
+            <button @onclick="OpenInviteModal" class="flex items-center gap-3 rounded-[32px] bg-[#1C1D2A] px-8 py-4 text-sm font-black text-white shadow-xl transition-all hover:bg-slate-800 active:scale-95"
+                    style="font-size:20px;">
+                <Blazicon Svg="Lucide.UserPlus" />
+                <span class="text-sm">Invite Member</span>
+            </button>
+        </div>
     </div>
 
     @if (_isLoadingMembers)
@@ -151,8 +162,22 @@
     OnClose="CloseInviteModal"
     OnInvitationSent="OnInvitationSent"/>
 
+@* Create Meeting Modal *@
+<CreateMeetingModal
+    IsVisible="_showMeetingModal"
+    ProjectId="ProjectId"
+    OnClose="CloseMeetingModal"
+    OnMeetingCreated="OnMeetingStarted"/>
+
+@* Meeting Room *@
+<MeetingRoom @key="_activeMeeting?.Id"
+    Meeting="_activeMeeting"
+    IsHost="_isMeetingHost"
+    OnClosed="OnMeetingRoomClosed"/>
+
 @code {
     [Parameter] public int ProjectId { get; set; }
+    [Parameter] public int? PendingMeetingId { get; set; }
 
     private List<TeamMemberResponse> _members = new();
     private List<PendingInvitationResponse> _pendingInvitations = new();
@@ -162,12 +187,46 @@
 #pragma warning restore CS0414
     private bool _isProcessing;
     private bool _showInviteModal;
+    private bool _showMeetingModal;
+    private MeetingResponse? _activeMeeting;
+    private bool _isMeetingHost;
     private TeamMemberResponse? _memberToRemove;
     private NotificationHubService? _hubService;
+
+    private int? _lastHandledMeetingId;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+        await TryJoinPendingMeeting();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Handle PendingMeetingId changes after first render (e.g., user already on Team tab)
+        if (PendingMeetingId.HasValue && PendingMeetingId != _lastHandledMeetingId && _activeMeeting == null)
+        {
+            await TryJoinPendingMeeting();
+        }
+    }
+
+    private async Task TryJoinPendingMeeting()
+    {
+        if (!PendingMeetingId.HasValue) return;
+        _lastHandledMeetingId = PendingMeetingId.Value;
+        try
+        {
+            var meeting = await MeetingService.GetMeetingAsync(PendingMeetingId.Value);
+            if (meeting != null && (meeting.Status == MeetingStatus.Scheduled || meeting.Status == MeetingStatus.InProgress))
+            {
+                _activeMeeting = meeting;
+                _isMeetingHost = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TeamManagement] Failed to load meeting {PendingMeetingId}: {ex.Message}");
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -192,6 +251,9 @@
                 // Subscribe to team member changes
                 _hubService.OnTeamMemberAdded += HandleTeamMemberAdded;
                 _hubService.OnTeamMemberRemoved += HandleTeamMemberRemoved;
+
+                // Subscribe to meeting started (auto-open meeting room for non-host members)
+                _hubService.OnMeetingStarted += HandleMeetingStartedViaBroadcast;
                 
                 Console.WriteLine("[TeamManagement] Subscribed to real-time events");
                 
@@ -280,6 +342,45 @@
     private void CloseInviteModal()
     {
         _showInviteModal = false;
+    }
+
+    private void OpenMeetingModal()
+    {
+        _showMeetingModal = true;
+    }
+
+    private void CloseMeetingModal()
+    {
+        _showMeetingModal = false;
+    }
+
+    private void OnMeetingStarted(MeetingResponse meeting)
+    {
+        _activeMeeting = meeting;
+        _isMeetingHost = true;
+        _showMeetingModal = false;
+        StateHasChanged();
+    }
+
+    private void OnMeetingRoomClosed()
+    {
+        _activeMeeting = null;
+        _isMeetingHost = false;
+        StateHasChanged();
+    }
+
+    private void HandleMeetingStartedViaBroadcast(MeetingResponse meeting)
+    {
+        // Only auto-open for this project and if not already in a meeting room
+        if (meeting.ProjectId == ProjectId && _activeMeeting == null)
+        {
+            InvokeAsync(() =>
+            {
+                _activeMeeting = meeting;
+                _isMeetingHost = false;
+                StateHasChanged();
+            });
+        }
     }
 
     private async Task OnInvitationSent()
@@ -414,6 +515,7 @@
             _hubService.OnUserStatusChanged -= HandleUserStatusChanged;
             _hubService.OnTeamMemberAdded -= HandleTeamMemberAdded;
             _hubService.OnTeamMemberRemoved -= HandleTeamMemberRemoved;
+            _hubService.OnMeetingStarted -= HandleMeetingStartedViaBroadcast;
         }
     }
 

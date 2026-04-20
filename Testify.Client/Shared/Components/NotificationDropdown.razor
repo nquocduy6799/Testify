@@ -188,6 +188,16 @@
                                     </button>
                                 </div>
                             }
+                            else if (notification.Type == NotificationType.MeetingCreated && !notification.IsRead)
+                            {
+                                <a href="@notification.Link" @onclick="() => JoinMeetingFromNotification(notification)"
+                                   class="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#E85D3F] to-[#d54e32] px-3 py-2.5 text-xs font-bold text-white shadow-lg shadow-[#E85D3F]/30 transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95 cursor-pointer no-underline">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                        <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/>
+                                    </svg>
+                                    <span>Join Waiting Room</span>
+                                </a>
+                            }
                             else if (notification.Type == NotificationType.ProjectInvitation)
                             {
                                 <span class="inline-flex animate-[fadeIn_0.5s_ease-out] items-center gap-1 rounded-full px-2.5 py-1 font-bold @GetStatusClass(notification.InvitationStatus) text-[10px]">
@@ -411,6 +421,14 @@
         {
             _isProcessing = false;
         }
+    }
+
+    private async Task JoinMeetingFromNotification(NotificationResponse notification)
+    {
+        // Mark as read
+        await NotificationService.MarkAsReadAsync(notification.Id);
+        notification.IsRead = true;
+        CloseDropdown();
     }
 
     private static string FormatTime(DateTime dateTime)
