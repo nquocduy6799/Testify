@@ -1,0 +1,1295 @@
+@using Testify.Client.Features.Meetings.Services
+@using Testify.Shared.DTOs.Meetings
+@using Testify.Shared.Enums
+@using System.Security.Claims
+@inject IMeetingService MeetingService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@implements IAsyncDisposable
+
+@if (Meeting != null)
+{
+    <div class="fixed inset-0 z-[300] flex flex-col bg-slate-50">
+
+        @* ============================================================
+           WAITING ROOM
+           ============================================================ *@
+        @if (!_meetingStarted)
+        {
+            <div class="flex flex-1 overflow-hidden">
+
+                @* LEFT — camera preview *@
+                <div class="flex flex-1 flex-col items-center justify-center gap-6 p-10">
+                    @* Camera card *@
+                    <div class="relative w-full max-w-2xl aspect-video rounded-[40px] overflow-hidden bg-[#1C1D2A] shadow-xl border border-slate-200">
+                        <video id="local-preview" autoplay playsinline muted
+                               class="w-full h-full object-cover @(_previewCameraOn ? "" : "hidden")"></video>
+                        @if (!_previewCameraOn)
+                        {
+                            <div class="absolute inset-0 flex items-center justify-center bg-[#1C1D2A]">
+                                <div class="flex flex-col items-center gap-3">
+                                    <div class="h-20 w-20 rounded-[20px] bg-white/10 flex items-center justify-center text-2xl font-black text-white shadow-lg">
+                                        @GetInitials(_currentUserName)
+                                    </div>
+                                    <span class="text-xs font-semibold text-white/50">Camera đã tắt</span>
+                                </div>
+                            </div>
+                        }
+                        @* Name label *@
+                        <div class="absolute bottom-4 left-4 flex items-center gap-1.5 rounded-xl bg-black/50 px-3 py-1.5 backdrop-blur-sm">
+                            <span class="text-sm font-semibold text-white">@_currentUserName</span>
+                            @if (!_previewMicOn)
+                            {
+                                <span class="text-red-400" style="font-size:13px;"><Blazicon Svg="Lucide.MicOff" /></span>
+                            }
+                        </div>
+                    </div>
+
+                    @* Camera / Mic toggles *@
+                    <div class="flex items-center gap-3 bg-white rounded-[32px] border border-slate-100 shadow-sm px-5 py-3">
+                        <button @onclick="TogglePreviewMic" title="@(_previewMicOn ? "Tắt micro" : "Bật micro")"
+                                class="flex items-center gap-2 h-10 px-4 rounded-[20px] transition-all cursor-pointer text-sm font-bold @(_previewMicOn ? "bg-[#1C1D2A] text-white" : "bg-red-50 text-red-500 border border-red-100")"
+                                style="font-size:16px;">
+                            <Blazicon Svg="@(_previewMicOn ? Lucide.Mic : Lucide.MicOff)" />
+                            <span class="text-sm">@(_previewMicOn ? "Micro" : "Tắt tiếng")</span>
+                        </button>
+                        <button @onclick="TogglePreviewCamera" title="@(_previewCameraOn ? "Tắt camera" : "Bật camera")"
+                                class="flex items-center gap-2 h-10 px-4 rounded-[20px] transition-all cursor-pointer text-sm font-bold @(_previewCameraOn ? "bg-[#1C1D2A] text-white" : "bg-red-50 text-red-500 border border-red-100")"
+                                style="font-size:16px;">
+                            <Blazicon Svg="@(_previewCameraOn ? Lucide.Video : Lucide.VideoOff)" />
+                            <span class="text-sm">@(_previewCameraOn ? "Camera" : "Tắt camera")</span>
+                        </button>
+                    </div>
+                </div>
+
+                @* RIGHT — info + participants *@
+                <div class="w-96 flex flex-col justify-between border-l border-slate-100 bg-white p-8">
+                    <div class="flex flex-col gap-6">
+                        @* Meeting info *@
+                        <div>
+                            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E85D3F]/10 mb-4">
+                                <span class="text-[#E85D3F]" style="font-size:22px;"><Blazicon Svg="Lucide.Video" /></span>
+                            </div>
+                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Cuộc họp</p>
+                            <h2 class="text-xl font-black text-slate-900 leading-tight">@Meeting.Title</h2>
+                            <p class="text-sm text-slate-500 mt-1">@Meeting.ProjectName</p>
+                            <div class="flex items-center gap-2 mt-3 text-slate-400 text-xs">
+                                <Blazicon Svg="Lucide.Clock" />
+                                <span>Thời lượng: @Meeting.MaxDurationMinutes phút</span>
+                            </div>
+                        </div>
+
+                        @* Participant list *@
+                        <div class="rounded-[32px] bg-white border border-slate-100 shadow-sm p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Phòng chờ</span>
+                                <span class="text-xs font-black text-[#1C1D2A] bg-slate-100 rounded-full px-2.5 py-0.5">
+                                    @_activeParticipants.Count / @Meeting.Participants.Count
+                                </span>
+                            </div>
+                            <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                                @foreach (var p in Meeting.Participants)
+                                {
+                                    var inRoom = _activeParticipants.Contains(p.UserId);
+                                    <div class="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all @(inRoom ? "bg-slate-50" : "opacity-50")">
+                                        <div class="relative shrink-0">
+                                            <div class="h-9 w-9 rounded-xl bg-[#1C1D2A] flex items-center justify-center text-xs font-black text-white">
+                                                @GetInitials(p.FullName ?? p.UserName)
+                                            </div>
+                                            @if (inRoom)
+                                            {
+                                                <div class="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500"></div>
+                                            }
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-slate-800 truncate">@(p.FullName ?? p.UserName)</p>
+                                            <p class="text-[11px] @(inRoom ? "text-emerald-500 font-semibold" : "text-slate-400")">
+                                                @(inRoom ? "Đã vào phòng" : "Chưa tham gia")
+                                            </p>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Actions *@
+                    <div class="flex flex-col gap-3 mt-6">
+                        @if (IsHost)
+                        {
+                            <button @onclick="StartMeeting" disabled="@_isStarting"
+                                    class="flex items-center justify-center gap-2.5 rounded-[28px] bg-[#E85D3F] px-6 py-3.5 text-sm font-black text-white hover:bg-[#d54e32] disabled:opacity-50 transition-all shadow-lg shadow-[#E85D3F]/20 cursor-pointer">
+                                @if (_isStarting)
+                                {
+                                    <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></div>
+                                    <span>Đang bắt đầu...</span>
+                                }
+                                else
+                                {
+                                    <span style="font-size:16px;"><Blazicon Svg="Lucide.Play" /></span>
+                                    <span>Bắt đầu cuộc họp</span>
+                                }
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="flex items-center justify-center gap-2.5 rounded-[28px] bg-amber-50 border border-amber-100 px-6 py-3.5">
+                                <div class="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></div>
+                                <span class="text-sm font-semibold text-amber-700">Chờ host bắt đầu...</span>
+                            </div>
+                        }
+                        <button @onclick="LeaveWaitingRoom"
+                                class="flex items-center justify-center gap-2 rounded-[28px] bg-slate-100 border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-all cursor-pointer">
+                            <span style="font-size:16px;"><Blazicon Svg="Lucide.LogOut" /></span>
+                            <span>Thoát</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @* ============================================================
+           ACTIVE MEETING
+           ============================================================ *@
+        else
+        {
+            @* TOP BAR *@
+            <div class="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-white shadow-sm shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E85D3F]/10">
+                        <span class="text-[#E85D3F]" style="font-size:16px;"><Blazicon Svg="Lucide.Video" /></span>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-black text-slate-900 leading-none">@Meeting.Title</h2>
+                        <p class="text-[10px] font-semibold text-slate-400 mt-0.5">@Meeting.ProjectName</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5 rounded-full bg-[#E85D3F]/10 border border-[#E85D3F]/20 px-3 py-1">
+                        <div class="h-1.5 w-1.5 rounded-full bg-[#E85D3F] animate-pulse"></div>
+                        <span class="text-[10px] font-black text-[#E85D3F] tracking-widest">LIVE</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5">
+                        <span class="text-slate-500" style="font-size:13px;"><Blazicon Svg="Lucide.Clock" /></span>
+                        <span class="font-mono text-xs font-black @(_remainingSeconds <= 120 ? "text-red-500" : "text-slate-700")">
+                            @TimeSpan.FromSeconds(Math.Max(0, _remainingSeconds)).ToString(@"mm\:ss")
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3 py-1.5">
+                        <span class="text-slate-500" style="font-size:13px;"><Blazicon Svg="Lucide.Users" /></span>
+                        <span class="text-xs font-black text-slate-700">@_activeParticipants.Count</span>
+                    </div>
+                    @if (_raisedHands.Count > 0)
+                    {
+                        <div class="flex items-center gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-1.5 animate-pulse">
+                            <span class="text-amber-500 text-sm">✋</span>
+                            <span class="text-xs font-black text-amber-600">@_raisedHands.Count</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* MAIN BODY *@
+            <div class="flex flex-1 overflow-hidden bg-[#1C1D2A]">
+
+                @* VIDEO AREA — Google Meet style: local video left, peers right *@
+                <div id="video-grid" class="flex-1 flex gap-3 p-4 overflow-hidden">
+
+                    @* LEFT — Local video (main area) *@
+                    <div class="flex-1 min-w-0">
+                        <div class="relative h-full bg-[#252638] rounded-[24px] overflow-hidden ring-1 ring-white/10">
+                            <video id="local-video" autoplay playsinline muted
+                                   class="w-full h-full object-cover @(!_isCameraOn ? "hidden" : "")"></video>
+                            @if (!_isCameraOn)
+                            {
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="h-20 w-20 rounded-[20px] bg-white/10 flex items-center justify-center text-2xl font-black text-white">
+                                        @GetInitials(_currentUserName)
+                                    </div>
+                                </div>
+                            }
+                            @if (_isHandRaised)
+                            {
+                                <div class="absolute top-3 right-3 rounded-lg bg-amber-400/90 px-2.5 py-1.5 text-sm shadow animate-bounce">✋</div>
+                            }
+                            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-sm font-semibold text-white">@_currentUserName <span class="text-white/50 font-normal">(You)</span></span>
+                                    @if (!_isMicOn)
+                                    {
+                                        <span class="text-red-400" style="font-size:13px;"><Blazicon Svg="Lucide.MicOff" /></span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* RIGHT — Peer videos sidebar *@
+                    @if (_peerStates.Count > 0)
+                    {
+                        <div class="w-72 shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
+                            @foreach (var peer in _peerStates)
+                            {
+                                <div id="peer-wrapper-@peer.Key" class="relative aspect-video bg-[#252638] rounded-[20px] overflow-hidden ring-1 ring-white/10 shrink-0">
+                                    <video id="peer-video-@peer.Key" autoplay playsinline
+                                           class="w-full h-full object-cover @(!peer.Value.IsCameraOn ? "hidden" : "")"></video>
+                                    @if (!peer.Value.IsCameraOn)
+                                    {
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <div class="h-14 w-14 rounded-[16px] bg-white/10 flex items-center justify-center text-base font-black text-white">
+                                                @GetInitials(peer.Value.Name)
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (_raisedHands.Contains(peer.Key))
+                                    {
+                                        <div class="absolute top-2 right-2 rounded-lg bg-amber-400/90 px-2 py-1 text-sm shadow animate-bounce">✋</div>
+                                    }
+                                    <div class="absolute bottom-0 left-0 right-0 p-2.5 bg-gradient-to-t from-black/70 to-transparent">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-xs font-semibold text-white truncate">@peer.Value.Name</span>
+                                            @if (!peer.Value.IsMicOn)
+                                            {
+                                                <span class="text-red-400 shrink-0" style="font-size:11px;"><Blazicon Svg="Lucide.MicOff" /></span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @* LIVE CAPTIONS OVERLAY *@
+                @if (_isCaptionEnabled && _liveCaptions.Any())
+                {
+                    <div class="px-4 pb-2 shrink-0">
+                        <div class="rounded-2xl bg-black/70 backdrop-blur-sm px-5 py-3 max-h-24 overflow-y-auto">
+                            @foreach (var caption in _liveCaptions)
+                            {
+                                var peerName = _peerStates.TryGetValue(caption.Key, out var ps) ? ps.Name
+                                    : (caption.Key == _currentUserId ? _currentUserName : caption.Key);
+                                <div class="flex items-start gap-2 mb-1 last:mb-0">
+                                    <span class="text-[10px] font-bold text-[#E85D3F] shrink-0">@peerName:</span>
+                                    <span class="text-xs text-white/90 leading-relaxed">@caption.Value</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @* SIDE PANEL *@
+                @if (_showChatPanel)
+                {
+                    <div class="w-80 border-l border-slate-100 flex flex-col bg-white shadow-xl">
+                        @* Header *@
+                        <div class="flex items-center border-b border-slate-100 shrink-0">
+                            <span class="flex-1 py-3.5 px-4 text-xs font-black text-[#1C1D2A]">💬 Chat</span>
+                            <button @onclick='() => { _showChatPanel = false; }'
+                                    class="px-3 py-3 text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
+                                    style="font-size:14px;">
+                                <Blazicon Svg="Lucide.X" />
+                            </button>
+                        </div>
+
+                        @* Chat — JS renders messages into this container *@
+                        @if (_showChatPanel)
+                        {
+                            <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50" id="chat-messages"></div>
+                            <div class="p-3 border-t border-slate-100 bg-white shrink-0">
+                                <div class="flex items-end gap-2 rounded-[20px] bg-slate-50 border border-slate-200 px-3 py-2">
+                                    <textarea id="chat-input"
+                                              placeholder="Nhắn tin..."
+                                              rows="1"
+                                              class="flex-1 bg-transparent text-xs text-slate-700 placeholder-slate-400 resize-none outline-none leading-relaxed max-h-24 overflow-y-auto"></textarea>
+                                    <button onclick="webRtcGroup._sendChat()"
+                                            class="shrink-0 flex h-7 w-7 items-center justify-center rounded-[14px] bg-[#E85D3F] text-white transition-all cursor-pointer hover:bg-[#d54e32]"
+                                            style="font-size:14px;">
+                                        <Blazicon Svg="Lucide.Send" />
+                                    </button>
+                                </div>
+                                <p class="text-[9px] text-slate-400 mt-1 px-1">Enter để gửi · Shift+Enter xuống dòng</p>
+                            </div>
+                        }
+
+                    </div>
+                }
+            </div>
+
+            @* BOTTOM CONTROL BAR *@
+            <div class="flex items-center justify-between px-8 py-4 border-t border-slate-100 bg-white shadow-[0_-4px_24px_rgba(0,0,0,0.06)] shrink-0">
+                <div class="flex items-center gap-2 min-w-[140px]">
+                    <div class="w-2 h-2 rounded-full bg-[#E85D3F] animate-pulse"></div>
+                    <span class="font-mono text-sm font-black @(_remainingSeconds <= 120 ? "text-red-500" : "text-slate-600")">
+                        @TimeSpan.FromSeconds(Math.Max(0, _remainingSeconds)).ToString(@"mm\:ss")
+                    </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    @* Mic *@
+                    <div class="flex flex-col items-center gap-1">
+                        <button @onclick="ToggleMic"
+                                class="relative flex h-12 w-12 items-center justify-center rounded-[16px] transition-all cursor-pointer @(_isMicOn ? "bg-[#1C1D2A] text-white hover:bg-[#252638]" : "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100")"
+                                style="font-size:20px;">
+                            <Blazicon Svg="@(_isMicOn ? Lucide.Mic : Lucide.MicOff)" />
+                            @* TRANSCRIPT DISABLED: speech active indicator removed *@
+                        </button>
+                        <span class="text-[9px] font-semibold text-slate-400">@(_isMicOn ? "Micro" : "Đã tắt")</span>
+                    </div>
+
+                    @* Camera *@
+                    <div class="flex flex-col items-center gap-1">
+                        <button @onclick="ToggleCamera"
+                                class="flex h-12 w-12 items-center justify-center rounded-[16px] transition-all cursor-pointer @(_isCameraOn ? "bg-[#1C1D2A] text-white hover:bg-[#252638]" : "bg-red-50 text-red-500 border border-red-100 hover:bg-red-100")"
+                                style="font-size:20px;">
+                            <Blazicon Svg="@(_isCameraOn ? Lucide.Video : Lucide.VideoOff)" />
+                        </button>
+                        <span class="text-[9px] font-semibold text-slate-400">@(_isCameraOn ? "Camera" : "Đã tắt")</span>
+                    </div>
+
+                    @* Hand *@
+                    <div class="flex flex-col items-center gap-1">
+                        <button @onclick="ToggleHandRaise"
+                                class="flex h-12 w-12 items-center justify-center rounded-[16px] transition-all cursor-pointer @(_isHandRaised ? "bg-amber-400 text-white hover:bg-amber-500 ring-2 ring-amber-300/50" : "bg-slate-100 text-slate-600 hover:bg-slate-200")"
+                                style="font-size:20px;">
+                            <Blazicon Svg="Lucide.Hand" />
+                        </button>
+                        <span class="text-[9px] font-semibold text-slate-400">@(_isHandRaised ? "Đã giơ" : "Giơ tay")</span>
+                    </div>
+
+                    <div class="h-8 w-px bg-slate-200 mx-1"></div>
+
+                    @* Chat *@
+                    <div class="flex flex-col items-center gap-1">
+                        <button @onclick="ToggleChatPanel"
+                                class="relative flex h-12 w-12 items-center justify-center rounded-[16px] transition-all cursor-pointer @(_showChatPanel ? "bg-[#7E96E1]/15 text-[#7E96E1] hover:bg-[#7E96E1]/25" : "bg-slate-100 text-slate-600 hover:bg-slate-200")"
+                                style="font-size:20px;">
+                            <Blazicon Svg="Lucide.MessageCircle" />
+                            <span id="chat-unread-badge" class="absolute -top-1 -right-1 h-4 min-w-4 rounded-full bg-[#E85D3F] text-[9px] font-black text-white items-center justify-center px-0.5" style="display:none;"></span>
+                        </button>
+                        <span class="text-[9px] font-semibold text-slate-400">Chat</span>
+                    </div>
+
+                    @* Captions *@
+                    <div class="flex flex-col items-center gap-1">
+                        <button @onclick="ToggleCaptions"
+                                class="flex h-12 w-12 items-center justify-center rounded-[16px] transition-all cursor-pointer @(_isCaptionEnabled ? "bg-[#7E96E1]/15 text-[#7E96E1] hover:bg-[#7E96E1]/25" : "bg-slate-100 text-slate-600 hover:bg-slate-200")"
+                                style="font-size:20px;">
+                            <Blazicon Svg="Lucide.Captions" />
+                        </button>
+                        <span class="text-[9px] font-semibold text-slate-400">@(_isCaptionEnabled ? "Phụ đề" : "Phụ đề")</span>
+                    </div>
+
+                    <div class="h-8 w-px bg-slate-200 mx-1"></div>
+
+                    @if (IsHost)
+                    {
+                        <button @onclick="EndMeeting" disabled="@_isEnding"
+                                class="flex items-center gap-2 rounded-[28px] bg-red-500 px-5 py-3 text-sm font-black text-white hover:bg-red-600 disabled:opacity-50 transition-all cursor-pointer shadow-lg shadow-red-500/20">
+                            @if (_isEnding)
+                            {
+                                <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></div>
+                            }
+                            else
+                            {
+                                <span style="font-size:17px;"><Blazicon Svg="Lucide.PhoneOff" /></span>
+                            }
+                            <span>Kết thúc</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button @onclick="LeaveMeeting"
+                                class="flex items-center gap-2 rounded-[28px] bg-red-500 px-5 py-3 text-sm font-black text-white hover:bg-red-600 transition-all cursor-pointer shadow-lg shadow-red-500/20">
+                            <span style="font-size:17px;"><Blazicon Svg="Lucide.PhoneOff" /></span>
+                            <span>Rời phòng</span>
+                        </button>
+                    }
+                </div>
+
+                <div class="min-w-[140px]"></div>
+            </div>
+
+            @* TRANSCRIPT OVERLAY *@
+            @if (_showSummary)
+            {
+                <div class="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
+                    <div class="w-full max-w-2xl max-h-[85vh] rounded-[48px] bg-white shadow-2xl overflow-hidden mx-4 flex flex-col">
+
+                        @* Header *@
+                        <div class="flex items-center gap-3 px-8 pt-8 pb-4 shrink-0">
+                            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E85D3F]/10">
+                                <span class="text-[#E85D3F]" style="font-size:20px;"><Blazicon Svg="Lucide.FileText" /></span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Kết quả</p>
+                                <h3 class="text-lg font-black text-slate-900">Nội dung cuộc họp</h3>
+                            </div>
+                        </div>
+
+                        @* Whisper progress banner *@
+                        @if (_isTranscribing)
+                        {
+                            <div class="mx-8 mb-3 flex items-center gap-3 rounded-2xl bg-amber-50 border border-amber-100 px-4 py-3 shrink-0">
+                                <div class="h-4 w-4 animate-spin rounded-full border-2 border-amber-200 border-t-amber-500 shrink-0"></div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs font-bold text-amber-700">🎙 Đang nhận dạng giọng nói...</p>
+                                    <div class="mt-1.5 h-1.5 rounded-full bg-amber-200 overflow-hidden">
+                                        <div class="h-full rounded-full bg-amber-500 transition-all duration-500" style="width: @(_transcriptionProgress)%"></div>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-black text-amber-600 shrink-0">@(_transcriptionProgress)%</span>
+                            </div>
+                        }
+
+                        @* Transcript content *@
+                        <div class="flex-1 overflow-y-auto px-8 pb-4">
+                            @if (!string.IsNullOrWhiteSpace(_transcriptText))
+                            {
+                                <div class="rounded-[24px] bg-slate-50 border border-slate-100 p-5">
+                                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">📝 Văn bản ghi lại</p>
+                                    <p class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">@_transcriptText</p>
+                                </div>
+                            }
+                            else if (!_isTranscribing)
+                            {
+                                <div class="flex flex-col items-center justify-center py-10 gap-3 text-center">
+                                    <span class="text-3xl">🎙</span>
+                                    <p class="text-sm font-bold text-slate-500">Không có nội dung giọng nói được ghi lại.</p>
+                                    <p class="text-xs text-slate-400">Micro đã bị tắt hoặc không phát hiện giọng nói.</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="flex flex-col items-center justify-center py-10 gap-3">
+                                    <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-[#E85D3F]"></div>
+                                    <p class="text-sm text-slate-400">Đang xử lý âm thanh...</p>
+                                </div>
+                            }
+                        </div>
+
+                        @* Footer *@
+                        <div class="px-8 pb-8 shrink-0">
+                            <button @onclick="CloseMeetingRoom" disabled="@_isTranscribing"
+                                    class="w-full rounded-[28px] bg-[#E85D3F] px-4 py-3 text-sm font-black text-white hover:bg-[#d54e32] disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer">
+                                @(_isTranscribing ? "Đang nhận dạng..." : "Đóng")
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public MeetingResponse? Meeting { get; set; }
+    [Parameter] public bool IsHost { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+
+    private MeetingHubService? _hubService;
+
+    private HashSet<string> _activeParticipants = new();
+    private Dictionary<string, PeerState> _peerStates = new();
+    private HashSet<string> _raisedHands = new();
+
+    private bool _meetingStarted;
+    private bool _isStarting;
+    private bool _isEnding;
+    private bool _isMicOn;
+    private bool _isCameraOn = true;
+    private bool _isHandRaised;
+    private bool _showChatPanel;
+    // private bool _showTranscriptPanel; // TRANSCRIPT DISABLED
+    private bool _showSummary;
+    private bool _webrtcInitialized;
+    private bool _pendingMeetingInit;
+    private bool _pendingHubSetup;
+
+    // Buffers for WebRTC signals received before initialization
+    private List<(string peerId, string peerName)> _bufferedPeerJoined = new();
+    private List<(string fromUserId, string fromUserName, string sdpOffer)> _bufferedOffers = new();
+    private List<(string fromUserId, string sdpAnswer)> _bufferedAnswers = new();
+    private List<(string fromUserId, string candidate, string? sdpMid, int sdpMLineIndex)> _bufferedIceCandidates = new();
+
+    private bool _previewCameraOn = true;
+    private bool _previewMicOn = true;
+    private bool _previewInitialized;
+
+    private bool _isTranscribing;
+    private int _transcriptionProgress;
+    private string _transcriptText = string.Empty;
+
+    // Live captions
+    private bool _isCaptionEnabled;
+    private Dictionary<string, string> _liveCaptions = new(); // userId -> current caption text
+    private Dictionary<string, DateTime> _captionTimestamps = new(); // userId -> last update time
+
+    private string _currentUserId = string.Empty;
+    private string _currentUserName = string.Empty;
+
+    private int _remainingSeconds;
+    private DotNetObjectReference<MeetingRoom>? _dotNetRef;
+    private System.Threading.Timer? _timer;
+
+    private class PeerState
+    {
+        public string Name { get; set; } = "";
+        public bool IsCameraOn { get; set; } = true;
+        public bool IsMicOn { get; set; } = true;
+    }
+
+    [Inject] private IServiceProvider ServiceProvider { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Meeting == null) return;
+
+        _remainingSeconds = Meeting.MaxDurationMinutes * 60;
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        _currentUserName = authState.User.FindFirst("name")?.Value
+            ?? authState.User.FindFirst(ClaimTypes.Name)?.Value
+            ?? "You";
+
+        if (Meeting.Status == MeetingStatus.InProgress)
+        {
+            _meetingStarted = true;
+            if (Meeting.StartedAt.HasValue)
+            {
+                var elapsed = (DateTime.UtcNow - Meeting.StartedAt.Value).TotalSeconds;
+                _remainingSeconds = Math.Max(0, (Meeting.MaxDurationMinutes * 60) - (int)elapsed);
+            }
+            // TRANSCRIPT DISABLED: _transcripts = await MeetingService.GetTranscriptsAsync(Meeting.Id);
+        }
+
+        foreach (var p in Meeting.Participants.Where(p => p.HasAttended && p.LeftAt == null))
+            _activeParticipants.Add(p.UserId);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Triggered when Meeting parameter changes from null → non-null (member sees meeting while on Team page)
+        if (Meeting == null || _hubService != null || _pendingHubSetup) return;
+
+        _remainingSeconds = Meeting.MaxDurationMinutes * 60;
+
+        if (string.IsNullOrEmpty(_currentUserId))
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            _currentUserId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            _currentUserName = authState.User.FindFirst("name")?.Value
+                ?? authState.User.FindFirst(ClaimTypes.Name)?.Value
+                ?? "You";
+        }
+
+        if (Meeting.Status == MeetingStatus.InProgress)
+        {
+            _meetingStarted = true;
+            if (Meeting.StartedAt.HasValue)
+            {
+                var elapsed = (DateTime.UtcNow - Meeting.StartedAt.Value).TotalSeconds;
+                _remainingSeconds = Math.Max(0, (Meeting.MaxDurationMinutes * 60) - (int)elapsed);
+            }
+            // TRANSCRIPT DISABLED: if (!_transcripts.Any()) _transcripts = await MeetingService.GetTranscriptsAsync(Meeting.Id);
+        }
+
+        foreach (var p in Meeting.Participants.Where(p => p.HasAttended && p.LeftAt == null))
+            if (!_activeParticipants.Contains(p.UserId))
+                _activeParticipants.Add(p.UserId);
+
+        _pendingHubSetup = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Meeting == null) return;
+
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await SetupHubAsync();
+
+            if (_meetingStarted)
+                await InitializeActiveMeeting();
+            else
+                await StartPreviewCamera();
+
+            await InvokeAsync(StateHasChanged);
+        }
+        else if (_pendingHubSetup)
+        {
+            _pendingHubSetup = false;
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await SetupHubAsync();
+
+            if (_meetingStarted)
+                await InitializeActiveMeeting();
+            else
+                await StartPreviewCamera();
+
+            await InvokeAsync(StateHasChanged);
+        }
+        else if (_pendingMeetingInit)
+        {
+            _pendingMeetingInit = false;
+            await InitializeActiveMeeting();
+        }
+        else if (_webrtcInitialized)
+        {
+            // After any Blazor re-render, re-attach streams in case video elements were recreated
+            try { await JSRuntime.InvokeVoidAsync("webRtcGroup.reattachStreams"); } catch { }
+        }
+    }
+
+    private async Task SetupHubAsync()
+    {
+        if (Meeting == null) return;
+        _hubService = ServiceProvider.GetService<MeetingHubService>();
+        if (_hubService == null) return;
+
+        await _hubService.StartAsync();
+        await _hubService.JoinMeetingAsync(Meeting.Id);
+
+        if (!string.IsNullOrEmpty(_currentUserId) && !_activeParticipants.Contains(_currentUserId))
+            _activeParticipants.Add(_currentUserId);
+
+        // Refresh participant list from API to get latest HasAttended status for all members
+        var freshMeeting = await MeetingService.GetMeetingAsync(Meeting.Id);
+        if (freshMeeting != null)
+        {
+            foreach (var p in freshMeeting.Participants.Where(p => p.HasAttended && p.LeftAt == null))
+                _activeParticipants.Add(p.UserId);
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+        // TRANSCRIPT DISABLED: _hubService.OnTranscriptReceived += HandleTranscriptReceived;
+        _hubService.OnParticipantJoined += HandleParticipantJoined;
+        _hubService.OnParticipantLeft += HandleParticipantLeft;
+        _hubService.OnMeetingEnded += HandleMeetingEnded;
+        _hubService.OnMeetingStarted += HandleMeetingStartedByHost;
+        _hubService.OnPeerJoinedForWebRTC += HandlePeerJoinedForWebRTC;
+        _hubService.OnReceiveWebRTCOffer += HandleReceiveWebRTCOffer;
+        _hubService.OnReceiveWebRTCAnswer += HandleReceiveWebRTCAnswer;
+        _hubService.OnReceiveIceCandidate += HandleReceiveIceCandidate;
+        _hubService.OnPeerMediaStateChanged += HandlePeerMediaStateChanged;
+        _hubService.OnPeerHandRaised += HandlePeerHandRaised;
+        _hubService.OnChatMessageReceived += HandleChatMessageReceived;
+        _hubService.OnLiveCaptionReceived += HandleLiveCaptionReceived;
+    }
+
+    // ===================== Preview =====================
+
+    private async Task StartPreviewCamera()
+    {
+        if (_previewInitialized) return;
+        _previewInitialized = true;
+        try
+        {
+            var ok = await JSRuntime.InvokeAsync<bool>("webRtcGroup.startLocalPreview", "local-preview");
+            if (!ok) { _previewCameraOn = false; await InvokeAsync(StateHasChanged); }
+        }
+        catch { _previewCameraOn = false; await InvokeAsync(StateHasChanged); }
+    }
+
+    private async Task TogglePreviewCamera()
+    {
+        _previewCameraOn = !_previewCameraOn;
+        try
+        {
+            if (_previewCameraOn)
+            {
+                await JSRuntime.InvokeAsync<bool>("webRtcGroup.startLocalPreview", "local-preview");
+                await JSRuntime.InvokeVoidAsync("webRtcGroup.toggleCamera", true);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("webRtcGroup.toggleCamera", false);
+            }
+        }
+        catch { }
+    }
+
+    private void TogglePreviewMic()
+    {
+        _previewMicOn = !_previewMicOn;
+        InvokeAsync(async () => { try { await JSRuntime.InvokeVoidAsync("webRtcGroup.toggleMic", _previewMicOn); } catch { } });
+    }
+
+    // ===================== Init =====================
+
+    private async Task InitializeActiveMeeting()
+    {
+        _timer ??= new System.Threading.Timer(TimerTick, null, 1000, 1000);
+
+        // TRANSCRIPT DISABLED: speech recognition init removed
+        // if (!_speechInitialized && _dotNetRef != null)
+        // {
+        //     await JSRuntime.InvokeVoidAsync("meetingSpeechRecognition.init", _dotNetRef);
+        //     _speechInitialized = true;
+        // }
+
+        // Initialize JS chat module
+        if (_dotNetRef != null)
+        {
+            await JSRuntime.InvokeVoidAsync("webRtcGroup.initChat", _dotNetRef, _currentUserId);
+        }
+
+        // Start live captions if mic is on
+        if (_isMicOn && _dotNetRef != null)
+        {
+            try { await JSRuntime.InvokeAsync<bool>("webRtcGroup.startSpeechRecognition", _dotNetRef); _isCaptionEnabled = true; } catch { }
+        }
+
+        // Pre-populate peer states from active participants for UI rendering
+        if (Meeting != null)
+        {
+            foreach (var p in _activeParticipants)
+            {
+                if (p == _currentUserId) continue;
+                if (!_peerStates.ContainsKey(p))
+                {
+                    var participant = Meeting.Participants.FirstOrDefault(mp => mp.UserId == p);
+                    _peerStates[p] = new PeerState { Name = participant?.FullName ?? participant?.UserName ?? "Unknown" };
+                }
+            }
+            StateHasChanged();
+        }
+
+        if (!_webrtcInitialized && _dotNetRef != null)
+        {
+            var success = await JSRuntime.InvokeAsync<bool>("webRtcGroup.init", _dotNetRef, _isCameraOn);
+            if (success)
+            {
+                _webrtcInitialized = true;
+                try { await JSRuntime.InvokeVoidAsync("webRtcGroup.startAudioRecording"); } catch { }
+
+                // Process any WebRTC signals that arrived before initialization
+                if (_bufferedPeerJoined.Count > 0 || _bufferedOffers.Count > 0)
+                {
+                    var pendingPeers = _bufferedPeerJoined.ToList();
+                    var pendingOffers = _bufferedOffers.ToList();
+                    var pendingAnswers = _bufferedAnswers.ToList();
+                    var pendingIce = _bufferedIceCandidates.ToList();
+                    _bufferedPeerJoined.Clear();
+                    _bufferedOffers.Clear();
+                    _bufferedAnswers.Clear();
+                    _bufferedIceCandidates.Clear();
+
+                    foreach (var (pid, pname) in pendingPeers)
+                    {
+                        if (!_peerStates.ContainsKey(pid)) { _peerStates[pid] = new PeerState { Name = pname }; StateHasChanged(); }
+                        await Task.Delay(50);
+                        var offer = await JSRuntime.InvokeAsync<string?>("webRtcGroup.createOffer", pid);
+                        if (!string.IsNullOrEmpty(offer) && _hubService != null && Meeting != null)
+                            await _hubService.SendWebRTCOfferAsync(Meeting.Id, pid, offer);
+                    }
+
+                    foreach (var (uid, uname, sdp) in pendingOffers)
+                    {
+                        if (!_peerStates.ContainsKey(uid)) { _peerStates[uid] = new PeerState { Name = uname }; StateHasChanged(); }
+                        await Task.Delay(50);
+                        var answer = await JSRuntime.InvokeAsync<string?>("webRtcGroup.handleOffer", uid, sdp);
+                        if (!string.IsNullOrEmpty(answer) && _hubService != null && Meeting != null)
+                            await _hubService.SendWebRTCAnswerAsync(Meeting.Id, uid, answer);
+                    }
+
+                    foreach (var (uid, sdp) in pendingAnswers)
+                        await JSRuntime.InvokeVoidAsync("webRtcGroup.handleAnswer", uid, sdp);
+
+                    foreach (var (uid, cand, mid, idx) in pendingIce)
+                        await JSRuntime.InvokeVoidAsync("webRtcGroup.addIceCandidate", uid, cand, mid, idx);
+                }
+
+                if (_hubService != null && Meeting != null)
+                    await _hubService.RequestPeerConnectionsAsync(Meeting.Id);
+            }
+        }
+    }
+
+    private async Task StartMeeting()
+    {
+        if (Meeting == null || !IsHost) return;
+        _isStarting = true; StateHasChanged();
+        try
+        {
+            var started = await MeetingService.StartMeetingAsync(Meeting.Id);
+            if (started != null)
+            {
+                Meeting = started;
+                _meetingStarted = true;
+                _isCameraOn = _previewCameraOn;
+                _isMicOn = _previewMicOn;
+                _remainingSeconds = Meeting.MaxDurationMinutes * 60;
+                _pendingMeetingInit = true;
+                StateHasChanged();
+            }
+        }
+        finally { _isStarting = false; }
+    }
+
+    private void HandleMeetingStartedByHost(MeetingResponse meeting)
+    {
+        InvokeAsync(() =>
+        {
+            Meeting = meeting;
+            _meetingStarted = true;
+            _isCameraOn = _previewCameraOn;
+            _isMicOn = _previewMicOn;
+            _remainingSeconds = Meeting.MaxDurationMinutes * 60;
+            _pendingMeetingInit = true;
+            StateHasChanged(); // triggers re-render → OnAfterRenderAsync picks up _pendingMeetingInit
+            return Task.CompletedTask;
+        });
+    }
+
+    private void TimerTick(object? state)
+    {
+        if (_remainingSeconds > 0) { _remainingSeconds--; InvokeAsync(StateHasChanged); }
+    }
+
+    // ===================== Controls =====================
+
+    private async Task ToggleMic()
+    {
+        _isMicOn = !_isMicOn;
+        if (_webrtcInitialized) await JSRuntime.InvokeVoidAsync("webRtcGroup.toggleMic", _isMicOn);
+        // Start/stop speech recognition with mic
+        if (_isMicOn && _isCaptionEnabled && _dotNetRef != null)
+        {
+            try { await JSRuntime.InvokeAsync<bool>("webRtcGroup.startSpeechRecognition", _dotNetRef); } catch { }
+        }
+        else if (!_isMicOn)
+        {
+            try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopSpeechRecognition"); } catch { }
+        }
+        if (_hubService != null && Meeting != null)
+            await _hubService.NotifyMediaStateChangedAsync(Meeting.Id, _isCameraOn, _isMicOn);
+    }
+
+    private async Task ToggleCamera()
+    {
+        _isCameraOn = !_isCameraOn;
+        if (_webrtcInitialized) await JSRuntime.InvokeVoidAsync("webRtcGroup.toggleCamera", _isCameraOn);
+        if (_hubService != null && Meeting != null)
+            await _hubService.NotifyMediaStateChangedAsync(Meeting.Id, _isCameraOn, _isMicOn);
+    }
+
+    private async Task ToggleHandRaise()
+    {
+        _isHandRaised = !_isHandRaised;
+        if (_hubService != null && Meeting != null)
+            await _hubService.NotifyHandRaisedAsync(Meeting.Id, _isHandRaised);
+    }
+
+    // ===================== Chat =====================
+
+    private async Task SwitchToChatTab()
+    {
+        if (_showChatPanel) return;
+        _showChatPanel = true;
+        // _showTranscriptPanel = false; // TRANSCRIPT DISABLED
+        await Task.Yield();
+        try { await JSRuntime.InvokeVoidAsync("webRtcGroup.openChatPanel"); } catch { }
+    }
+
+    // TRANSCRIPT DISABLED
+    // private void SwitchToTranscriptTab() { ... }
+
+    private void ToggleChatPanel()
+    {
+        if (_showChatPanel)
+        {
+            _showChatPanel = false;
+            // _showTranscriptPanel = false; // TRANSCRIPT DISABLED
+            InvokeAsync(async () =>
+            {
+                try { await JSRuntime.InvokeVoidAsync("webRtcGroup.closeChatPanel"); } catch { }
+            });
+        }
+        else
+        {
+            _showChatPanel = true;
+            // _showTranscriptPanel = false; // TRANSCRIPT DISABLED
+            // After Blazor re-renders the panel container, JS renders all buffered messages
+            InvokeAsync(async () =>
+            {
+                await Task.Yield(); // wait for DOM
+                try { await JSRuntime.InvokeVoidAsync("webRtcGroup.openChatPanel"); } catch { }
+            });
+        }
+    }
+
+    /// <summary>
+    /// Called from JS when user clicks send or presses Enter.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnJsSendChat(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content) || _hubService == null || Meeting == null) return;
+
+        // Add to JS buffer + render immediately
+        var time = DateTime.Now.ToString("HH:mm");
+        await JSRuntime.InvokeVoidAsync("webRtcGroup.addMessage",
+            _currentUserId, _currentUserName, content, time, GetInitials(_currentUserName));
+
+        // Send to other participants via SignalR
+        await _hubService.SendChatMessageAsync(Meeting.Id, content);
+    }
+
+    private void HandleChatMessageReceived(MeetingChatMessage msg)
+    {
+        InvokeAsync(async () =>
+        {
+            var time = msg.Timestamp.ToLocalTime().ToString("HH:mm");
+            var initials = GetInitials(msg.UserName);
+
+            // Add to JS buffer — JS handles DOM + unread badge automatically
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("webRtcGroup.addMessage",
+                    msg.UserId, msg.UserName, msg.Content, time, initials);
+            }
+            catch { }
+        });
+    }
+
+    // ===================== Speech — TRANSCRIPT DISABLED =====================
+    // [JSInvokable] public async Task OnSpeechResult(string text, bool isFinal) { ... }
+    // [JSInvokable] public async Task OnSpeechError(string error) { ... }
+    // [JSInvokable] public async Task OnSpeechEnd() { ... }
+    // private void HandleTranscriptReceived(MeetingTranscriptEntry entry) { ... }
+
+    // ===================== Live Captions =====================
+
+    [JSInvokable]
+    public async Task OnLiveCaptionResult(string text, bool isFinal)
+    {
+        if (_hubService == null || Meeting == null || string.IsNullOrWhiteSpace(text)) return;
+
+        // Show own caption locally
+        _liveCaptions[_currentUserId] = text;
+        _captionTimestamps[_currentUserId] = DateTime.UtcNow;
+        await InvokeAsync(StateHasChanged);
+
+        // Broadcast to other participants
+        await _hubService.SendLiveCaptionAsync(Meeting.Id, text, isFinal);
+
+        // Clear own final caption after a delay
+        if (isFinal)
+        {
+            _ = Task.Delay(3000).ContinueWith(_ => InvokeAsync(() =>
+            {
+                if (_liveCaptions.TryGetValue(_currentUserId, out var current) && current == text)
+                {
+                    _liveCaptions.Remove(_currentUserId);
+                    StateHasChanged();
+                }
+            }));
+        }
+    }
+
+    private void HandleLiveCaptionReceived(string userId, string userName, string text, bool isFinal)
+    {
+        InvokeAsync(() =>
+        {
+            if (!_isCaptionEnabled) return;
+
+            _liveCaptions[userId] = text;
+            _captionTimestamps[userId] = DateTime.UtcNow;
+
+            // Ensure peer name is registered
+            if (!_peerStates.ContainsKey(userId))
+                _peerStates[userId] = new PeerState { Name = userName };
+
+            StateHasChanged();
+
+            // Clear final caption after a delay
+            if (isFinal)
+            {
+                _ = Task.Delay(3000).ContinueWith(_ => InvokeAsync(() =>
+                {
+                    if (_liveCaptions.TryGetValue(userId, out var current) && current == text)
+                    {
+                        _liveCaptions.Remove(userId);
+                        StateHasChanged();
+                    }
+                }));
+            }
+        });
+    }
+
+    private async Task ToggleCaptions()
+    {
+        _isCaptionEnabled = !_isCaptionEnabled;
+
+        if (_isCaptionEnabled)
+        {
+            // Start speech recognition if mic is on
+            if (_isMicOn && _dotNetRef != null)
+            {
+                try { await JSRuntime.InvokeAsync<bool>("webRtcGroup.startSpeechRecognition", _dotNetRef); } catch { }
+            }
+        }
+        else
+        {
+            // Stop speech recognition and clear captions
+            try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopSpeechRecognition"); } catch { }
+            _liveCaptions.Clear();
+            _captionTimestamps.Clear();
+        }
+    }
+
+    // ===================== WebRTC =====================
+
+    private void HandlePeerJoinedForWebRTC(string peerId, string peerName)
+    {
+        InvokeAsync(async () =>
+        {
+            if (!_peerStates.ContainsKey(peerId))
+            {
+                _peerStates[peerId] = new PeerState { Name = peerName };
+                StateHasChanged();
+            }
+
+            if (!_webrtcInitialized || _hubService == null || Meeting == null)
+            {
+                _bufferedPeerJoined.Add((peerId, peerName));
+                return;
+            }
+
+            await Task.Delay(100);
+            var offer = await JSRuntime.InvokeAsync<string?>("webRtcGroup.createOffer", peerId);
+            if (!string.IsNullOrEmpty(offer)) await _hubService.SendWebRTCOfferAsync(Meeting.Id, peerId, offer);
+        });
+    }
+
+    private void HandleReceiveWebRTCOffer(string fromUserId, string fromUserName, string sdpOffer)
+    {
+        InvokeAsync(async () =>
+        {
+            if (!_peerStates.ContainsKey(fromUserId))
+            {
+                _peerStates[fromUserId] = new PeerState { Name = fromUserName };
+                StateHasChanged();
+            }
+
+            if (!_webrtcInitialized || _hubService == null || Meeting == null)
+            {
+                _bufferedOffers.Add((fromUserId, fromUserName, sdpOffer));
+                return;
+            }
+
+            await Task.Delay(100);
+            var answer = await JSRuntime.InvokeAsync<string?>("webRtcGroup.handleOffer", fromUserId, sdpOffer);
+            if (!string.IsNullOrEmpty(answer)) await _hubService.SendWebRTCAnswerAsync(Meeting.Id, fromUserId, answer);
+        });
+    }
+
+    private void HandleReceiveWebRTCAnswer(string fromUserId, string sdpAnswer)
+    {
+        InvokeAsync(async () =>
+        {
+            if (!_webrtcInitialized)
+            {
+                _bufferedAnswers.Add((fromUserId, sdpAnswer));
+                return;
+            }
+            await JSRuntime.InvokeVoidAsync("webRtcGroup.handleAnswer", fromUserId, sdpAnswer);
+        });
+    }
+
+    private void HandleReceiveIceCandidate(string fromUserId, string candidate, string? sdpMid, int sdpMLineIndex)
+    {
+        InvokeAsync(async () =>
+        {
+            if (!_webrtcInitialized)
+            {
+                _bufferedIceCandidates.Add((fromUserId, candidate, sdpMid, sdpMLineIndex));
+                return;
+            }
+            await JSRuntime.InvokeVoidAsync("webRtcGroup.addIceCandidate", fromUserId, candidate, sdpMid, sdpMLineIndex);
+        });
+    }
+
+    private void HandlePeerMediaStateChanged(string userId, bool isCameraOn, bool isMicOn)
+    {
+        InvokeAsync(() => { if (_peerStates.TryGetValue(userId, out var s)) { s.IsCameraOn = isCameraOn; s.IsMicOn = isMicOn; StateHasChanged(); } });
+    }
+
+    private void HandlePeerHandRaised(string userId, string userName, bool isRaised)
+    {
+        InvokeAsync(() => { if (isRaised) _raisedHands.Add(userId); else _raisedHands.Remove(userId); StateHasChanged(); });
+    }
+
+    private void HandleParticipantJoined(string userId, string userName)
+    {
+        InvokeAsync(() => { _activeParticipants.Add(userId); StateHasChanged(); });
+    }
+
+    private void HandleParticipantLeft(string userId, string userName)
+    {
+        InvokeAsync(async () =>
+        {
+            _activeParticipants.Remove(userId);
+            if (_webrtcInitialized && _peerStates.ContainsKey(userId))
+            { await JSRuntime.InvokeVoidAsync("webRtcGroup.removePeer", userId); _peerStates.Remove(userId); }
+            StateHasChanged();
+        });
+    }
+
+    [JSInvokable]
+    public async Task OnIceCandidateForPeer(string peerId, string candidate, string? sdpMid, int sdpMLineIndex)
+    {
+        if (_hubService != null && Meeting != null)
+            await _hubService.SendIceCandidateAsync(Meeting.Id, peerId, candidate, sdpMid, sdpMLineIndex);
+    }
+
+    [JSInvokable]
+    public Task OnPeerTrackReceived(string peerId)
+    {
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable] public Task OnPeerConnectionStateChanged(string peerId, string state) { Console.WriteLine($"[WebRTC] {peerId}: {state}"); return Task.CompletedTask; }
+    [JSInvokable] public Task OnWebRTCError(string error) { Console.WriteLine($"[WebRTC] {error}"); return Task.CompletedTask; }
+
+    // ===================== Whisper Transcription =====================
+
+    [JSInvokable]
+    public Task OnTranscriptionStarted()
+    {
+        _isTranscribing = true;
+        _transcriptionProgress = 0;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task OnTranscriptionProgress(int percent)
+    {
+        _transcriptionProgress = percent;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnTranscriptionComplete(int meetingId, string text)
+    {
+        _isTranscribing = false;
+        _transcriptionProgress = 100;
+        _transcriptText = text;
+        if (!string.IsNullOrWhiteSpace(text))
+            await MeetingService.AddTranscriptAsync(meetingId, text);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task OnTranscriptionFailed(string error)
+    {
+        _isTranscribing = false;
+        Console.WriteLine($"[Whisper] Transcription failed: {error}");
+        return InvokeAsync(StateHasChanged);
+    }
+
+    // ===================== End/Leave =====================
+
+    private async void HandleMeetingEnded(int meetingId)
+    {
+        await InvokeAsync(async () =>
+        {
+            _isMicOn = false;
+            try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopSpeechRecognition"); } catch { }
+            try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopAudioRecording"); } catch { }
+            if (_webrtcInitialized) { await JSRuntime.InvokeVoidAsync("webRtcGroup.dispose"); _webrtcInitialized = false; _peerStates.Clear(); }
+            if (_dotNetRef != null) _ = JSRuntime.InvokeVoidAsync("webRtcGroup.transcribeInBackground", _dotNetRef, meetingId);
+            _showSummary = true;
+            StateHasChanged();
+        });
+    }
+
+    private async Task EndMeeting()
+    {
+        if (Meeting == null) return;
+        _isEnding = true; StateHasChanged();
+        try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopSpeechRecognition"); } catch { }
+        try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopAudioRecording"); } catch { }
+        if (_webrtcInitialized) { await JSRuntime.InvokeVoidAsync("webRtcGroup.dispose"); _webrtcInitialized = false; _peerStates.Clear(); }
+        if (_dotNetRef != null) _ = JSRuntime.InvokeVoidAsync("webRtcGroup.transcribeInBackground", _dotNetRef, Meeting.Id);
+        await MeetingService.EndMeetingAsync(Meeting.Id);
+        _showSummary = true; _isEnding = false;
+        StateHasChanged();
+    }
+
+    private async Task RetryGenerateSummary()
+    {
+        // No-op: Gemini removed
+        await Task.CompletedTask;
+    }
+
+    private async Task LeaveMeeting()
+    {
+        if (Meeting == null) return;
+        try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopSpeechRecognition"); } catch { }
+        try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopAudioRecording"); } catch { }
+        if (_webrtcInitialized) { try { await JSRuntime.InvokeVoidAsync("webRtcGroup.dispose"); } catch { } _webrtcInitialized = false; }
+        if (_hubService != null) await _hubService.LeaveMeetingAsync(Meeting.Id);
+        await CloseMeetingRoom();
+    }
+
+    private async Task LeaveWaitingRoom()
+    {
+        if (Meeting == null) return;
+        try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopLocalPreview"); } catch { }
+        if (_hubService != null) await _hubService.LeaveMeetingAsync(Meeting.Id);
+        await CloseMeetingRoom();
+    }
+
+    private async Task CloseMeetingRoom() => await OnClosed.InvokeAsync();
+
+    private static string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2) return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return parts[0].Length >= 2 ? parts[0][..2].ToUpper() : parts[0].ToUpper();
+    }
+
+    private string GetVideoGridCols()
+    {
+        // Kept for compatibility but no longer used in the main layout
+        var total = 1 + _peerStates.Count;
+        return total switch { 1 => "grid-cols-1", 2 => "grid-cols-2", 3 or 4 => "grid-cols-2", 5 or 6 => "grid-cols-3", _ => "grid-cols-3" };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _timer?.Dispose();
+        if (_hubService != null)
+        {
+            // TRANSCRIPT DISABLED: _hubService.OnTranscriptReceived -= HandleTranscriptReceived;
+            _hubService.OnParticipantJoined -= HandleParticipantJoined;
+            _hubService.OnParticipantLeft -= HandleParticipantLeft;
+            _hubService.OnMeetingEnded -= HandleMeetingEnded;
+            _hubService.OnMeetingStarted -= HandleMeetingStartedByHost;
+            _hubService.OnPeerJoinedForWebRTC -= HandlePeerJoinedForWebRTC;
+            _hubService.OnReceiveWebRTCOffer -= HandleReceiveWebRTCOffer;
+            _hubService.OnReceiveWebRTCAnswer -= HandleReceiveWebRTCAnswer;
+            _hubService.OnReceiveIceCandidate -= HandleReceiveIceCandidate;
+            _hubService.OnPeerMediaStateChanged -= HandlePeerMediaStateChanged;
+            _hubService.OnPeerHandRaised -= HandlePeerHandRaised;
+            _hubService.OnChatMessageReceived -= HandleChatMessageReceived;
+            _hubService.OnLiveCaptionReceived -= HandleLiveCaptionReceived;
+        }
+        if (_dotNetRef != null)
+        {
+            // TRANSCRIPT DISABLED: if (_speechInitialized) { try { await JSRuntime.InvokeVoidAsync("meetingSpeechRecognition.dispose"); } catch { } }
+            try { await JSRuntime.InvokeVoidAsync("webRtcGroup.stopSpeechRecognition"); } catch { }
+            if (_webrtcInitialized) { try { await JSRuntime.InvokeVoidAsync("webRtcGroup.dispose"); } catch { } }
+            _dotNetRef.Dispose();
+        }
+    }
+}

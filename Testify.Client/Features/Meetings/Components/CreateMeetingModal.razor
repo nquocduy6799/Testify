@@ -1,0 +1,111 @@
+@using Testify.Client.Features.Meetings.Services
+@using Testify.Shared.DTOs.Meetings
+@inject IMeetingService MeetingService
+
+@if (IsVisible)
+{
+    <div class="fixed inset-0 z-[200] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @onclick="Close"></div>
+        <div class="relative z-10 w-full max-w-md rounded-[32px] bg-white p-8 shadow-2xl">
+            <h2 class="text-2xl font-black text-slate-800 mb-6">Create Meeting</h2>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Meeting Title</label>
+                    <input type="text" @bind="_title" @bind:event="oninput"
+                           placeholder="e.g. Sprint Review, Daily Standup..."
+                           class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3.5 text-sm font-bold text-slate-800 placeholder-slate-300 focus:border-[#E85D3F] focus:outline-none focus:ring-2 focus:ring-[#E85D3F]/20 transition-all" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Duration (minutes)</label>
+                    <div class="flex gap-3">
+                        @foreach (var dur in new[] { 10, 15, 20, 30 })
+                        {
+                            <button @onclick="() => _duration = dur"
+                                    class="flex-1 rounded-2xl py-3 text-sm font-bold transition-all @(dur == _duration ? "bg-[#1C1D2A] text-white shadow-lg" : "bg-slate-50 text-slate-500 hover:bg-slate-100")">
+                                @dur min
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <div class="rounded-2xl bg-amber-50 border border-amber-100 p-4">
+                    <div class="flex items-start gap-3">
+                        <span class="text-amber-500 mt-0.5" style="font-size:18px;">
+                            <Blazicon Svg="Lucide.Info" />
+                        </span>
+                        <p class="text-xs font-medium text-amber-700 leading-relaxed">
+                            All project team members will be invited to the waiting room. The meeting will start when the host clicks Start.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button @onclick="Close"
+                        class="flex-1 cursor-pointer rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                    Cancel
+                </button>
+                <button @onclick="CreateMeeting" disabled="@(_isProcessing || string.IsNullOrWhiteSpace(_title))"
+                        class="flex-1 cursor-pointer rounded-2xl bg-[#E85D3F] px-4 py-3 text-sm font-bold text-white hover:bg-[#d4502f] disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                    @if (_isProcessing)
+                    {
+                        <div class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                        <span>Creating...</span>
+                    }
+                    else
+                    {
+                        <span style="font-size:18px;"><Blazicon Svg="Lucide.Video" /></span>
+                        <span>Create Meeting</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public int ProjectId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<MeetingResponse> OnMeetingCreated { get; set; }
+
+    private string _title = string.Empty;
+    private int _duration = 20;
+    private bool _isProcessing;
+
+    private async Task Close()
+    {
+        _title = string.Empty;
+        _duration = 20;
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task CreateMeeting()
+    {
+        if (string.IsNullOrWhiteSpace(_title)) return;
+
+        _isProcessing = true;
+        try
+        {
+            var request = new CreateMeetingRequest
+            {
+                ProjectId = ProjectId,
+                Title = _title.Trim(),
+                MaxDurationMinutes = _duration
+            };
+
+            var meeting = await MeetingService.CreateMeetingAsync(request);
+            if (meeting != null)
+            {
+                await OnMeetingCreated.InvokeAsync(meeting);
+                await Close();
+            }
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+}

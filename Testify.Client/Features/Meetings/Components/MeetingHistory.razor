@@ -1,0 +1,269 @@
+@using Testify.Client.Features.Meetings.Services
+@using Testify.Shared.DTOs.Meetings
+@using Testify.Shared.Enums
+@inject IMeetingService MeetingService
+
+<div class="space-y-6">
+    @* Header *@
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-xl font-black text-slate-800">Meeting History</h2>
+            <p class="text-sm text-slate-400 mt-1">Past and ongoing meetings for this project</p>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="flex items-center justify-center py-20">
+            <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#E85D3F]"></div>
+        </div>
+    }
+    else if (!_meetings.Any())
+    {
+        <div class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-[24px] bg-slate-100">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400">
+                    <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/>
+                </svg>
+            </div>
+            <p class="text-sm font-bold text-slate-500">No meetings yet</p>
+            <p class="text-xs text-slate-400 mt-1">Meetings will appear here once created</p>
+        </div>
+    }
+    else
+    {
+        <div class="space-y-4">
+            @foreach (var meeting in _meetings)
+            {
+                <div class="rounded-[20px] border border-slate-100 bg-white p-5 transition-all hover:shadow-md">
+                    <div class="flex items-start justify-between">
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-11 w-11 items-center justify-center rounded-2xl @GetStatusBgClass(meeting.Status)">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="@GetStatusIconClass(meeting.Status)">
+                                    <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-slate-800">@meeting.Title</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    Hosted by <span class="font-bold text-slate-500">@meeting.HostName</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <span class="rounded-full px-3 py-1 text-[10px] font-black uppercase @GetStatusBadgeClass(meeting.Status)">
+                            @meeting.Status
+                        </span>
+                    </div>
+
+                    @* Meeting Details *@
+                    <div class="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                        @if (meeting.StartedAt.HasValue)
+                        {
+                            <div class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                <span>@meeting.StartedAt.Value.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                <span>Created @meeting.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy HH:mm")</span>
+                            </div>
+                        }
+
+                        @if (meeting.EndedAt.HasValue && meeting.StartedAt.HasValue)
+                        {
+                            var duration = meeting.EndedAt.Value - meeting.StartedAt.Value;
+                            <div class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>
+                                </svg>
+                                <span>@((int)duration.TotalMinutes) min</span>
+                            </div>
+                        }
+
+                        <div class="flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <span>@meeting.Participants.Count participants</span>
+                        </div>
+
+                        @if (meeting.MaxDurationMinutes > 0)
+                        {
+                            <div class="flex items-center gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                <span>Max @meeting.MaxDurationMinutes min</span>
+                            </div>
+                        }
+                    </div>
+
+                    @* Participants avatars *@
+                    <div class="mt-4 flex items-center gap-2">
+                        <div class="flex -space-x-2">
+                            @foreach (var p in meeting.Participants.Take(6))
+                            {
+                                <div class="h-7 w-7 rounded-lg bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-black text-slate-500"
+                                     title="@(p.FullName ?? p.UserName)">
+                                    @GetInitials(p.FullName ?? p.UserName)
+                                </div>
+                            }
+                            @if (meeting.Participants.Count > 6)
+                            {
+                                <div class="h-7 w-7 rounded-lg bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                    +@(meeting.Participants.Count - 6)
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    @* Transcript action *@
+                    @if (meeting.Participants.Any(p => p.HasAttended))
+                    {
+                        <div class="mt-4">
+                            <button @onclick="() => ToggleTranscript(meeting.Id)"
+                                    class="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>
+                                </svg>
+                                @(_expandedSummaryId == meeting.Id ? "Ẩn transcript" : "Xem transcript")
+                            </button>
+                        </div>
+
+                        @if (_expandedSummaryId == meeting.Id)
+                        {
+                            <div class="mt-4 rounded-2xl bg-slate-50 p-5 border border-slate-100">
+                                @if (_loadingSummaryId == meeting.Id)
+                                {
+                                    <div class="flex items-center gap-3 py-4">
+                                        <div class="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-[#E85D3F]"></div>
+                                        <span class="text-xs text-slate-400">Đang tải transcript...</span>
+                                    </div>
+                                }
+                                else if (_transcriptEntries.Any())
+                                {
+                                    <div class="space-y-3">
+                                        @foreach (var entry in _transcriptEntries)
+                                        {
+                                            <div class="flex gap-3">
+                                                <div class="h-7 w-7 rounded-lg bg-[#1C1D2A] flex items-center justify-center text-[10px] font-black text-white shrink-0 mt-0.5">
+                                                    @GetInitials(entry.UserName)
+                                                </div>
+                                                <div>
+                                                    <div class="flex items-center gap-2 mb-0.5">
+                                                        <span class="text-xs font-bold text-slate-700">@entry.UserName</span>
+                                                        <span class="text-[10px] text-slate-400">@entry.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                                                    </div>
+                                                    <p class="text-sm text-slate-600 leading-relaxed">@entry.Content</p>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-xs text-slate-400 text-center py-4">Không có transcript cho cuộc họp này.</p>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int ProjectId { get; set; }
+
+    private List<MeetingResponse> _meetings = new();
+    private bool _isLoading = true;
+    private int? _expandedSummaryId;
+    private int? _loadingSummaryId;
+    private List<MeetingTranscriptEntry> _transcriptEntries = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMeetings();
+    }
+
+    private async Task LoadMeetings()
+    {
+        _isLoading = true;
+        try
+        {
+            _meetings = await MeetingService.GetProjectMeetingsAsync(ProjectId);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ToggleTranscript(int meetingId)
+    {
+        if (_expandedSummaryId == meetingId)
+        {
+            _expandedSummaryId = null;
+            _transcriptEntries = new();
+            return;
+        }
+
+        _expandedSummaryId = meetingId;
+        _loadingSummaryId = meetingId;
+        StateHasChanged();
+
+        try
+        {
+            _transcriptEntries = await MeetingService.GetTranscriptsAsync(meetingId);
+        }
+        finally
+        {
+            _loadingSummaryId = null;
+        }
+    }
+
+    private static string GetStatusBgClass(MeetingStatus status) => status switch
+    {
+        MeetingStatus.Scheduled => "bg-amber-50",
+        MeetingStatus.InProgress => "bg-emerald-50",
+        MeetingStatus.Ended => "bg-slate-100",
+        MeetingStatus.Cancelled => "bg-red-50",
+        _ => "bg-slate-100"
+    };
+
+    private static string GetStatusIconClass(MeetingStatus status) => status switch
+    {
+        MeetingStatus.Scheduled => "text-amber-500",
+        MeetingStatus.InProgress => "text-emerald-500",
+        MeetingStatus.Ended => "text-slate-400",
+        MeetingStatus.Cancelled => "text-red-400",
+        _ => "text-slate-400"
+    };
+
+    private static string GetStatusBadgeClass(MeetingStatus status) => status switch
+    {
+        MeetingStatus.Scheduled => "bg-amber-100 text-amber-700",
+        MeetingStatus.InProgress => "bg-emerald-100 text-emerald-700",
+        MeetingStatus.Ended => "bg-slate-100 text-slate-500",
+        MeetingStatus.Cancelled => "bg-red-100 text-red-600",
+        _ => "bg-slate-100 text-slate-500"
+    };
+
+    private static string GetInitials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return parts[0].Length >= 2 ? parts[0][..2].ToUpper() : parts[0].ToUpper();
+    }
+}
