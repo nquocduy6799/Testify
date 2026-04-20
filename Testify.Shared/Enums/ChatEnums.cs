@@ -45,7 +45,12 @@ namespace Testify.Shared.Enums
         MissedCall = 21,
 
         // Project Events
-        ProjectInvitation = 30
+        ProjectInvitation = 30,
+
+        // Meeting Events
+        MeetingCreated = 39,
+        MeetingStarted = 40,
+        MeetingSummaryReady = 41
     }
 
     public enum CallType
